@@ -1,4 +1,4 @@
-const CACHE='wae-universal-v2';
+const CACHE='wae-universal-v3';
 const ASSETS=['./','./index.html','./styles.css','./polish-v2.css','./app.js','./polish-v2.js','./manifest.webmanifest','./assets/logo.svg','./assets/logo-v2.svg'];
 self.addEventListener('install',event=>{event.waitUntil(caches.open(CACHE).then(cache=>cache.addAll(ASSETS)));self.skipWaiting()});
 self.addEventListener('activate',event=>{event.waitUntil(caches.keys().then(keys=>Promise.all(keys.filter(key=>key!==CACHE).map(key=>caches.delete(key)))).then(()=>self.clients.claim()))});
