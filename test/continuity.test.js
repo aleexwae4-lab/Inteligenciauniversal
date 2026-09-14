@@ -79,8 +79,16 @@ test('continuity fails closed when a file contains only embedded instructions af
     },
     { role: 'user', content: 'Conserva la evidencia del archivo.' },
   ]);
-  assert.match(reply, /detectó instrucciones incrustadas|modo de continuidad/i);
+  assert.match(reply, /detecté instrucciones incrustadas|bloqueé/i);
   assert.doesNotMatch(reply, new RegExp(secret));
+  assert.doesNotMatch(reply, /modo de continuidad/i);
+});
+
+test('continuity public fallback stays infrastructure-neutral', () => {
+  const reply = continuityReply([{ role: 'user', content: 'Explícame una arquitectura compleja que no puede resolverse de forma determinista.' }]);
+  assert.match(reply, /No pude completar la generación avanzada/i);
+  assert.match(reply, /Conservé la conversación/i);
+  assert.doesNotMatch(reply, /modo de continuidad|provider|proveedor|fallback|router|modelo|model/i);
 });
 
 test('continuity serves the chat completion contract used by the adaptive router', () => {
@@ -92,6 +100,7 @@ test('continuity serves the chat completion contract used by the adaptive router
   assert.equal(payload.continuity.cost_usd, 0);
   assert.equal(payload.continuity.raw_memory_exposed, false);
   assert.equal(payload.continuity.structured_document_extraction, true);
+  assert.equal(payload.continuity.public_copy, 'infrastructure-neutral');
 });
 
 test('runtime exposes an explicit deterministic continuity lane with AssistantResponse', async () => {
@@ -109,4 +118,5 @@ test('runtime exposes an explicit deterministic continuity lane with AssistantRe
   assert.equal(result.response.schema,'assistant-response/v1');
   assert.equal(result.response.metadata.degraded,true);
   assert.match(result.reply,/4200 MXN/);
+  assert.doesNotMatch(result.reply,/modo de continuidad/i);
 });
