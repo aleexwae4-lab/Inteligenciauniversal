@@ -2,66 +2,59 @@
 <html lang="es">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, interactive-widget=resizes-content" />
   <meta name="theme-color" content="#090a0d" />
   <meta name="description" content="WAE Inteligencia Universal — interfaz ejecutiva de inteligencia, investigación, programación, análisis y diseño." />
   <link rel="manifest" href="./manifest.webmanifest" />
   <link rel="icon" href="./assets/logo.svg" type="image/svg+xml" />
   <link rel="stylesheet" href="./styles.css" />
   <link rel="stylesheet" href="./polish-v2.css" />
+  <style>
+    html,body{max-width:100%;overflow-x:hidden}
+    @media(max-width:899px){
+      .workspace{position:fixed!important;inset:0!important;top:0!important;right:0!important;bottom:0!important;left:0!important;width:100vw!important;max-width:100vw!important;height:100dvh!important;min-height:100dvh!important;max-height:100dvh!important;margin:0!important;z-index:1000!important;overflow:hidden!important;grid-template-rows:auto auto minmax(0,1fr)!important;transform:translate3d(0,101%,0)!important;overscroll-behavior:contain;contain:layout paint;box-sizing:border-box;padding-top:env(safe-area-inset-top);padding-right:env(safe-area-inset-right);padding-bottom:env(safe-area-inset-bottom);padding-left:env(safe-area-inset-left)}
+      .workspace.open{transform:translate3d(0,0,0)!important}
+      html:has(.workspace.open),body:has(.workspace.open){overflow:hidden!important;overscroll-behavior:none!important}
+      .workspace-topbar{min-width:0!important;max-width:100%!important;flex:0 0 auto!important;padding:9px 10px!important;gap:6px!important}
+      .workspace-title{min-width:0!important;overflow:hidden}.workspace-title>div{min-width:0}.workspace-title strong,.workspace-title small{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+      .workspace-actions{min-width:0!important;flex:0 0 auto!important;gap:4px!important}.workspace-actions .chip,.workspace-actions .save-btn{padding:7px 9px!important;font-size:.66rem!important;white-space:nowrap}
+      .workspace-tabs{min-width:0!important;max-width:100%!important;overflow-x:auto!important;overscroll-behavior-x:contain;scrollbar-width:none}.workspace-tabs::-webkit-scrollbar{display:none}
+      .workspace-body{width:100%!important;max-width:100%!important;min-width:0!important;min-height:0!important;height:100%!important;overflow:hidden!important}
+      .tab-panel{min-width:0!important;max-width:100%!important;min-height:0!important;height:100%!important}
+      #panel-document.active{display:grid!important;grid-template-rows:auto minmax(0,1fr)!important;overflow:hidden!important}
+      .toolbar{min-width:0!important;max-width:100%!important;overflow-x:auto!important;scrollbar-width:none}.toolbar::-webkit-scrollbar{display:none}
+      .document-sheet{box-sizing:border-box!important;width:auto!important;max-width:calc(100vw - 20px - env(safe-area-inset-left) - env(safe-area-inset-right))!important;min-width:0!important;min-height:0!important;height:auto!important;margin:10px!important;padding:18px!important;overflow:auto!important;overscroll-behavior:contain;-webkit-overflow-scrolling:touch}
+      .split-panel.active{width:100%!important;max-width:100%!important;height:100%!important;min-height:0!important;overflow:hidden!important}
+      .code-pane,.preview-pane{min-width:0!important;max-width:100%!important;min-height:0!important;overflow:hidden!important}
+      #htmlEditor,#htmlPreview{box-sizing:border-box!important;width:100%!important;max-width:100%!important;min-width:0!important}
+      #htmlEditor{overflow:auto!important;-webkit-overflow-scrolling:touch}
+      .plan-board{box-sizing:border-box!important;width:100%!important;max-width:100%!important;min-width:0!important;overflow:auto!important;-webkit-overflow-scrolling:touch}
+    }
+    @media(max-width:420px){
+      .workspace-topbar>.icon-btn{min-width:32px!important;width:32px!important;height:32px!important}.workspace-icon{display:none}.workspace-actions .chip,.workspace-actions .save-btn{padding:7px 8px!important}.document-sheet{padding:16px!important}
+    }
+  </style>
   <title>WAE · Inteligencia Universal</title>
 </head>
 <body>
   <div id="app" class="app-shell">
     <header class="topbar">
       <button class="icon-btn" id="menuBtn" aria-label="Abrir menú">☰</button>
-      <div class="brand">
-        <img src="./assets/logo.svg" alt="WAE" />
-        <div>
-          <strong>WAE OS</strong>
-          <span>Inteligencia Universal</span>
-        </div>
-      </div>
-      <div class="top-actions">
-        <button class="chip" id="newChatBtn">＋ Nueva</button>
-        <button class="icon-btn" id="workspaceBtn" title="Workspace">◇</button>
-        <button class="avatar" aria-label="Perfil">AW</button>
-      </div>
+      <div class="brand"><img src="./assets/logo.svg" alt="WAE" /><div><strong>WAE OS</strong><span>Inteligencia Universal</span></div></div>
+      <div class="top-actions"><button class="chip" id="newChatBtn">＋ Nueva</button><button class="icon-btn" id="workspaceBtn" title="Workspace">◇</button><button class="avatar" aria-label="Perfil">AW</button></div>
     </header>
 
-    <div class="status-strip">
-      <span class="status-dot"></span>
-      <span>Universal Core · online</span>
-      <span class="status-meta">4 capacidades activas</span>
-    </div>
+    <div class="status-strip"><span class="status-dot"></span><span>Universal Core · online</span><span class="status-meta">4 capacidades activas</span></div>
 
     <main class="chat-layout">
       <section class="chat-column">
-        <div class="chat-heading">
-          <p class="eyebrow">NÚCLEO UNIVERSAL</p>
-          <h1>¿Qué quieres construir hoy?</h1>
-          <p>Investiga, programa, analiza, diseña y convierte ideas en entregables desde una sola interfaz.</p>
-        </div>
-
+        <div class="chat-heading"><p class="eyebrow">NÚCLEO UNIVERSAL</p><h1>¿Qué quieres construir hoy?</h1><p>Investiga, programa, analiza, diseña y convierte ideas en entregables desde una sola interfaz.</p></div>
         <div class="messages" id="messages" aria-live="polite"></div>
-
         <div class="capability-grid" id="capabilityGrid">
-          <button class="capability-card" data-mode="research">
-            <span class="cap-icon">⌕</span>
-            <span><strong>Investigar</strong><small>Fuentes, contexto, síntesis</small></span>
-          </button>
-          <button class="capability-card" data-mode="code">
-            <span class="cap-icon">⌘</span>
-            <span><strong>Programar</strong><small>Arquitectura, código, pruebas</small></span>
-          </button>
-          <button class="capability-card" data-mode="analysis">
-            <span class="cap-icon">▦</span>
-            <span><strong>Analizar</strong><small>Datos, riesgos, decisiones</small></span>
-          </button>
-          <button class="capability-card" data-mode="design">
-            <span class="cap-icon">✦</span>
-            <span><strong>Diseñar</strong><small>Producto, UX, sistemas</small></span>
-          </button>
+          <button class="capability-card" data-mode="research"><span class="cap-icon">⌕</span><span><strong>Investigar</strong><small>Fuentes, contexto, síntesis</small></span></button>
+          <button class="capability-card" data-mode="code"><span class="cap-icon">⌘</span><span><strong>Programar</strong><small>Arquitectura, código, pruebas</small></span></button>
+          <button class="capability-card" data-mode="analysis"><span class="cap-icon">▦</span><span><strong>Analizar</strong><small>Datos, riesgos, decisiones</small></span></button>
+          <button class="capability-card" data-mode="design"><span class="cap-icon">✦</span><span><strong>Diseñar</strong><small>Producto, UX, sistemas</small></span></button>
         </div>
       </section>
     </main>
@@ -69,151 +62,50 @@
     <form class="composer" id="composer">
       <div class="mode-pill" id="modePill">General</div>
       <textarea id="messageInput" rows="1" placeholder="Describe una misión, crea un sistema o pide un análisis…"></textarea>
-      <div class="composer-actions">
-        <div>
-          <button type="button" class="mini-btn" id="attachBtn" title="Adjuntar">＋</button>
-          <button type="button" class="mini-btn" id="voiceBtn" title="Voz">◉</button>
-        </div>
-        <button class="send-btn" type="submit" aria-label="Enviar">➜</button>
-      </div>
+      <div class="composer-actions"><div><button type="button" class="mini-btn" id="attachBtn" title="Adjuntar">＋</button><button type="button" class="mini-btn" id="voiceBtn" title="Voz">◉</button></div><button class="send-btn" type="submit" aria-label="Enviar">➜</button></div>
     </form>
 
-    <footer class="runtime-bar">
-      <div><span class="pulse"></span><strong>Operativo</strong><small> · núcleo local</small></div>
-      <strong class="health">100%</strong>
-    </footer>
+    <footer class="runtime-bar"><div><span class="pulse"></span><strong>Operativo</strong><small> · núcleo local</small></div><strong class="health">100%</strong></footer>
 
     <aside class="drawer" id="drawer" aria-hidden="true">
-      <div class="drawer-head">
-        <div class="brand compact">
-          <img src="./assets/logo.svg" alt="WAE" />
-          <div><strong>WAE OS</strong><span>Universal Core</span></div>
-        </div>
-        <button class="icon-btn" id="closeDrawerBtn">×</button>
-      </div>
+      <div class="drawer-head"><div class="brand compact"><img src="./assets/logo.svg" alt="WAE" /><div><strong>WAE OS</strong><span>Universal Core</span></div></div><button class="icon-btn" id="closeDrawerBtn">×</button></div>
       <button class="primary-wide" id="drawerNewChat">＋ Nueva conversación</button>
       <button class="secondary-wide" id="drawerWorkspace">◇ Workspace</button>
       <p class="nav-label">NAVEGACIÓN</p>
       <nav class="nav-list">
-        <button data-view="control">◫ <span>Centro de Control</span></button>
-        <button data-view="comms">◌ <span>Comunicaciones</span></button>
-        <button data-view="projects">◇ <span>Proyectos</span></button>
-        <button data-view="agents">✣ <span>Agentes</span><em>4</em></button>
-        <button data-view="automations">↻ <span>Automatizaciones</span></button>
-        <button data-view="memory">◈ <span>Memoria</span></button>
-        <button data-view="knowledge">▤ <span>Base de Conocimiento</span></button>
-        <button data-view="ai">✦ <span>AI Center</span></button>
-        <button data-view="market">▧ <span>Marketplace</span><em class="new-badge">NEW</em></button>
-        <button id="settingsBtn">⚙ <span>Configuración</span></button>
+        <button data-view="control">◫ <span>Centro de Control</span></button><button data-view="comms">◌ <span>Comunicaciones</span></button><button data-view="projects">◇ <span>Proyectos</span></button><button data-view="agents">✣ <span>Agentes</span><em>4</em></button><button data-view="automations">↻ <span>Automatizaciones</span></button><button data-view="memory">◈ <span>Memoria</span></button><button data-view="knowledge">▤ <span>Base de Conocimiento</span></button><button data-view="ai">✦ <span>AI Center</span></button><button data-view="market">▧ <span>Marketplace</span><em class="new-badge">NEW</em></button><button id="settingsBtn">⚙ <span>Configuración</span></button>
       </nav>
-      <div class="drawer-foot">
-        <small>MEMORIA UNIVERSAL</small>
-        <div class="memory-meter"><span style="width: 18%"></span></div>
-        <small>18% utilizada</small>
-      </div>
+      <div class="drawer-foot"><small>MEMORIA UNIVERSAL</small><div class="memory-meter"><span style="width:18%"></span></div><small>18% utilizada</small></div>
     </aside>
     <div class="scrim" id="scrim"></div>
 
     <section class="workspace" id="workspace" aria-hidden="true">
       <header class="workspace-topbar">
-        <button class="icon-btn" id="closeWorkspaceBtn">←</button>
-        <div class="workspace-title">
-          <span class="workspace-icon">◆</span>
-          <div><strong>Workspace</strong><small id="saveState">Guardado</small></div>
-        </div>
-        <div class="workspace-actions">
-          <button class="chip" id="exportBtn">Exportar</button>
-          <button class="save-btn" id="saveBtn">Guardar</button>
-        </div>
+        <button class="icon-btn" id="closeWorkspaceBtn" aria-label="Cerrar Workspace">←</button>
+        <div class="workspace-title"><span class="workspace-icon">◆</span><div><strong>Workspace</strong><small id="saveState">Guardado</small></div></div>
+        <div class="workspace-actions"><button class="chip" id="exportBtn">Exportar</button><button class="save-btn" id="saveBtn">Guardar</button></div>
       </header>
-
-      <div class="workspace-tabs">
-        <button class="active" data-tab="document">Documento</button>
-        <button data-tab="html">Canvas HTML</button>
-        <button data-tab="plans">Planes</button>
-      </div>
-
+      <div class="workspace-tabs"><button class="active" data-tab="document">Documento</button><button data-tab="html">Canvas HTML</button><button data-tab="plans">Planes</button></div>
       <div class="workspace-body">
         <section class="tab-panel active" id="panel-document">
-          <div class="toolbar" aria-label="Formato">
-            <button data-format="bold"><b>B</b></button>
-            <button data-format="italic"><i>I</i></button>
-            <button data-format="underline"><u>U</u></button>
-            <button data-format="insertUnorderedList">• Lista</button>
-            <button data-format="formatBlock" data-value="h2">H2</button>
-            <button data-format="formatBlock" data-value="blockquote">❝</button>
-          </div>
-          <div class="document-sheet" id="documentEditor" contenteditable="true">
-            <p class="placeholder-line">Comienza a escribir o pega el texto de una respuesta para editarlo…</p>
-          </div>
+          <div class="toolbar" aria-label="Formato"><button data-format="bold"><b>B</b></button><button data-format="italic"><i>I</i></button><button data-format="underline"><u>U</u></button><button data-format="insertUnorderedList">• Lista</button><button data-format="formatBlock" data-value="h2">H2</button><button data-format="formatBlock" data-value="blockquote">❝</button></div>
+          <div class="document-sheet" id="documentEditor" contenteditable="true"><p class="placeholder-line">Comienza a escribir o pega el texto de una respuesta para editarlo…</p></div>
         </section>
-
         <section class="tab-panel split-panel" id="panel-html">
-          <div class="code-pane">
-            <div class="pane-label">HTML</div>
-            <textarea id="htmlEditor" spellcheck="false">&lt;!doctype html&gt;
+          <div class="code-pane"><div class="pane-label">HTML</div><textarea id="htmlEditor" spellcheck="false">&lt;!doctype html&gt;
 &lt;html lang="es"&gt;
-&lt;head&gt;
-  &lt;meta charset="utf-8"&gt;
-  &lt;style&gt;
-    body { font-family: Inter, system-ui; padding: 32px; color: #101316; }
-    h1 { margin-bottom: 8px; }
-  &lt;/style&gt;
-&lt;/head&gt;
-&lt;body&gt;
-  &lt;h1&gt;Hola WAE OS&lt;/h1&gt;
-  &lt;p&gt;Edita este HTML y mira la vista previa.&lt;/p&gt;
-&lt;/body&gt;
-&lt;/html&gt;</textarea>
-          </div>
-          <div class="preview-pane">
-            <div class="pane-label">VISTA PREVIA</div>
-            <iframe id="htmlPreview" title="Vista previa HTML" sandbox="allow-scripts"></iframe>
-          </div>
+&lt;head&gt;&lt;meta charset="utf-8"&gt;&lt;style&gt;body{font-family:Inter,system-ui;padding:32px;color:#101316}h1{margin-bottom:8px}&lt;/style&gt;&lt;/head&gt;
+&lt;body&gt;&lt;h1&gt;Hola WAE OS&lt;/h1&gt;&lt;p&gt;Edita este HTML y mira la vista previa.&lt;/p&gt;&lt;/body&gt;
+&lt;/html&gt;</textarea></div>
+          <div class="preview-pane"><div class="pane-label">VISTA PREVIA</div><iframe id="htmlPreview" title="Vista previa HTML" sandbox="allow-scripts"></iframe></div>
         </section>
-
-        <section class="tab-panel" id="panel-plans">
-          <div class="plan-board">
-            <article>
-              <span>01</span>
-              <div><strong>Definir objetivo</strong><p>Resultado, restricciones y criterio de éxito.</p></div>
-            </article>
-            <article>
-              <span>02</span>
-              <div><strong>Diseñar arquitectura</strong><p>Datos, componentes, integraciones y seguridad.</p></div>
-            </article>
-            <article>
-              <span>03</span>
-              <div><strong>Ejecutar</strong><p>Construcción, pruebas, corrección y entrega.</p></div>
-            </article>
-          </div>
-        </section>
+        <section class="tab-panel" id="panel-plans"><div class="plan-board"><article><span>01</span><div><strong>Definir objetivo</strong><p>Resultado, restricciones y criterio de éxito.</p></div></article><article><span>02</span><div><strong>Diseñar arquitectura</strong><p>Datos, componentes, integraciones y seguridad.</p></div></article><article><span>03</span><div><strong>Ejecutar</strong><p>Construcción, pruebas, corrección y entrega.</p></div></article></div></section>
       </div>
     </section>
 
-    <dialog id="settingsDialog">
-      <form method="dialog" class="settings-card">
-        <div class="settings-head">
-          <div><p class="eyebrow">CONFIGURACIÓN</p><h2>Conectar inteligencia real</h2></div>
-          <button class="icon-btn" value="cancel">×</button>
-        </div>
-        <label>Endpoint IA
-          <input id="apiEndpoint" type="url" placeholder="https://tu-api.com/api/chat" />
-        </label>
-        <label>Nombre del núcleo
-          <input id="coreName" type="text" placeholder="Universal Core" />
-        </label>
-        <p class="help">El endpoint debe aceptar POST JSON con <code>message</code> y <code>mode</code>, y devolver <code>{ "reply": "..." }</code>.</p>
-        <div class="dialog-actions">
-          <button value="cancel" class="secondary-wide">Cancelar</button>
-          <button type="button" id="saveSettingsBtn" class="save-btn">Guardar</button>
-        </div>
-      </form>
-    </dialog>
-
+    <dialog id="settingsDialog"><form method="dialog" class="settings-card"><div class="settings-head"><div><p class="eyebrow">CONFIGURACIÓN</p><h2>Conectar inteligencia real</h2></div><button class="icon-btn" value="cancel">×</button></div><label>Endpoint IA<input id="apiEndpoint" type="url" placeholder="https://tu-api.com/api/chat" /></label><label>Nombre del núcleo<input id="coreName" type="text" placeholder="Universal Core" /></label><p class="help">El endpoint debe aceptar POST JSON con <code>message</code> y <code>mode</code>, y devolver <code>{ "reply": "..." }</code>.</p><div class="dialog-actions"><button value="cancel" class="secondary-wide">Cancelar</button><button type="button" id="saveSettingsBtn" class="save-btn">Guardar</button></div></form></dialog>
     <input id="fileInput" type="file" hidden multiple />
   </div>
-
   <script src="./app.js" defer></script>
   <script src="./polish-v2.js" defer></script>
 </body>
