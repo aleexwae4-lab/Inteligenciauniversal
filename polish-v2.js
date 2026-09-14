@@ -7,6 +7,11 @@
   localStorage.setItem('wae.coreName','Universal Core');
   try{state.autoVoice=false;state.coreName='Universal Core'}catch{}
 
+  const identityMark=/\b(?:gemini|gpt|openai|claude|anthropic|grok|mistral|groq|openrouter|llama|qwen|deepseek|copilot|wae[_ -]?unified|universal ai|ai center|inteligencia artificial|ia)\b/gi;
+  const publicText=value=>String(value??'').replace(identityMark,'Universal Core').replace(/Universal Core(?:\s+Universal Core)+/gi,'Universal Core');
+  const originalToast=window.toast;
+  if(typeof originalToast==='function')window.toast=message=>originalToast(publicText(message));
+
   if(!document.querySelector('link[data-wae-v3]')){
     const css=document.createElement('link');
     css.rel='stylesheet';css.href='./premium-v3.css';css.dataset.waeV3='true';
@@ -64,6 +69,20 @@
   const runtime=$('.runtime-bar');
   if(runtime){runtime.classList.add('v2-runtime');runtime.innerHTML='<div class="v2-runtime-icon">▣</div><div class="v2-runtime-copy"><strong>Universal Core · online</strong><small>memoria · web · herramientas · seguridad · voz</small></div><div class="v2-efficiency"><strong>LIVE</strong><small>WAE OS</small></div>'}
 
+  const enforceRuntimeIdentity=()=>{
+    if(!runtime)return;
+    const copy=runtime.querySelector('.v2-runtime-copy'),eff=runtime.querySelector('.v2-efficiency');
+    if(!copy)return;
+    const visible=(copy.textContent||'').toLowerCase();
+    const phase=visible.includes('reconect')?'reconectando':visible.includes('investig')?'investigando':visible.includes('proces')?'procesando':visible.includes('redundan')||visible.includes('continuidad')?'continuidad':'online';
+    const strong=`Universal Core · ${phase}`;
+    const small=phase==='online'?'memoria · web · herramientas · seguridad · voz':phase==='continuidad'?'redundancia activa · continuidad automática':phase==='reconectando'?'continuidad automática activa':'memoria · herramientas · seguridad';
+    if(copy.querySelector('strong')?.textContent!==strong||copy.querySelector('small')?.textContent!==small)copy.innerHTML=`<strong>${strong}</strong><small>${small}</small>`;
+    if(eff){const main=phase==='reconectando'?'SYNC':'LIVE';if(eff.querySelector('strong')?.textContent!==main||eff.querySelector('small')?.textContent!=='WAE OS')eff.innerHTML=`<strong>${main}</strong><small>WAE OS</small>`}
+  };
+  enforceRuntimeIdentity();
+  if(runtime)new MutationObserver(enforceRuntimeIdentity).observe(runtime,{childList:true,subtree:true,characterData:true});
+
   const settings=$('#settingsDialog');
   if(settings){
     const ep=$('#apiEndpoint');if(ep)ep.closest('label')?.remove();
@@ -79,14 +98,14 @@
     const foot=drawer.querySelector('.drawer-foot');if(foot)foot.innerHTML='<small>MEMORIA</small><div class="memory-meter"><span style="width:18%"></span></div><strong>ACTIVA</strong>';
   }
 
-  // Provider/model names are internal routing data and never product identity.
-  const providerMark=/\b(?:gemini|gpt|openai|claude|anthropic|grok|mistral|groq|openrouter|llama|qwen|deepseek|copilot)\b/i;
+  // Response metadata can expose telemetry, never provider/model identity.
+  const allowedMeta=/^(?:Universal Core|\d+(?:[.,]\d+)?\s*ms|\d+\s+fuentes?|\d+\s+memorias?)$/i;
   const sanitizeRuntimeMeta=()=>$$('.iu-answer-meta').forEach(meta=>{
     let hasCore=false;
     [...meta.querySelectorAll('span')].forEach(span=>{
       const value=(span.textContent||'').trim();
-      if(providerMark.test(value)){span.remove();return}
-      if(value==='Universal Core')hasCore=true;
+      if(!allowedMeta.test(value)){span.remove();return}
+      if(/^Universal Core$/i.test(value)){span.textContent='Universal Core';hasCore=true}
     });
     if(!hasCore){const badge=document.createElement('span');badge.textContent='Universal Core';meta.prepend(badge)}
   });
@@ -100,5 +119,5 @@
     if(document.querySelector(`script[data-src="${src}"]`)){done?.();return}
     const script=document.createElement('script');script.src=src;script.defer=true;script.dataset.src=src;script.onload=()=>done?.();document.head.appendChild(script);
   };
-  load('./voice-client.js',()=>load('./premium-v4.js',()=>load('./streaming-v2.js',sanitizeRuntimeMeta)));
+  load('./voice-client.js',()=>load('./premium-v4.js',()=>load('./streaming-v2.js',()=>{sanitizeRuntimeMeta();enforceRuntimeIdentity()})));
 })();
