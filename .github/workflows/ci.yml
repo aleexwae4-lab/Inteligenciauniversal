@@ -42,13 +42,14 @@ jobs:
             EXP6JS=$(curl -fsS --max-time 20 "$APP_URL/experience-v6.js?release=${GITHUB_SHA}" || true)
             EXP6CSS=$(curl -fsS --max-time 20 "$APP_URL/experience-v6.css?release=${GITHUB_SHA}" || true)
             if jq -e '.ok == true and .service == "wae-universal-runtime"' <<<"$HEALTH" >/dev/null 2>&1 \
-              && grep -q "wae-universal-v15-gpt-feel" <<<"$SW" \
-              && grep -q "routing_variant:'control'" <<<"$RUNTIME" \
-              && grep -q "createSSEParser" <<<"$SSE" \
-              && grep -q "speechSynthesis" <<<"$VOICE" \
-              && grep -q "playBrowser" <<<"$VOICE" \
-              && grep -q "v6-gpt-feel" <<<"$EXP6JS" \
-              && grep -q "message.assistant" <<<"$EXP6CSS"; then
+              && grep -Fq "wae-universal-v15-gpt-feel" <<<"$SW" \
+              && grep -Fq "candidate_promotable===true" <<<"$RUNTIME" \
+              && grep -Fq "?'candidate':'control'" <<<"$RUNTIME" \
+              && grep -Fq "createSSEParser" <<<"$SSE" \
+              && grep -Fq "speechSynthesis" <<<"$VOICE" \
+              && grep -Fq "playBrowser" <<<"$VOICE" \
+              && grep -Fq "v6-gpt-feel" <<<"$EXP6JS" \
+              && grep -Fq "message.assistant" <<<"$EXP6CSS"; then
               echo "Render Experience v6 invariants detected"
               jq '{version,ready,generativeReady,continuity}' <<<"$HEALTH"
               exit 0
@@ -70,11 +71,10 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          ORIGIN="$APP_URL"
-          CAP=$(curl -fsS --max-time 30 "$EDGE_URL" -H "content-type: application/json" -H "origin: $ORIGIN" --data '{"action":"capabilities"}')
+          CAP=$(curl -fsS --max-time 30 "$EDGE_URL" -H "content-type: application/json" -H "origin: $APP_URL" --data '{"action":"capabilities"}')
           jq -e '.success == true and .version == "1.8.0-universal-core-router-v21" and .router == "wae-adaptive-router-v21" and .canary_pct == 0 and .response_schema == "assistant-response/v1" and .adaptive_routing == true and .streaming_mode == "verified_only" and .structured_responses == true and .natural_voice == true and .observability == true' <<<"$CAP" >/dev/null
 
-          BOOT=$(curl -fsS --max-time 30 "$EDGE_URL" -H "content-type: application/json" -H "origin: $ORIGIN" --data '{"action":"bootstrap"}')
+          BOOT=$(curl -fsS --max-time 30 "$EDGE_URL" -H "content-type: application/json" -H "origin: $APP_URL" --data '{"action":"bootstrap"}')
           SID=$(jq -r '.session_id' <<<"$BOOT")
           SECRET=$(jq -r '.session_secret' <<<"$BOOT")
           test -n "$SID" && test "$SID" != "null"
@@ -82,23 +82,23 @@ jobs:
           echo "sid=$SID" >> "$GITHUB_OUTPUT"
           echo "secret=$SECRET" >> "$GITHUB_OUTPUT"
 
-          DEFAULT_PREVIEW=$(jq -n --arg sid "$SID" --arg secret "$SECRET" '{action:"route_preview",session_id:$sid,session_secret:$secret,message:"Hola",mode:"general",stream:false}' | curl -fsS --max-time 30 "$EDGE_URL" -H "content-type: application/json" -H "origin: $ORIGIN" --data-binary @-)
+          DEFAULT_PREVIEW=$(jq -n --arg sid "$SID" --arg secret "$SECRET" '{action:"route_preview",session_id:$sid,session_secret:$secret,message:"Hola",mode:"general",stream:false}' | curl -fsS --max-time 30 "$EDGE_URL" -H "content-type: application/json" -H "origin: $APP_URL" --data-binary @-)
           jq -e '.success == true and .router_variant == "control" and .task.path == "FAST" and (.candidates|length) >= 1 and ([.candidates[] | select(.health == "offline" or .circuit == "OPEN")] | length) == 0' <<<"$DEFAULT_PREVIEW" >/dev/null
 
-          CANDIDATE_PREVIEW=$(jq -n --arg sid "$SID" --arg secret "$SECRET" '{action:"route_preview",session_id:$sid,session_secret:$secret,message:"Hola",mode:"general",stream:false,routing_variant:"candidate"}' | curl -fsS --max-time 30 "$EDGE_URL" -H "content-type: application/json" -H "origin: $ORIGIN" --data-binary @-)
+          CANDIDATE_PREVIEW=$(jq -n --arg sid "$SID" --arg secret "$SECRET" '{action:"route_preview",session_id:$sid,session_secret:$secret,message:"Hola",mode:"general",stream:false,routing_variant:"candidate"}' | curl -fsS --max-time 30 "$EDGE_URL" -H "content-type: application/json" -H "origin: $APP_URL" --data-binary @-)
           jq -e '.success == true and .router_variant == "candidate" and (.candidates|length) >= 1 and ([.candidates[] | select(.health == "offline" or .circuit == "OPEN")] | length) == 0 and ([.candidates[] | select((.failure_debt|type)!="number")] | length) == 0' <<<"$CANDIDATE_PREVIEW" >/dev/null
 
-          CHAT=$(jq -n --arg sid "$SID" --arg secret "$SECRET" '{action:"chat",session_id:$sid,session_secret:$secret,message:"Responde solamente con la palabra OK.",mode:"general",web_enabled:false,stream:false}' | curl -fsS --max-time 55 "$EDGE_URL" -H "content-type: application/json" -H "origin: $ORIGIN" --data-binary @-)
+          CHAT=$(jq -n --arg sid "$SID" --arg secret "$SECRET" '{action:"chat",session_id:$sid,session_secret:$secret,message:"Responde solamente con la palabra OK.",mode:"general",web_enabled:false,stream:false}' | curl -fsS --max-time 55 "$EDGE_URL" -H "content-type: application/json" -H "origin: $APP_URL" --data-binary @-)
           jq -e '.success == true and .runtime == "1.8.0-universal-core-router-v21" and .router_variant == "control" and .response.schema == "assistant-response/v1" and .ttft_ms == null and (.speech_text | type == "string") and (.speech_text | length > 0) and (.components | length > 0) and (.message_id | type == "string")' <<<"$CHAT" >/dev/null
           CID=$(jq -r '.conversation_id' <<<"$CHAT")
 
-          LIST=$(jq -n --arg sid "$SID" --arg secret "$SECRET" '{action:"list_conversations",session_id:$sid,session_secret:$secret}' | curl -fsS --max-time 30 "$EDGE_URL" -H "content-type: application/json" -H "origin: $ORIGIN" --data-binary @-)
+          LIST=$(jq -n --arg sid "$SID" --arg secret "$SECRET" '{action:"list_conversations",session_id:$sid,session_secret:$secret}' | curl -fsS --max-time 30 "$EDGE_URL" -H "content-type: application/json" -H "origin: $APP_URL" --data-binary @-)
           jq -e '(.conversations | length) >= 1' <<<"$LIST" >/dev/null
 
-          GET=$(jq -n --arg sid "$SID" --arg secret "$SECRET" --arg cid "$CID" '{action:"get_conversation",session_id:$sid,session_secret:$secret,conversation_id:$cid}' | curl -fsS --max-time 30 "$EDGE_URL" -H "content-type: application/json" -H "origin: $ORIGIN" --data-binary @-)
+          GET=$(jq -n --arg sid "$SID" --arg secret "$SECRET" --arg cid "$CID" '{action:"get_conversation",session_id:$sid,session_secret:$secret,conversation_id:$cid}' | curl -fsS --max-time 30 "$EDGE_URL" -H "content-type: application/json" -H "origin: $APP_URL" --data-binary @-)
           jq -e '.success == true and (.messages | length) >= 2 and ([.messages[] | select(.role == "assistant" and .content_json.schema == "assistant-response/v1")] | length) >= 1' <<<"$GET" >/dev/null
 
-          LEARN=$(jq -n --arg sid "$SID" --arg secret "$SECRET" '{action:"learning_status",session_id:$sid,session_secret:$secret}' | curl -fsS --max-time 30 "$EDGE_URL" -H "content-type: application/json" -H "origin: $ORIGIN" --data-binary @-)
+          LEARN=$(jq -n --arg sid "$SID" --arg secret "$SECRET" '{action:"learning_status",session_id:$sid,session_secret:$secret}' | curl -fsS --max-time 30 "$EDGE_URL" -H "content-type: application/json" -H "origin: $APP_URL" --data-binary @-)
           jq -e '.success == true and .base_model_trained == false' <<<"$LEARN" >/dev/null
 
       - name: Verify SSE when available or fail closed when unavailable
@@ -125,5 +125,3 @@ jobs:
           ! grep -q '^event: response.error' /tmp/stream.txt
           COMPLETE=$(awk '/^event: response.complete/{getline; sub(/^data: /,""); print; exit}' /tmp/stream.txt)
           jq -e '.success == true and .stream_verified == true and .runtime == "1.8.0-universal-core-router-v21" and .router_variant == "candidate" and .response_schema == "assistant-response/v1" and (.ttft_ms|type=="number") and .ttft_ms > 0 and .ttft_ms < .latency_ms' <<<"$COMPLETE" >/dev/null
-          echo "Production SSE deltas: $DELTAS"
-          jq '{provider,model,latency_ms,ttft_ms,router_overhead_ms,routing_path,router_variant}' <<<"$COMPLETE"
