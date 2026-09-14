@@ -8,7 +8,7 @@
   window.__waeRuntimeAttachments=[];
 
   const edge=async(payload)=>{
-    const res=await nativeFetch(EDGE,{method:'POST',headers:{'content-type':'application/json','apikey':SUPABASE_KEY,'x-client-info':'wae-inteligencia-universal/1.1'},body:JSON.stringify(payload),cache:'no-store'});
+    const res=await nativeFetch(EDGE,{method:'POST',headers:{'content-type':'application/json','apikey':SUPABASE_KEY,'x-client-info':'wae-inteligencia-universal/1.2'},body:JSON.stringify(payload),cache:'no-store'});
     const data=await res.json().catch(()=>({success:false,error:`HTTP ${res.status}`}));
     if(!res.ok)throw Object.assign(new Error(data.error||`HTTP ${res.status}`),{status:res.status,data});
     return data;
@@ -34,10 +34,18 @@
       if(data.conversation_id)localStorage.setItem(CONVERSATION_ID,data.conversation_id);
       window.__iuLastRuntime=data;
       queueMicrotask(()=>{updateRuntimeCard(data);loadConversations().catch(()=>{})});
-      return new Response(JSON.stringify({reply:data.reply||'',runtime:data.runtime,provider:data.provider,model:data.model,web_sources:data.web_sources||[]}),{status:200,headers:{'content-type':'application/json','cache-control':'no-store'}});
+      return new Response(JSON.stringify({reply:data.reply||'',runtime:data.runtime,provider:data.provider,model:data.model,web_sources:data.web_sources||[]}),{status:200,headers:{'content-type':'application/json','cache-control':'no-store','x-wae-runtime':'supabase-primary'}});
     }catch(err){
-      const status=Number(err?.status)||503;
-      return new Response(JSON.stringify({error:err?.message||'supabase_runtime_unavailable'}),{status,headers:{'content-type':'application/json','cache-control':'no-store'}});
+      console.warn('[WAE IU] Supabase primary unavailable; using Render fallback',err?.message||err);
+      try{
+        const fallback=await nativeFetch(input,init);
+        const copy=document.querySelector('.v2-runtime-copy');
+        if(copy&&fallback.ok)copy.innerHTML='<strong>WAE Gateway · fallback activo</strong><small>Render → Supabase capability router</small>';
+        return fallback;
+      }catch(fallbackError){
+        const status=Number(err?.status)||503;
+        return new Response(JSON.stringify({error:'universal_runtime_unavailable',primary:err?.message||'supabase_runtime_unavailable',fallback:fallbackError?.message||'render_runtime_unavailable'}),{status,headers:{'content-type':'application/json','cache-control':'no-store'}});
+      }
     }
   };
 
@@ -57,19 +65,19 @@
     const copy=document.querySelector('.v2-runtime-copy'),eff=document.querySelector('.v2-efficiency');
     if(!copy)return;
     if(data?.model_count!==undefined){
-      const extra=[data.web_configured?'web':'',data.memory?'memoria':'',data.files?'archivos':''].filter(Boolean).join(' · ');
+      const extra=[data.web_configured?'web':'',data.memory?'memoria':'',data.files?'archivos':'',data.history?'historial':''].filter(Boolean).join(' · ');
       copy.innerHTML=`<strong>Supabase Universal Runtime · ${data.model_count} modelo${data.model_count===1?'':'s'}</strong><small>${extra||'backend persistente'} · sesiones cifradas</small>`;
-      if(eff)eff.innerHTML=`<strong>${data.model_count?'LIVE':'SETUP'}</strong><small>SUPABASE GPT</small>`;
+      if(eff)eff.innerHTML=`<strong>${data.model_count?'LIVE':'SETUP'}</strong><small>UNIVERSAL AI</small>`;
       document.documentElement.dataset.runtimeReady=data.model_count?'true':'false';
     }else if(data?.model){
       copy.innerHTML=`<strong>Supabase Runtime · ${escapeHtml(data.model)}</strong><small>${data.web_used?'web verificada · ':''}${data.memory_count||0} memorias recuperadas · ${data.latency_ms||0}ms</small>`;
-      if(eff)eff.innerHTML='<strong>LIVE</strong><small>SUPABASE GPT</small>';
+      if(eff)eff.innerHTML='<strong>LIVE</strong><small>UNIVERSAL AI</small>';
     }
   }
-  const escapeHtml=t=>String(t??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  const escapeHtml=t=>String(t??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot',"'":'&#39;'}[c]));
 
   async function loadHealth(){
-    try{const data=await edge({action:'health'});updateRuntimeCard(data)}catch{const copy=document.querySelector('.v2-runtime-copy');if(copy)copy.innerHTML='<strong>Supabase Runtime · reconectando</strong><small>La interfaz mantiene fallback local seguro</small>'}
+    try{const data=await edge({action:'health'});updateRuntimeCard(data)}catch{const copy=document.querySelector('.v2-runtime-copy');if(copy)copy.innerHTML='<strong>Supabase Runtime · reconectando</strong><small>Fallback Render → WAE Gateway disponible</small>'}
   }
 
   function ensureHistoryStyles(){
