@@ -1,12 +1,13 @@
 (()=>{
   const $=(s,r=document)=>r.querySelector(s);
   const PROFILE_KEY='iu.reasoningProfile';
+  const LIVE_CHAT_RENDER_VERSION='mobile-live-render/v1';
   const priorFetch=window.fetch.bind(window);
   let caps=null,perf=null,lastSync=0,activityTimer=null;
 
   const profile=()=>localStorage.getItem(PROFILE_KEY)==='deep'?'deep':'auto';
   const setProfile=value=>{localStorage.setItem(PROFILE_KEY,value==='deep'?'deep':'auto');document.documentElement.dataset.reasoningProfile=profile();renderProfile();syncLive(true)};
-  const safe=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  const safe=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot',"'":'&#39;'}[c]));
   const fmtMs=v=>Number.isFinite(Number(v))&&Number(v)>0?`${Math.round(Number(v))} ms`:'—';
   const isChatPost=(input,init={})=>{try{const raw=typeof input==='string'?input:input?.url,u=new URL(raw,location.href);return u.origin===location.origin&&u.pathname==='/api/chat'&&String(init.method||'GET').toUpperCase()==='POST'}catch{return false}};
   const history=()=>{try{return (JSON.parse(localStorage.getItem('wae.messages')||'[]')||[]).slice(-16)}catch{return[]}};
@@ -43,6 +44,30 @@
     clearTimeout(activityTimer);if(hold)activityTimer=setTimeout(()=>activity('Listo',false),hold);
   }
 
+  function keepLatestVisible(){
+    requestAnimationFrame(()=>{
+      const scroller=$('.chat-layout'),last=$('#messages .message:last-child');
+      if(scroller)scroller.scrollTop=scroller.scrollHeight;
+      last?.scrollIntoView({block:'end',inline:'nearest',behavior:'auto'});
+    });
+  }
+
+  function armLiveChatRender(){
+    const messages=$('#messages'),composer=$('#composer');if(!messages)return;
+    document.documentElement.dataset.uiInteractive='true';
+    const sync=()=>{
+      const hasUser=!!messages.querySelector('.message.user');
+      document.documentElement.classList.toggle('v8-conversation-live',hasUser);
+      document.documentElement.dataset.liveChatRender=LIVE_CHAT_RENDER_VERSION;
+      keepLatestVisible();
+    };
+    new MutationObserver(sync).observe(messages,{childList:true,subtree:false});
+    composer?.addEventListener('submit',()=>{activity('Enviando',true);queueMicrotask(keepLatestVisible)},true);
+    window.visualViewport?.addEventListener('resize',keepLatestVisible,{passive:true});
+    window.addEventListener('pageshow',keepLatestVisible,{passive:true});
+    sync();
+  }
+
   async function json(url){const r=await priorFetch(url,{headers:{accept:'application/json'},cache:'no-store'});if(!r.ok)throw new Error(`HTTP ${r.status}`);return r.json()}
   async function syncLive(force=false){
     if(!force&&Date.now()-lastSync<20000)return;
@@ -72,7 +97,7 @@
       if(!response.ok||typeof data.reply!=='string')return new Response(JSON.stringify(data),{status:response.status||502,headers:{'content-type':'application/json','cache-control':'no-store'}});
       window.__iuLastRuntime={...data,latency_ms:data.latencyMs||data.orchestration?.elapsedMs||null,memory_count:data.memory?.recalled||0};
       activity(`Síntesis Deep · ${data.orchestration?.specialists?.filter(x=>x.ok).length||0} especialistas`,false,3200);
-      syncLive(true).catch(()=>{});
+      syncLive(true).catch(()=>{});keepLatestVisible();
       if(window.__waeVoice?.enabled&&data.speech_text)window.__waeVoice.enqueue?.(String(data.speech_text)).catch(()=>{});
       return new Response(JSON.stringify(data),{status:200,headers:{'content-type':'application/json','cache-control':'no-store','x-wae-runtime':'universal-core-deep'}});
     }catch(error){activity(error?.name==='AbortError'?'Deep agotó su ventana':'Continuidad activada',false,3200);return new Response(JSON.stringify({error:'deep_runtime_unavailable',message:String(error?.message||error),recoverable:true}),{status:503,headers:{'content-type':'application/json','cache-control':'no-store'}})}
@@ -92,17 +117,17 @@
     if(name==='response.start')activity('Procesando',true);
     if(name==='reasoning.status')activity(String(data.status||'Procesando'),true);
     if(name==='source.add')activity('Verificando fuentes',true);
-    if(name==='content.delta')activity('Respondiendo',true);
-    if(name==='response.complete'){activity('Respuesta lista',false,2200);syncLive(true).catch(()=>{})}
+    if(name==='content.delta'){activity('Respondiendo',true);keepLatestVisible()}
+    if(name==='response.complete'){activity('Respuesta lista',false,2200);keepLatestVisible();syncLive(true).catch(()=>{})}
     if(name==='response.error')activity('Continuidad activada',false,2600);
   });
 
   const observer=new MutationObserver(()=>{if(document.documentElement.dataset.aiBusy==='true')activity(profile()==='deep'?'Orquestando':'Procesando',true)});
   observer.observe(document.documentElement,{attributes:true,attributeFilter:['data-ai-busy']});
-  document.addEventListener('visibilitychange',()=>{if(!document.hidden)syncLive(true).catch(()=>{})});
+  document.addEventListener('visibilitychange',()=>{if(!document.hidden){syncLive(true).catch(()=>{});keepLatestVisible()}});
   window.addEventListener('keydown',event=>{if((event.ctrlKey||event.metaKey)&&event.shiftKey&&event.key.toLowerCase()==='d'){event.preventDefault();setProfile(profile()==='deep'?'auto':'deep')}});
 
-  function init(){ensureDock();ensureReasoningControl();document.documentElement.dataset.reasoningProfile=profile();renderProfile();syncLive(true).catch(()=>{});setInterval(()=>{if(!document.hidden)syncLive(false).catch(()=>{})},30000)}
+  function init(){ensureDock();ensureReasoningControl();armLiveChatRender();document.documentElement.dataset.reasoningProfile=profile();renderProfile();syncLive(true).catch(()=>{});setInterval(()=>{if(!document.hidden)syncLive(false).catch(()=>{})},30000)}
   document.readyState==='loading'?document.addEventListener('DOMContentLoaded',init):init();
-  window.__waeV8={get profile(){return profile()},setProfile,sync:()=>syncLive(true)};
+  window.__waeV8={version:LIVE_CHAT_RENDER_VERSION,get profile(){return profile()},setProfile,sync:()=>syncLive(true),keepLatestVisible};
 })();
