@@ -31,3 +31,4 @@ as $$
 $$;
 
 revoke all on function public.search_universal_memory(text,text,int) from public;
+grant execute on function public.search_universal_memory(text,text,int) to service_role;
