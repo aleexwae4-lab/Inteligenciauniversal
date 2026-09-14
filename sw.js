@@ -1,5 +1,35 @@
-const CACHE='wae-universal-v5';
-const ASSETS=['./','./index.html','./styles.css','./polish-v2.css','./runtime-client.js','./app.js','./polish-v2.js','./manifest.webmanifest','./assets/logo.svg','./assets/logo-v2.svg'];
-self.addEventListener('install',event=>{event.waitUntil(caches.open(CACHE).then(cache=>cache.addAll(ASSETS)));self.skipWaiting()});
-self.addEventListener('activate',event=>{event.waitUntil(caches.keys().then(keys=>Promise.all(keys.filter(key=>key!==CACHE).map(key=>caches.delete(key)))).then(()=>self.clients.claim()))});
-self.addEventListener('fetch',event=>{const url=new URL(event.request.url);if(event.request.method!=='GET'||url.pathname.startsWith('/api/')||url.hostname.endsWith('.supabase.co'))return;event.respondWith(caches.match(event.request).then(cached=>cached||fetch(event.request).then(response=>{const copy=response.clone();caches.open(CACHE).then(cache=>cache.put(event.request,copy));return response}).catch(()=>caches.match('./index.html'))))});
+const CACHE='wae-universal-v6';
+const ASSETS=['./','./index.html','./styles.css','./polish-v2.css','./premium-v3.css','./runtime-client.js','./app.js','./polish-v2.js','./manifest.webmanifest','./assets/logo.svg','./assets/logo-v2.svg'];
+
+self.addEventListener('install',event=>{
+  event.waitUntil(caches.open(CACHE).then(cache=>cache.addAll(ASSETS)));
+  self.skipWaiting();
+});
+
+self.addEventListener('activate',event=>{
+  event.waitUntil(
+    caches.keys()
+      .then(keys=>Promise.all(keys.filter(key=>key!==CACHE).map(key=>caches.delete(key))))
+      .then(()=>self.clients.claim())
+  );
+});
+
+self.addEventListener('fetch',event=>{
+  const req=event.request,url=new URL(req.url);
+  if(req.method!=='GET'||url.pathname.startsWith('/api/')||url.hostname.endsWith('.supabase.co'))return;
+
+  if(req.mode==='navigate'){
+    event.respondWith(
+      fetch(req,{cache:'no-store'})
+        .then(response=>{const copy=response.clone();caches.open(CACHE).then(cache=>cache.put('./index.html',copy));return response})
+        .catch(()=>caches.match('./index.html'))
+    );
+    return;
+  }
+
+  event.respondWith(
+    fetch(req)
+      .then(response=>{if(response.ok&&url.origin===location.origin){const copy=response.clone();caches.open(CACHE).then(cache=>cache.put(req,copy))}return response})
+      .catch(()=>caches.match(req))
+  );
+});
