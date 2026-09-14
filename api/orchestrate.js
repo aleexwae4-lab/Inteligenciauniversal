@@ -4,6 +4,10 @@ import { allowRequest, originAllowed, applyHeaders, getClientIp } from '../lib/s
 
 const cleanHistory=(value)=>Array.isArray(value)?value.slice(-16).filter(x=>x&&['user','assistant'].includes(x.role)).map(x=>({role:x.role,text:String(x.text??x.content??'').slice(0,12000)})):[];
 const cleanAttachments=(value)=>Array.isArray(value)?value.slice(0,5):[];
+const publicResponse=(response={})=>({
+  ...response,
+  metadata:{...(response.metadata||{}),provider:undefined,model:undefined}
+});
 
 export default async function handler(req,res){
   applyHeaders(res);
@@ -50,6 +54,7 @@ export default async function handler(req,res){
     const elapsedMs=Date.now()-started;
     return res.status(200).json({
       ...final,
+      response:publicResponse(final.response),
       provider:undefined,
       model:undefined,
       fallbackFailures:undefined,
