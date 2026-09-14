@@ -48,17 +48,34 @@ test('Experience v5 provides live voice state and responsive interaction layer',
   assert.match(js, /v5-live-status/);
   assert.match(js, /v5-degraded/);
   assert.match(js, /scrollHeight/);
+  assert.match(js, /experience-v6\.css/);
+  assert.match(js, /experience-v6\.js/);
   assert.match(css, /100dvh/);
   assert.match(css, /v5MessageIn/);
   assert.match(css, /data-voice-state/);
   assert.match(css, /prefers-reduced-motion/);
 });
 
-test('PWA cache is invalidated for the Experience v5 voice release', async () => {
+test('Experience v6 makes the conversation primary and verifies voice activation', async () => {
+  const js = await read('experience-v6.js');
+  const css = await read('experience-v6.css');
+  assert.match(js, /v6-gpt-feel/);
+  assert.match(js, /enableVoiceIntent/);
+  assert.match(js, /Voz activada\./);
+  assert.match(js, /visualViewport/);
+  assert.match(css, /message\.assistant/);
+  assert.match(css, /background:transparent!important/);
+  assert.match(css, /runtime-bar\.v2-runtime\{display:none!important/);
+  assert.match(css, /composer/);
+});
+
+test('PWA cache is invalidated for the Experience v6 release', async () => {
   const sw = await read('sw.js');
-  assert.match(sw, /wae-universal-v14-experience-voice/);
+  assert.match(sw, /wae-universal-v15-gpt-feel/);
   assert.match(sw, /voice-client\.js/);
   assert.match(sw, /experience-v5\.js/);
   assert.match(sw, /experience-v5\.css/);
+  assert.match(sw, /experience-v6\.js/);
+  assert.match(sw, /experience-v6\.css/);
   assert.match(sw, /polish-v2\.js/);
 });
