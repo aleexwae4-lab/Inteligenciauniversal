@@ -135,6 +135,15 @@ async function serveFile(req, res, pathname) {
     .pipe(res);
 }
 
+function isMobileRequest(req, url) {
+  if (url.searchParams.get('desktop') === '1') return false;
+  if (url.searchParams.get('mobile') === '1') return true;
+  const ua = String(req.headers['user-agent'] || '').toLowerCase();
+  const mobileUa = /android|iphone|ipad|ipod|mobile|windows phone/.test(ua);
+  const clientMobile = String(req.headers['sec-ch-ua-mobile'] || '').includes('?1');
+  return mobileUa || clientMobile;
+}
+
 const server = createServer(async (req, res) => {
   const url = new URL(req.url || '/', `http://${req.headers.host || 'localhost'}`);
   const handler = apiRoutes.get(url.pathname);
@@ -145,6 +154,10 @@ const server = createServer(async (req, res) => {
     res.statusCode = 405;
     res.setHeader('Content-Type', 'application/json; charset=utf-8');
     return res.end(JSON.stringify({ error: 'method_not_allowed' }));
+  }
+
+  if (url.pathname === '/' && isMobileRequest(req, url)) {
+    return mobileHandler(req, res);
   }
 
   return serveFile(req, res, url.pathname);
