@@ -31,12 +31,12 @@ jobs:
       EDGE_URL: https://pbswcbryxawsmltyromd.supabase.co/functions/v1/wae-local-voice-demo-v61
       ORIGIN: https://wae-inteligencia-universal.onrender.com
     steps:
-      - name: Verify v1.7 control plane
+      - name: Verify v1.7.1 control plane
         shell: bash
         run: |
           set -euo pipefail
           CAP=$(curl -fsS --max-time 30 "$EDGE_URL" -H 'content-type: application/json' -H "origin: $ORIGIN" --data '{"action":"capabilities"}')
-          jq -e '.success == true and .version == "1.7.0-adaptive-router-proven-stream-v2" and .router == "wae-adaptive-router-v2" and .response_schema == "assistant-response/v1" and .streaming_mode == "verified_only" and .ttft == "real_first_delta_only"' <<<"$CAP" >/dev/null
+          jq -e '.success == true and .version == "1.7.1-adaptive-router-proven-stream-v2" and .router == "wae-adaptive-router-v2" and .response_schema == "assistant-response/v1" and .streaming_mode == "verified_only" and .ttft == "real_first_delta_only"' <<<"$CAP" >/dev/null
           echo "$CAP" | jq '{version,router,model_count,verified_streaming_models,streaming_mode,ttft}'
 
       - name: Bootstrap isolated canary session
@@ -73,7 +73,7 @@ jobs:
           : > /tmp/json-canary.ndjson
           for i in 1 2 3 4 5; do
             CHAT=$(jq -n --arg sid "$SID" --arg secret "$SECRET" --arg msg "Canary $i: responde solamente OK." '{action:"chat",session_id:$sid,session_secret:$secret,message:$msg,mode:"general",web_enabled:false,stream:false,routing_variant:"candidate"}' | curl -fsS --max-time 55 "$EDGE_URL" -H 'content-type: application/json' -H "origin: $ORIGIN" --data-binary @-)
-            jq -e '.success == true and .response_schema == "assistant-response/v1" and .runtime == "1.7.0-adaptive-router-proven-stream-v2" and .ttft_ms == null and (.reply|type=="string") and (.reply|length)>0' <<<"$CHAT" >/dev/null
+            jq -e '.success == true and .response_schema == "assistant-response/v1" and .runtime == "1.7.1-adaptive-router-proven-stream-v2" and .ttft_ms == null and (.reply|type=="string") and (.reply|length)>0' <<<"$CHAT" >/dev/null
             jq -c '{request_id,provider,model,latency_ms,ttft_ms,routing_path,router_variant,cost_microunits}' <<<"$CHAT" | tee -a /tmp/json-canary.ndjson
           done
 
@@ -85,8 +85,8 @@ jobs:
           SECRET: ${{ steps.boot.outputs.secret }}
         run: |
           set -euo pipefail
-          PROBE=$(jq -n --arg sid "$SID" --arg secret "$SECRET" '{action:"stream_probe",session_id:$sid,session_secret:$secret}' | curl -fsS --max-time 180 "$EDGE_URL" -H 'content-type: application/json' -H "origin: $ORIGIN" --data-binary @-)
-          jq -e '.success == true and .runtime == "1.7.0-adaptive-router-proven-stream-v2"' <<<"$PROBE" >/dev/null
+          PROBE=$(jq -n --arg sid "$SID" --arg secret "$SECRET" '{action:"stream_probe",session_id:$sid,session_secret:$secret}' | curl -fsS --max-time 240 "$EDGE_URL" -H 'content-type: application/json' -H "origin: $ORIGIN" --data-binary @-)
+          jq -e '.success == true and .runtime == "1.7.1-adaptive-router-proven-stream-v2" and (.candidates_considered|type=="number")' <<<"$PROBE" >/dev/null
           VERIFIED=$(jq -r '.verified' <<<"$PROBE")
           echo "verified=$VERIFIED" >> "$GITHUB_OUTPUT"
           echo "$PROBE" | jq .
