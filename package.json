@@ -1,10 +1,11 @@
 {
   "name": "wae-inteligencia-universal",
-  "version": "0.4.0",
+  "version": "0.5.0",
   "private": true,
   "type": "module",
   "engines": { "node": ">=20" },
   "scripts": {
-    "check": "node --check api/chat.js && node --check api/health.js && node --check api/capabilities.js && node --check api/tasks.js && node --check lib/providers.js && node --check lib/tools.js && node --check lib/memory.js && node --check lib/agents.js && node --check lib/runtime.js && node --check lib/security.js && node --check runtime-client.js"
+    "start": "node server.js",
+    "check": "node --check server.js && node --check api/chat.js && node --check api/health.js && node --check api/capabilities.js && node --check api/tasks.js && node --check lib/providers.js && node --check lib/tools.js && node --check lib/memory.js && node --check lib/agents.js && node --check lib/runtime.js && node --check lib/security.js && node --check runtime-client.js"
   }
 }
