@@ -1,4 +1,4 @@
-import { executeMission } from '../lib/runtime.js';
+import { executeMission, publicMissionResult } from '../lib/runtime.js';
 import { allowRequest, originAllowed, applyHeaders, getClientIp } from '../lib/security.js';
 
 export default async function handler(req,res) {
@@ -9,9 +9,10 @@ export default async function handler(req,res) {
   try {
     const body = req.body || {};
     const result = await executeMission({ ...body, userKey:body.userKey || body.sessionId || getClientIp(req) });
-    return res.status(200).json(result);
+    return res.status(200).json(publicMissionResult(result));
   } catch (error) {
     const status = error.statusCode || (error.code === 'NO_PROVIDER' ? 503 : 502);
-    return res.status(status).json({ error:error.code || 'runtime_error', message:String(error.message || error), failures:error.failures || undefined });
+    const message = status < 500 ? String(error.message || error) : 'No pude completar la solicitud en este intento.';
+    return res.status(status).json({ error:error.code || 'runtime_error', message });
   }
 }
