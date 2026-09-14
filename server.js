@@ -9,6 +9,7 @@ import performanceHandler from './api/performance.js';
 import healthHandler from './api/health.js';
 import capabilitiesHandler from './api/capabilities.js';
 import tasksHandler from './api/tasks.js';
+import orchestrateHandler from './api/orchestrate.js';
 
 const ROOT = fileURLToPath(new URL('.', import.meta.url));
 const PORT = Number(process.env.PORT || 10000);
@@ -22,6 +23,7 @@ const apiRoutes = new Map([
   ['/api/health', healthHandler],
   ['/api/capabilities', capabilitiesHandler],
   ['/api/tasks', tasksHandler],
+  ['/api/orchestrate', orchestrateHandler],
 ]);
 
 const contentTypes = {
