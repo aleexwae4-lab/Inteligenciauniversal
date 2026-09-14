@@ -102,32 +102,48 @@ test('Experience v8 makes the primary interface live and exposes bounded Deep or
   assert.match(server, /\/api\/orchestrate/);
 });
 
-test('mobile live chat stays inside the visual viewport and renders new turns immediately', async () => {
+test('mobile live chat stays inside the viewport without losing the send control', async () => {
   const js = await read('experience-v8.js');
   const css = await read('experience-v8.css');
-  assert.match(js, /mobile-live-render\/v1/);
   assert.match(js, /armLiveChatRender/);
   assert.match(js, /MutationObserver/);
   assert.match(js, /keepLatestVisible/);
   assert.match(js, /scrollIntoView/);
   assert.match(js, /visualViewport/);
+  assert.match(css, /mobile-live-render\/v2/);
+  assert.match(css, /grid-template-columns:minmax\(0,1fr\)/);
+  assert.match(css, /max-width:min\(900px,calc\(100vw - 16px\)\)/);
+  assert.match(css, /\.iu-answer-actions\{[^}]*overflow-x:auto!important/);
+  assert.match(css, /\.send-btn\{[^}]*visibility:visible!important/);
   assert.match(css, /max-height:100dvh!important/);
-  assert.match(css, /grid-template-rows:auto minmax\(0,1fr\) auto auto auto auto!important/);
-  assert.match(css, /overflow-y:auto!important/);
-  assert.match(css, /overscroll-behavior-y:contain!important/);
+  assert.match(css, /overflow-x:hidden!important/);
 });
 
-test('PWA cache is invalidated for the mobile live chat release', async () => {
+test('critical interaction layers are loaded deterministically by the HTML shell', async () => {
+  const html = await read('index.html');
+  assert.match(html, /<link rel="stylesheet" href="\.\/experience-v8\.css" data-wae-v8="true"/);
+  assert.match(html, /<script src="\.\/experience-v8\.js" defer data-src="\.\/experience-v8\.js"><\/script>/);
+  assert.match(html, /<script src="\.\/interaction-v9\.js" defer><\/script>/);
+  assert.match(html, /<script src="\.\/premium-v4\.js" defer data-src="\.\/premium-v4\.js"><\/script>/);
+});
+
+test('interaction v9 repairs a missing send control and exposes recovery for stranded turns', async () => {
+  const js = await read('interaction-v9.js');
+  assert.match(js, /interaction-v9\/v1/);
+  assert.match(js, /ensureSendButton/);
+  assert.match(js, /dataset\.sendReady='true'/);
+  assert.match(js, /La última solicitud quedó pendiente\./);
+  assert.match(js, /Reintentar respuesta/);
+  assert.match(js, /requestSubmit\(\)/);
+  assert.match(js, /last\.role!==['"]user['"]/);
+});
+
+test('PWA cache is invalidated for deterministic mobile interaction release', async () => {
   const sw = await read('sw.js');
-  assert.match(sw, /v18-live-chat-render/);
+  assert.match(sw, /v19-mobile-interaction/);
   assert.match(sw, /voice-client\.js/);
-  assert.match(sw, /experience-v5\.js/);
-  assert.match(sw, /experience-v5\.css/);
-  assert.match(sw, /experience-v6\.js/);
-  assert.match(sw, /experience-v6\.css/);
   assert.match(sw, /experience-v7\.js/);
-  assert.match(sw, /experience-v7\.css/);
   assert.match(sw, /experience-v8\.js/);
-  assert.match(sw, /experience-v8\.css/);
+  assert.match(sw, /interaction-v9\.js/);
   assert.match(sw, /polish-v2\.js/);
 });
