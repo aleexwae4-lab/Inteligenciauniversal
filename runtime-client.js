@@ -24,7 +24,7 @@
   const sseModule=()=>sseModulePromise||(sseModulePromise=import('./lib/sse-events.js'));
 
   const edge=async(payload,{signal}={})=>{
-    const res=await nativeFetch(EDGE,{method:'POST',headers:{'content-type':'application/json','apikey':SUPABASE_KEY,'x-client-info':'wae-inteligencia-universal/2.0'},body:JSON.stringify(payload),cache:'no-store',signal});
+    const res=await nativeFetch(EDGE,{method:'POST',headers:{'content-type':'application/json','apikey':SUPABASE_KEY,'x-client-info':'wae-inteligencia-universal/2.1'},body:JSON.stringify(payload),cache:'no-store',signal});
     const data=await res.json().catch(()=>({success:false,error:`HTTP ${res.status}`}));
     if(!res.ok)throw Object.assign(new Error(data.error||`HTTP ${res.status}`),{status:res.status,data});
     return data;
@@ -37,7 +37,7 @@
   }).catch(err=>{bootPromise=null;throw err}));
 
   async function streamingAllowed(){
-    if(!runtimeCaps||Number(runtimeCaps.verified_streaming_models||0)<1||runtimeCaps.streaming_mode!=='verified_only')return false;
+    if(!runtimeCaps||runtimeCaps.stream_continuity!==true||Number(runtimeCaps.verified_streaming_models||0)<1||runtimeCaps.streaming_mode!=='verified_only')return false;
     const {streamingCanaryEligible}=await sseModule();
     return streamingCanaryEligible({sessionId:localStorage.getItem(SESSION_ID)||'',verifiedModels:Number(runtimeCaps.verified_streaming_models||0),canaryPct:Number(runtimeCaps.canary_pct||25),override:localStorage.getItem(STREAM_OVERRIDE)||''});
   }
@@ -60,7 +60,7 @@
       emit(event,data);
     });
     try{
-      const res=await nativeFetch(EDGE,{method:'POST',headers:{'content-type':'application/json','accept':'text/event-stream','apikey':SUPABASE_KEY,'x-client-info':'wae-streaming-client/2.0'},body:JSON.stringify({...payload,stream:true,routing_variant:'candidate'}),cache:'no-store',signal:controller.signal});
+      const res=await nativeFetch(EDGE,{method:'POST',headers:{'content-type':'application/json','accept':'text/event-stream','apikey':SUPABASE_KEY,'x-client-info':'wae-streaming-client/2.1'},body:JSON.stringify({...payload,stream:true,routing_variant:'candidate'}),cache:'no-store',signal:controller.signal});
       if(!res.ok)throw Object.assign(new Error(`stream_http_${res.status}`),{status:res.status,serverStarted});
       if(!(res.headers.get('content-type')||'').toLowerCase().includes('text/event-stream')||!res.body)throw Object.assign(new Error('stream_transport_invalid'),{serverStarted});
       const reader=res.body.getReader(),decoder=new TextDecoder();
@@ -86,7 +86,7 @@
   window.__iuStream={
     cancel(){if(!currentStream?.canCancel)return false;currentStream.userCancelled=true;currentStream.controller.abort('user_cancelled');return true},
     get active(){return !!currentStream},get canCancel(){return currentStream?.canCancel===true},
-    get enabled(){return Number(runtimeCaps?.verified_streaming_models||0)>0},get capabilities(){return runtimeCaps}
+    get enabled(){return Number(runtimeCaps?.verified_streaming_models||0)>0&&runtimeCaps?.stream_continuity===true},get capabilities(){return runtimeCaps}
   };
 
   function isLocalRuntime(input){try{const raw=typeof input==='string'?input:input?.url,url=new URL(raw,location.href);return url.origin===location.origin&&url.pathname==='/api/chat'}catch{return false}}
@@ -98,7 +98,7 @@
     setThinking(true,String(incoming.mode||'')==='research'?'Investigando':'Procesando');
     try{
       await bootstrap();
-      const payload={action:'chat',...sessionPayload(),conversation_id:localStorage.getItem(CONVERSATION_ID)||null,message:String(incoming.message||''),mode:String(incoming.mode||localStorage.getItem('wae.mode')||'general'),web_enabled:incoming.web_enabled===true||String(incoming.mode||'')==='research',attachments:window.__waeRuntimeAttachments||[]};
+      const payload={action:'chat',...sessionPayload(),conversation_id:localStorage.getItem(CONVERSATION_ID)||null,message:String(incoming.message||''),mode:String(incoming.mode||localStorage.getItem('wae.mode')||'general'),web_enabled:incoming.web_enabled===true||String(incoming.mode||'')==='research',attachments:window.__waeRuntimeAttachments||[],routing_variant:'control'};
       let data;
       if(await streamingAllowed())data=await streamChat(payload,init.signal);
       else data=await edge(payload,{signal:init.signal});
@@ -124,7 +124,7 @@
 
   async function readAttachments(files){const allowed=/\.(txt|md|markdown|json|csv|tsv|js|mjs|cjs|ts|tsx|jsx|css|html|htm|xml|yaml|yml|py|java|go|rs|sql|sh|log)$/i,output=[];for(const file of [...files].slice(0,5)){const looksText=file.type.startsWith('text/')||file.type.includes('json')||file.type.includes('xml')||allowed.test(file.name);if(!looksText)continue;output.push({name:file.name,type:file.type||'text/plain',text:(await file.text()).slice(0,120000)})}window.__waeRuntimeAttachments=output;window.toast?.(output.length?`${output.length} archivo${output.length===1?'':'s'} listo${output.length===1?'':'s'} para IA`:'Ese formato todavía no se procesa como texto')}
 
-  function updateRuntimeCard(data){const copy=document.querySelector('.v2-runtime-copy'),eff=document.querySelector('.v2-efficiency');if(!copy)return;if(data?.model_count!==undefined){const verified=Number(data.verified_streaming_models||0),extra=[data.web_search?'web':'',data.memory?'memoria':'',data.adaptive_routing?'router adaptativo':'',verified?`${verified} stream verificado`:''].filter(Boolean).join(' · ');copy.innerHTML=`<strong>Universal Runtime · ${data.model_count} modelo${data.model_count===1?'':'s'}</strong><small>${extra||'backend persistente'}</small>`;if(eff)eff.innerHTML=`<strong>${data.model_count?'LIVE':'SETUP'}</strong><small>${verified?'SSE READY':'UNIVERSAL AI'}</small>`;document.documentElement.dataset.runtimeReady=data.model_count?'true':'false'}else if(data?.model){const ttft=Number(data.client_ttft_ms||data.ttft_ms);copy.innerHTML=`<strong>${escapeHtml(data.model)}</strong><small>${data.web_used?'web · ':''}${data.memory_count||0} memorias · ${data.latency_ms||0}ms${Number.isFinite(ttft)&&ttft>0?` · TTFT ${ttft}ms`:''}</small>`;if(eff)eff.innerHTML='<strong>LIVE</strong><small>UNIVERSAL AI</small>'}}
+  function updateRuntimeCard(data){const copy=document.querySelector('.v2-runtime-copy'),eff=document.querySelector('.v2-efficiency');if(!copy)return;if(data?.model_count!==undefined){const verified=Number(data.verified_streaming_models||0),continuity=data.stream_continuity===true,extra=[data.web_search?'web':'',data.memory?'memoria':'',data.adaptive_routing?'router adaptativo':'',verified?`${verified} stream verificado`:'',verified&&!continuity?'stream en espera segura':''].filter(Boolean).join(' · ');copy.innerHTML=`<strong>Universal Runtime · ${data.model_count} modelo${data.model_count===1?'':'s'}</strong><small>${extra||'backend persistente'}</small>`;if(eff)eff.innerHTML=`<strong>${data.model_count?'LIVE':'SETUP'}</strong><small>${verified&&continuity?'SSE READY':'UNIVERSAL AI'}</small>`;document.documentElement.dataset.runtimeReady=data.model_count?'true':'false'}else if(data?.model){const ttft=Number(data.client_ttft_ms||data.ttft_ms);copy.innerHTML=`<strong>${escapeHtml(data.model)}</strong><small>${data.web_used?'web · ':''}${data.memory_count||0} memorias · ${data.latency_ms||0}ms${Number.isFinite(ttft)&&ttft>0?` · TTFT ${ttft}ms`:''}</small>`;if(eff)eff.innerHTML='<strong>LIVE</strong><small>UNIVERSAL AI</small>'}}
   const escapeHtml=t=>String(t??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
   async function loadHealth(){try{const data=await edge({action:'health'});runtimeCaps=data;updateRuntimeCard(data)}catch{runtimeCaps=null;const copy=document.querySelector('.v2-runtime-copy');if(copy)copy.innerHTML='<strong>Runtime · reconectando</strong><small>continuidad automática activa</small>'}}
 
