@@ -59,14 +59,14 @@ jobs:
           HEALTH=$(curl -fsS --max-time 30 "$APP_URL/api/health")
           jq -e '.ok == true and .ready == true' <<<"$HEALTH" >/dev/null
 
-      - name: Verify adaptive runtime and stable control contract
+      - name: Verify v21 runtime and fail-closed control contract
         id: runtime
         shell: bash
         run: |
           set -euo pipefail
           ORIGIN="$APP_URL"
           CAP=$(curl -fsS --max-time 30 "$EDGE_URL" -H "content-type: application/json" -H "origin: $ORIGIN" --data '{"action":"capabilities"}')
-          jq -e '.success == true and (.version | startswith("1.7.")) and .router == "wae-adaptive-router-v2" and .response_schema == "assistant-response/v1" and .adaptive_routing == true and .streaming_mode == "verified_only" and .structured_responses == true and .natural_voice == true and .observability == true' <<<"$CAP" >/dev/null
+          jq -e '.success == true and .version == "1.8.0-universal-core-router-v21" and .router == "wae-adaptive-router-v21" and .canary_pct == 0 and .response_schema == "assistant-response/v1" and .adaptive_routing == true and .streaming_mode == "verified_only" and .structured_responses == true and .natural_voice == true and .observability == true' <<<"$CAP" >/dev/null
 
           BOOT=$(curl -fsS --max-time 30 "$EDGE_URL" -H "content-type: application/json" -H "origin: $ORIGIN" --data '{"action":"bootstrap"}')
           SID=$(jq -r '.session_id' <<<"$BOOT")
@@ -76,11 +76,14 @@ jobs:
           echo "sid=$SID" >> "$GITHUB_OUTPUT"
           echo "secret=$SECRET" >> "$GITHUB_OUTPUT"
 
-          PREVIEW=$(jq -n --arg sid "$SID" --arg secret "$SECRET" '{action:"route_preview",session_id:$sid,session_secret:$secret,message:"Hola",mode:"general",stream:false,routing_variant:"control"}' | curl -fsS --max-time 30 "$EDGE_URL" -H "content-type: application/json" -H "origin: $ORIGIN" --data-binary @-)
-          jq -e '.success == true and .task.path == "FAST" and (.candidates|length) >= 1 and ([.candidates[] | select(.health == "offline" or .circuit == "OPEN")] | length) == 0' <<<"$PREVIEW" >/dev/null
+          DEFAULT_PREVIEW=$(jq -n --arg sid "$SID" --arg secret "$SECRET" '{action:"route_preview",session_id:$sid,session_secret:$secret,message:"Hola",mode:"general",stream:false}' | curl -fsS --max-time 30 "$EDGE_URL" -H "content-type: application/json" -H "origin: $ORIGIN" --data-binary @-)
+          jq -e '.success == true and .router_variant == "control" and .task.path == "FAST" and (.candidates|length) >= 1 and ([.candidates[] | select(.health == "offline" or .circuit == "OPEN")] | length) == 0' <<<"$DEFAULT_PREVIEW" >/dev/null
 
-          CHAT=$(jq -n --arg sid "$SID" --arg secret "$SECRET" '{action:"chat",session_id:$sid,session_secret:$secret,message:"Responde solamente con la palabra OK.",mode:"general",web_enabled:false,stream:false,routing_variant:"control"}' | curl -fsS --max-time 55 "$EDGE_URL" -H "content-type: application/json" -H "origin: $ORIGIN" --data-binary @-)
-          jq -e '.success == true and .response.schema == "assistant-response/v1" and .ttft_ms == null and (.speech_text | type == "string") and (.speech_text | length > 0) and (.components | length > 0) and (.message_id | type == "string")' <<<"$CHAT" >/dev/null
+          CANDIDATE_PREVIEW=$(jq -n --arg sid "$SID" --arg secret "$SECRET" '{action:"route_preview",session_id:$sid,session_secret:$secret,message:"Hola",mode:"general",stream:false,routing_variant:"candidate"}' | curl -fsS --max-time 30 "$EDGE_URL" -H "content-type: application/json" -H "origin: $ORIGIN" --data-binary @-)
+          jq -e '.success == true and .router_variant == "candidate" and (.candidates|length) >= 1 and ([.candidates[] | select(.health == "offline" or .circuit == "OPEN")] | length) == 0 and ([.candidates[] | select((.failure_debt|type)!="number")] | length) == 0' <<<"$CANDIDATE_PREVIEW" >/dev/null
+
+          CHAT=$(jq -n --arg sid "$SID" --arg secret "$SECRET" '{action:"chat",session_id:$sid,session_secret:$secret,message:"Responde solamente con la palabra OK.",mode:"general",web_enabled:false,stream:false}' | curl -fsS --max-time 55 "$EDGE_URL" -H "content-type: application/json" -H "origin: $ORIGIN" --data-binary @-)
+          jq -e '.success == true and .runtime == "1.8.0-universal-core-router-v21" and .router_variant == "control" and .response.schema == "assistant-response/v1" and .ttft_ms == null and (.speech_text | type == "string") and (.speech_text | length > 0) and (.components | length > 0) and (.message_id | type == "string")' <<<"$CHAT" >/dev/null
           CID=$(jq -r '.conversation_id' <<<"$CHAT")
 
           LIST=$(jq -n --arg sid "$SID" --arg secret "$SECRET" '{action:"list_conversations",session_id:$sid,session_secret:$secret}' | curl -fsS --max-time 30 "$EDGE_URL" -H "content-type: application/json" -H "origin: $ORIGIN" --data-binary @-)
@@ -100,7 +103,7 @@ jobs:
         run: |
           set -euo pipefail
           PROBE=$(jq -n --arg sid "$SID" --arg secret "$SECRET" '{action:"stream_probe",session_id:$sid,session_secret:$secret}' | curl -fsS --max-time 240 "$EDGE_URL" -H 'content-type: application/json' -H "origin: $APP_URL" --data-binary @-)
-          jq -e '.success == true and (.verified|type=="boolean")' <<<"$PROBE" >/dev/null
+          jq -e '.success == true and .runtime == "1.8.0-universal-core-router-v21" and .router == "wae-adaptive-router-v21" and (.verified|type=="boolean")' <<<"$PROBE" >/dev/null
           VERIFIED=$(jq -r '.verified' <<<"$PROBE")
           if [ "$VERIFIED" != "true" ]; then
             echo "No SSE transport verified in this run; progressive client remains fail-closed by design."
@@ -108,13 +111,13 @@ jobs:
           fi
           jq -e '([.results[] | select(.verified == true and (.deltas|tonumber) >= 1 and (.ttft_ms|type=="number") and .ttft_ms > 0)] | length) >= 1' <<<"$PROBE" >/dev/null
 
-          jq -n --arg sid "$SID" --arg secret "$SECRET" '{action:"chat",session_id:$sid,session_secret:$secret,message:"Explica en tres frases breves por qué medir TTFT mejora la experiencia de una interfaz de IA.",mode:"general",web_enabled:false,stream:true,routing_variant:"candidate"}' > /tmp/request.json
+          jq -n --arg sid "$SID" --arg secret "$SECRET" '{action:"chat",session_id:$sid,session_secret:$secret,message:"Explica en tres frases breves por qué medir TTFT mejora la experiencia de una interfaz.",mode:"general",web_enabled:false,stream:true,routing_variant:"candidate"}' > /tmp/request.json
           curl -fsS -N --max-time 90 "$EDGE_URL" -H 'content-type: application/json' -H "origin: $APP_URL" --data-binary @/tmp/request.json > /tmp/stream.txt
           DELTAS=$(grep -c '^event: content.delta' /tmp/stream.txt || true)
           test "$DELTAS" -ge 2
           grep -q '^event: response.complete' /tmp/stream.txt
           ! grep -q '^event: response.error' /tmp/stream.txt
           COMPLETE=$(awk '/^event: response.complete/{getline; sub(/^data: /,""); print; exit}' /tmp/stream.txt)
-          jq -e '.success == true and .stream_verified == true and .response_schema == "assistant-response/v1" and (.ttft_ms|type=="number") and .ttft_ms > 0 and .ttft_ms < .latency_ms' <<<"$COMPLETE" >/dev/null
+          jq -e '.success == true and .stream_verified == true and .runtime == "1.8.0-universal-core-router-v21" and .router_variant == "candidate" and .response_schema == "assistant-response/v1" and (.ttft_ms|type=="number") and .ttft_ms > 0 and .ttft_ms < .latency_ms' <<<"$COMPLETE" >/dev/null
           echo "Production SSE deltas: $DELTAS"
           jq '{provider,model,latency_ms,ttft_ms,router_overhead_ms,routing_path,router_variant}' <<<"$COMPLETE"
