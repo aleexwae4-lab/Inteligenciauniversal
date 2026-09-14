@@ -102,9 +102,24 @@ test('Experience v8 makes the primary interface live and exposes bounded Deep or
   assert.match(server, /\/api\/orchestrate/);
 });
 
-test('PWA cache is invalidated for the Experience v8 release', async () => {
+test('mobile live chat stays inside the visual viewport and renders new turns immediately', async () => {
+  const js = await read('experience-v8.js');
+  const css = await read('experience-v8.css');
+  assert.match(js, /mobile-live-render\/v1/);
+  assert.match(js, /armLiveChatRender/);
+  assert.match(js, /MutationObserver/);
+  assert.match(js, /keepLatestVisible/);
+  assert.match(js, /scrollIntoView/);
+  assert.match(js, /visualViewport/);
+  assert.match(css, /max-height:100dvh!important/);
+  assert.match(css, /grid-template-rows:auto minmax\(0,1fr\) auto auto auto auto!important/);
+  assert.match(css, /overflow-y:auto!important/);
+  assert.match(css, /overscroll-behavior-y:contain!important/);
+});
+
+test('PWA cache is invalidated for the mobile live chat release', async () => {
   const sw = await read('sw.js');
-  assert.match(sw, /v17-living-core/);
+  assert.match(sw, /v18-live-chat-render/);
   assert.match(sw, /voice-client\.js/);
   assert.match(sw, /experience-v5\.js/);
   assert.match(sw, /experience-v5\.css/);
