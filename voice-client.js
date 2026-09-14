@@ -17,5 +17,6 @@
   async function setEnabled(value){enabled=!!value;localStorage.setItem(VOICE_ENABLED,String(enabled));if(!enabled)stop();const s=session();if(s.session_id&&s.session_secret){fetch(VOICE_ENDPOINT,{method:'POST',headers:{'content-type':'application/json','apikey':SUPABASE_KEY},body:JSON.stringify({action:'preferences',...s,set:{voice_enabled:enabled,voice_name:voice}}),cache:'no-store'}).catch(()=>{})}return enabled}
   async function toggle(){const value=await setEnabled(!enabled);toast(value?'Voz automática activada':'Voz automática desactivada');return value}
   async function setVoice(name){voice=String(name||'Kore');localStorage.setItem(VOICE_NAME,voice);return voice}
+  if(localStorage.getItem('wae.autoVoice')!=='false')document.querySelector('#voiceBtn')?.click();
   window.__waeVoice={speak,stop,toggle,unlock,setEnabled,setVoice,get enabled(){return enabled},get voice(){return voice}};
 })();
