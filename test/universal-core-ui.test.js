@@ -85,9 +85,26 @@ test('Experience v7 converts static navigation into runtime-backed modules', asy
   assert.match(shell, /experience-v7\.js/);
 });
 
-test('PWA cache is invalidated for the Experience v7 release', async () => {
+test('Experience v8 makes the primary interface live and exposes bounded Deep orchestration', async () => {
+  const js = await read('experience-v8.js');
+  const css = await read('experience-v8.css');
+  const shell = await read('polish-v2.js');
+  const server = await read('server.js');
+  assert.match(js, /v8LiveDock/);
+  assert.match(js, /iu\.reasoningProfile/);
+  assert.match(js, /\/api\/orchestrate/);
+  assert.match(js, /Planificando misión/);
+  assert.match(js, /wae:stream-event/);
+  assert.match(css, /\.v8-live-dock/);
+  assert.match(css, /data-reasoning-profile/);
+  assert.match(shell, /experience-v8\.css/);
+  assert.match(shell, /experience-v8\.js/);
+  assert.match(server, /\/api\/orchestrate/);
+});
+
+test('PWA cache is invalidated for the Experience v8 release', async () => {
   const sw = await read('sw.js');
-  assert.match(sw, /v16-dynamic-core/);
+  assert.match(sw, /v17-living-core/);
   assert.match(sw, /voice-client\.js/);
   assert.match(sw, /experience-v5\.js/);
   assert.match(sw, /experience-v5\.css/);
@@ -95,5 +112,7 @@ test('PWA cache is invalidated for the Experience v7 release', async () => {
   assert.match(sw, /experience-v6\.css/);
   assert.match(sw, /experience-v7\.js/);
   assert.match(sw, /experience-v7\.css/);
+  assert.match(sw, /experience-v8\.js/);
+  assert.match(sw, /experience-v8\.css/);
   assert.match(sw, /polish-v2\.js/);
 });
