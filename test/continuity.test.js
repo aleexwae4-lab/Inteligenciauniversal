@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { continuityReply, extractContinuityFacts, openAIContinuityResponse } from '../lib/continuity.js';
+import { executeMission } from '../lib/runtime.js';
 
 test('continuity returns exact OK contract without external generation', () => {
   const reply = continuityReply([
@@ -11,7 +12,7 @@ test('continuity returns exact OK contract without external generation', () => {
 });
 
 test('continuity extracts remembered structured facts generically', () => {
-  const context = 'RELEVANT MEMORY: proyecto ZEPHYR; base de datos CockroachDB; región São Paulo; objetivo P95 180 ms.';
+  const context = 'MEMORIA RECUPERADA: proyecto ZEPHYR; base de datos CockroachDB; región São Paulo; objetivo P95 180 ms.';
   assert.deepEqual(extractContinuityFacts(context), {
     project: 'ZEPHYR',
     database: 'CockroachDB',
@@ -31,6 +32,16 @@ test('continuity extracts remembered structured facts generically', () => {
   });
 });
 
+test('continuity never dumps raw private memory when no structured fact was requested', () => {
+  const secret = 'PRIVATE-MEMORY-DO-NOT-LEAK-9271';
+  const reply = continuityReply([
+    { role: 'system', content: `MEMORIA RECUPERADA (contexto previo potencialmente relevante):\n1. ${secret}` },
+    { role: 'user', content: 'Recuerda mi memoria.' },
+  ]);
+  assert.match(reply, /no expone el bloque bruto de memoria/i);
+  assert.doesNotMatch(reply, new RegExp(secret));
+});
+
 test('continuity serves the chat completion contract used by the adaptive router', () => {
   const payload = openAIContinuityResponse({ messages: [{ role: 'user', content: '100 x 200' }] });
   assert.equal(payload.object, 'chat.completion');
@@ -38,4 +49,22 @@ test('continuity serves the chat completion contract used by the adaptive router
   assert.equal(payload.choices[0].message.content, '20000');
   assert.equal(payload.continuity.external_provider, false);
   assert.equal(payload.continuity.cost_usd, 0);
+  assert.equal(payload.continuity.raw_memory_exposed, false);
+});
+
+test('runtime exposes an explicit deterministic continuity lane with AssistantResponse', async () => {
+  const result = await executeMission({
+    message:'Conserva la evidencia del archivo.',
+    provider:'continuity_core',
+    sessionId:'continuity-unit-test',
+    history:[],
+    attachments:[{name:'estado.txt',type:'text/plain',text:'Estado de prueba: 4200 MXN'}],
+    tools:[],
+  });
+  assert.equal(result.provider,'universal_continuity_core');
+  assert.equal(result.model,'universal-core-continuity-v1');
+  assert.equal(result.degraded,true);
+  assert.equal(result.response.schema,'assistant-response/v1');
+  assert.equal(result.response.metadata.degraded,true);
+  assert.match(result.reply,/4200 MXN/);
 });
