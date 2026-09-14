@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="WAE">
+  <defs><linearGradient id="g" x1="8" y1="6" x2="56" y2="58" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#61f2d8"/><stop offset="1" stop-color="#35d6bb"/></linearGradient></defs>
+  <path d="M32 3.5 56.5 17.8v28.4L32 60.5 7.5 46.2V17.8L32 3.5Z" fill="url(#g)"/>
+  <path d="M22 22h5.5l2.5 14 2-8.5 2 8.5 2.5-14H42l-4.8 21h-5L32 40l-.2 3h-5L22 22Z" fill="#07100e"/>
+</svg>
