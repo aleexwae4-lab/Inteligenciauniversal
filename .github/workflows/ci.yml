@@ -29,7 +29,7 @@ jobs:
       APP_URL: https://wae-inteligencia-universal.onrender.com
       EDGE_URL: https://pbswcbryxawsmltyromd.supabase.co/functions/v1/wae-local-voice-demo-v61
     steps:
-      - name: Wait for Render deterministic mobile interaction invariants
+      - name: Wait for Render restored v8 interaction invariants
         shell: bash
         run: |
           set -euo pipefail
@@ -44,13 +44,14 @@ jobs:
             POLISH=$(curl -fsS --max-time 20 "$APP_URL/polish-v2.js?release=${GITHUB_SHA}" || true)
             EXP8JS=$(curl -fsS --max-time 20 "$APP_URL/experience-v8.js?release=${GITHUB_SHA}" || true)
             EXP8CSS=$(curl -fsS --max-time 20 "$APP_URL/experience-v8.css?release=${GITHUB_SHA}" || true)
-            INTERACTION=$(curl -fsS --max-time 20 "$APP_URL/interaction-v9.js?release=${GITHUB_SHA}" || true)
             if jq -e '.ok == true and .service == "wae-universal-runtime" and .version == "1.4.0-deep-orchestration"' <<<"$HEALTH" >/dev/null 2>&1 \
               && jq -e '.ready == true and .interface == "experience-v8-living-core" and .orchestration.schema == "universal-orchestrator/v1" and .orchestration.maxSpecialists == 3 and (.reasoningProfiles | index("deep")) != null' <<<"$CAPS" >/dev/null 2>&1 \
-              && grep -Fq "v19-mobile-interaction" <<<"$SW" \
-              && grep -Fq '<script src="./experience-v8.js" defer data-src="./experience-v8.js"></script>' <<<"$INDEX" \
-              && grep -Fq '<script src="./interaction-v9.js" defer></script>' <<<"$INDEX" \
-              && grep -Fq '<link rel="stylesheet" href="./experience-v8.css" data-wae-v8="true"' <<<"$INDEX" \
+              && grep -Fq "v20-stable-v8-interaction" <<<"$SW" \
+              && grep -Fq '<script src="./runtime-client.js" defer></script>' <<<"$INDEX" \
+              && grep -Fq '<script src="./app.js" defer></script>' <<<"$INDEX" \
+              && grep -Fq '<script src="./polish-v2.js" defer></script>' <<<"$INDEX" \
+              && ! grep -Fq 'interaction-v9.js' <<<"$INDEX" \
+              && ! grep -Fq '<script src="./experience-v8.js"' <<<"$INDEX" \
               && grep -Fq "candidate_promotable===true" <<<"$RUNTIME" \
               && grep -Fq "?'candidate':'control'" <<<"$RUNTIME" \
               && grep -Fq "createSSEParser" <<<"$SSE" \
@@ -59,22 +60,17 @@ jobs:
               && grep -Fq "experience-v8.js" <<<"$POLISH" \
               && grep -Fq "/api/orchestrate" <<<"$EXP8JS" \
               && grep -Fq "v8LiveDock" <<<"$EXP8JS" \
-              && grep -Fq "armLiveChatRender" <<<"$EXP8JS" \
-              && grep -Fq "mobile-live-render/v2" <<<"$EXP8CSS" \
-              && grep -Fq "grid-template-columns:minmax(0,1fr)" <<<"$EXP8CSS" \
-              && grep -Fq "visibility:visible!important" <<<"$EXP8CSS" \
-              && grep -Fq "100vw - 16px" <<<"$EXP8CSS" \
-              && grep -Fq "interaction-v9/v1" <<<"$INTERACTION" \
-              && grep -Fq "ensureSendButton" <<<"$INTERACTION" \
-              && grep -Fq "Reintentar respuesta" <<<"$INTERACTION"; then
-              echo "Render deterministic mobile interaction invariants detected"
+              && ! grep -Fq "armLiveChatRender" <<<"$EXP8JS" \
+              && grep -Fq ".v8-live-dock" <<<"$EXP8CSS" \
+              && ! grep -Fq "mobile-live-render" <<<"$EXP8CSS"; then
+              echo "Render restored v8 interaction invariants detected"
               jq '{version,ready,generativeReady,continuity}' <<<"$HEALTH"
               jq '{interface,reasoningProfiles,orchestration}' <<<"$CAPS"
               exit 0
             fi
             sleep 10
           done
-          echo "Render did not expose the required deterministic mobile interaction invariants" >&2
+          echo "Render did not expose the restored v8 interaction invariants" >&2
           exit 1
 
       - name: Verify Render runtime health
