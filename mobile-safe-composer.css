@@ -1,0 +1,16 @@
+#mobileSafeComposer{display:none}
+@media(max-width:899px){
+  html,body{max-width:100vw!important;overflow-x:hidden!important}
+  #composer{display:none!important}
+  #mobileSafeComposer{display:flex!important;position:fixed!important;left:8px!important;right:8px!important;bottom:max(8px,env(safe-area-inset-bottom))!important;z-index:2147483647!important;align-items:flex-end!important;gap:8px!important;padding:8px!important;border:1px solid rgba(255,255,255,.12)!important;border-radius:20px!important;background:#15181c!important;box-shadow:0 12px 42px rgba(0,0,0,.45)!important;pointer-events:auto!important;visibility:visible!important;opacity:1!important;transform:none!important;contain:layout paint!important}
+  #mobileSafeInput{display:block!important;position:relative!important;z-index:2147483647!important;flex:1 1 auto!important;width:100%!important;min-width:0!important;min-height:44px!important;max-height:144px!important;margin:0!important;padding:11px 10px!important;border:0!important;border-radius:14px!important;background:#0e1115!important;color:#f6f7f8!important;font:16px/1.4 system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif!important;resize:none!important;outline:none!important;pointer-events:auto!important;touch-action:manipulation!important;-webkit-user-select:text!important;user-select:text!important;caret-color:#f6f7f8!important;overflow-y:auto!important}
+  #mobileSafeInput::placeholder{color:#7f858b!important}
+  #mobileSafeInput:focus{box-shadow:0 0 0 1px rgba(81,235,207,.65)!important}
+  #mobileSafeSend{display:grid!important;place-items:center!important;position:relative!important;z-index:2147483647!important;flex:0 0 44px!important;width:44px!important;height:44px!important;margin:0!important;border:0!important;border-radius:50%!important;background:#f3f5f4!important;color:#101214!important;font:800 20px/1 system-ui!important;pointer-events:auto!important;touch-action:manipulation!important}
+  #mobileSafeSend:disabled{opacity:.45!important}
+  .runtime-bar{padding-bottom:calc(82px + env(safe-area-inset-bottom))!important}
+  .drawer:not(.open),.workspace:not(.open),.v7-panel:not(.open){visibility:hidden!important;pointer-events:none!important}
+  .drawer.open,.workspace.open,.v7-panel.open{visibility:visible!important;pointer-events:auto!important}
+  .scrim:not(.visible){visibility:hidden!important;pointer-events:none!important}
+  .scrim.visible{visibility:visible!important;pointer-events:auto!important}
+}
