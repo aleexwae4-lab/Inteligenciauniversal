@@ -22,6 +22,14 @@ test('premium shell disables the legacy voice channel before natural voice loads
   assert.match(js, /load\('\.\/voice-client\.js'/);
 });
 
+test('dynamic runtime chrome cannot expose model or provider identity', async () => {
+  const js = await read('polish-v2.js');
+  assert.match(js, /enforceRuntimeIdentity/);
+  assert.match(js, /allowedMeta/);
+  assert.match(js, /Universal Core · \$\{phase\}/);
+  assert.match(js, /<small>WAE OS<\/small>/);
+});
+
 test('PWA cache is invalidated for the Universal Core voice release', async () => {
   const sw = await read('sw.js');
   assert.match(sw, /wae-universal-v13-core-voice/);
