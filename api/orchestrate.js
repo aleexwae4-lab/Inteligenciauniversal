@@ -1,13 +1,10 @@
-import { executeMission } from '../lib/runtime.js';
+import { executeMission, publicMissionResult } from '../lib/runtime.js';
 import { planMission, specialistPrompt, synthesisPrompt, ORCHESTRATOR_VERSION } from '../lib/orchestrator.js';
+import { evaluateMissionOutput } from '../lib/evals.js';
 import { allowRequest, originAllowed, applyHeaders, getClientIp } from '../lib/security.js';
 
 const cleanHistory=(value)=>Array.isArray(value)?value.slice(-16).filter(x=>x&&['user','assistant'].includes(x.role)).map(x=>({role:x.role,text:String(x.text??x.content??'').slice(0,12000)})):[];
 const cleanAttachments=(value)=>Array.isArray(value)?value.slice(0,5):[];
-const publicResponse=(response={})=>({
-  ...response,
-  metadata:{...(response.metadata||{}),provider:undefined,model:undefined}
-});
 
 export default async function handler(req,res){
   applyHeaders(res);
@@ -35,11 +32,17 @@ export default async function handler(req,res){
       sessionId:`${sessionId}:deep:${agent}`.slice(0,160),
       history,
       attachments,
+      toolApproval:body.toolApproval===true,
+      toolBudgetMs:body.toolBudgetMs,
     });
-    return{agent,reply:result.reply,latencyMs:result.latencyMs,tools:(result.tools||[]).map(x=>({tool:x.tool,ok:x.ok}))};
+    return{
+      agent,reply:result.reply,latencyMs:result.latencyMs,
+      tools:(result.tools||[]).map(x=>({tool:x.tool,ok:x.ok,receipt:x.receipt||null})),
+      receipts:result.tool_receipts||[]
+    };
   }));
 
-  const specialists=specialistRuns.map((run,index)=>run.status==='fulfilled'?run.value:{agent:plan.specialists[index],error:String(run.reason?.message||run.reason||'specialist_failed').slice(0,300)});
+  const specialists=specialistRuns.map((run,index)=>run.status==='fulfilled'?run.value:{agent:plan.specialists[index],error:String(run.reason?.message||run.reason||'specialist_failed').slice(0,300),tools:[],receipts:[]});
   const usable=specialists.filter(x=>x.reply);
 
   try{
@@ -53,20 +56,24 @@ export default async function handler(req,res){
       disableTools:true,
     });
     const elapsedMs=Date.now()-started;
+    const receiptEvidence=specialists.flatMap(x=>(x.tools||[]));
+    const qualityGate=evaluateMissionOutput({reply:final.reply,specialists:usable,toolResults:receiptEvidence,elapsedMs});
+    const publicFinal=publicMissionResult(final);
     return res.status(200).json({
-      ...final,
-      response:publicResponse(final.response),
-      provider:undefined,
-      model:undefined,
-      fallbackFailures:undefined,
+      ...publicFinal,
       deep:true,
       orchestration:{
         schema:ORCHESTRATOR_VERSION,
         strategy:plan.strategy,
-        specialists:specialists.map(x=>({agent:x.agent,ok:!!x.reply,latencyMs:x.latencyMs||null,tools:x.tools||[],error:x.error||null})),
+        specialists:specialists.map(x=>({
+          agent:x.agent,ok:!!x.reply,latencyMs:x.latencyMs||null,
+          tools:(x.tools||[]).map(t=>({tool:t.tool,ok:t.ok,receipt:t.receipt||null})),
+          error:x.error||null
+        })),
         synthesis:'executive',
         elapsedMs,
         evidencePolicy:plan.evidencePolicy,
+        qualityGate,
       },
       agent:{id:'universal-deep',name:'Universal Core Deep'},
     });

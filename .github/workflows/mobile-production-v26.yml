@@ -1,4 +1,4 @@
-name: Mobile Production v26
+name: Mobile Production v27
 
 on:
   push:
@@ -16,7 +16,7 @@ jobs:
       APP_URL: https://wae-inteligencia-universal.onrender.com
       MOBILE_UA: Mozilla/5.0 (Linux; Android 13; Mobile) AppleWebKit/537.36 Chrome/152.0.0.0 Mobile Safari/537.36
     steps:
-      - name: Wait for v25 mobile release on Render
+      - name: Wait for v27 capability kernel on Render
         shell: bash
         run: |
           set -euo pipefail
@@ -26,13 +26,13 @@ jobs:
             if grep -Fq "universal-core-mobile-v25" <<<"$MOBILE" \
               && grep -Fq "Pregunta lo que quieras" <<<"$MOBILE" \
               && ! grep -Fq "Mobile Recovery" <<<"$MOBILE" \
-              && jq -e '.ok == true and .ready == true and .generativeReady == true and ([.providers[] | select(.id == "wae_edge" and .configured == true)] | length) == 1' <<<"$HEALTH" >/dev/null 2>&1; then
-              echo "Android Universal Core release detected"
+              && jq -e '.ok == true and .ready == true and .generativeReady == true and .capabilityKernel.schema == "universal-capability-kernel/v1" and (has("providers") | not) and (.continuity | has("provider") | not) and (.continuity | has("model") | not)' <<<"$HEALTH" >/dev/null 2>&1; then
+              echo "Android Universal Core v27 release detected"
               exit 0
             fi
             sleep 10
           done
-          echo "Render did not expose the certified Android release" >&2
+          echo "Render did not expose the certified Android v27 release" >&2
           exit 1
 
       - name: Verify mobile root is canonical and interactive
@@ -63,7 +63,7 @@ jobs:
           grep -Fq "¿En qué trabajamos?" <<<"$PAGE"
           grep -Fq "Pregunta lo que quieras" <<<"$PAGE"
 
-      - name: Verify server fallback remains genuinely generative
+      - name: Verify server fallback remains genuinely generative and private
         shell: bash
         run: |
           set -euo pipefail
@@ -72,12 +72,12 @@ jobs:
             ANSWER=$(curl -fsS --max-time 90 "$APP_URL/api/chat" \
               -H 'content-type: application/json' \
               -H "origin: $APP_URL" \
-              --data '{"message":"Responde exactamente con la palabra OK.","mode":"general","sessionId":"mobile-production-v26"}' || true)
-            if jq -e '.degraded == false and (.reply | type == "string") and (.reply | length) > 0 and .response.schema == "assistant-response/v1"' <<<"$ANSWER" >/dev/null 2>&1; then
+              --data '{"message":"Responde exactamente con la palabra OK.","mode":"general","sessionId":"mobile-production-v27"}' || true)
+            if jq -e '.degraded == false and (.reply | type == "string") and (.reply | length) > 0 and .response.schema == "assistant-response/v1" and .capability_kernel == "universal-capability-kernel/v1" and (has("provider") | not) and (has("model") | not) and (has("fallbackFailures") | not) and (.response.metadata | has("provider") | not) and (.response.metadata | has("model") | not)' <<<"$ANSWER" >/dev/null 2>&1; then
               exit 0
             fi
             sleep 5
           done
-          echo "Server generative fallback did not stabilize" >&2
-          echo "$ANSWER" | jq '{degraded,reply,response_schema}' >&2 || true
+          echo "Server generative fallback or public privacy contract did not stabilize" >&2
+          echo "$ANSWER" | jq '{degraded,reply,response_schema,capability_kernel}' >&2 || true
           exit 1
