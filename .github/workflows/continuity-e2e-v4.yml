@@ -1,0 +1,33 @@
+name: Continuity E2E v4
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  render-continuity:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    env:
+      APP: https://wae-inteligencia-universal.onrender.com
+    steps:
+      - name: Verify Render health contract
+        shell: bash
+        run: |
+          set -euo pipefail
+          HEALTH=$(curl -fsS --max-time 30 "$APP/api/health")
+          jq -e '.ok == true and .service == "wae-universal-runtime" and .ready == true' <<<"$HEALTH" >/dev/null
+          jq '{ok,version,ready,providers,memory}' <<<"$HEALTH"
+
+      - name: Verify Render can answer independently
+        shell: bash
+        run: |
+          set -euo pipefail
+          PAYLOAD=$(jq -n '{message:"Responde solamente con la palabra OK.",mode:"general",sessionId:"continuity-e2e-v4",history:[],attachments:[],tools:[]}')
+          RESULT=$(curl -fsS --max-time 90 "$APP/api/chat" -H 'content-type: application/json' --data-binary @- <<<"$PAYLOAD")
+          jq -e '(.reply // "") | type == "string" and length > 0' <<<"$RESULT" >/dev/null
+          jq -e '(.response_schema // .response.schema // "") == "assistant-response/v1"' <<<"$RESULT" >/dev/null
+          jq '{provider,model,latencyMs,fallbackFailures,reply}' <<<"$RESULT"
