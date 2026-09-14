@@ -9,6 +9,7 @@
   <link rel="icon" href="./assets/logo.svg" type="image/svg+xml" />
   <link rel="stylesheet" href="./styles.css" />
   <link rel="stylesheet" href="./polish-v2.css" />
+  <link rel="stylesheet" href="./mobile-safe-composer.css" />
   <style>
     html,body{max-width:100%;overflow-x:hidden}
     @media(max-width:899px){
@@ -106,8 +107,15 @@
     <dialog id="settingsDialog"><form method="dialog" class="settings-card"><div class="settings-head"><div><p class="eyebrow">CONFIGURACIÓN</p><h2>Universal Core</h2></div><button class="icon-btn" value="cancel">×</button></div><label>Núcleo activo<input id="coreName" type="text" value="Universal Core" readonly aria-readonly="true" /></label><p class="help">Universal Core se administra automáticamente dentro de WAE OS Enterprise. La interfaz mantiene una sola identidad para respuestas, memoria, herramientas y voz.</p><div class="dialog-actions"><button value="cancel" class="secondary-wide">Cancelar</button><button type="button" id="saveSettingsBtn" class="save-btn">Guardar</button></div></form></dialog>
     <input id="fileInput" type="file" hidden multiple />
   </div>
+
+  <form id="mobileSafeComposer" aria-label="Escribir a Universal Core" autocomplete="off">
+    <textarea id="mobileSafeInput" rows="1" inputmode="text" enterkeyhint="send" autocomplete="off" autocapitalize="sentences" spellcheck="true" placeholder="Escribe un mensaje…"></textarea>
+    <button id="mobileSafeSend" type="submit" aria-label="Enviar">➜</button>
+  </form>
+
   <script src="./runtime-client.js" defer></script>
   <script src="./app.js" defer></script>
+  <script src="./mobile-safe-composer.js" defer></script>
   <script src="./polish-v2.js" defer></script>
 </body>
 </html>
