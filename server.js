@@ -18,6 +18,20 @@ const PORT = Number(process.env.PORT || 10000);
 const HOST = '0.0.0.0';
 const MAX_BODY_BYTES = Number(process.env.WAE_MAX_BODY_BYTES || 2_000_000);
 
+function mobilePremiumHandler(req,res) {
+  const nativeEnd = res.end.bind(res);
+  res.end = (chunk, encoding, callback) => {
+    if (typeof chunk === 'string' && chunk.includes('</head>') && chunk.includes('</body>')) {
+      if (!chunk.includes('mobile-v26.css')) chunk = chunk.replace('</head>', '<link rel="stylesheet" href="/mobile-v26.css"></head>');
+      if (!chunk.includes('mobile-v26.js')) chunk = chunk.replace('</body>', '<script src="/mobile-v26.js" defer></script></body>');
+      res.setHeader('Cache-Control','no-store, max-age=0');
+      res.setHeader('X-WAE-Mobile-Release','universal-core-mobile-v26');
+    }
+    return nativeEnd(chunk, encoding, callback);
+  };
+  return mobileHandler(req,res);
+}
+
 const apiRoutes = new Map([
   ['/api/chat', chatHandler],
   ['/api/continuity/chat/completions', continuityHandler],
@@ -26,7 +40,7 @@ const apiRoutes = new Map([
   ['/api/capabilities', capabilitiesHandler],
   ['/api/tasks', tasksHandler],
   ['/api/orchestrate', orchestrateHandler],
-  ['/api/mobile', mobileHandler],
+  ['/api/mobile', mobilePremiumHandler],
   ['/api/ui-diagnostics', uiDiagnosticsHandler],
 ]);
 
@@ -157,7 +171,7 @@ const server = createServer(async (req, res) => {
   }
 
   if (url.pathname === '/' && isMobileRequest(req, url)) {
-    return mobileHandler(req, res);
+    return mobilePremiumHandler(req, res);
   }
 
   return serveFile(req, res, url.pathname);
@@ -168,5 +182,5 @@ server.headersTimeout = 65_000;
 server.keepAliveTimeout = 5_000;
 
 server.listen(PORT, HOST, () => {
-  console.log(`[WAE Universal Runtime] listening on http://${HOST}:${PORT}`);
+  console.log(`[WAE Universal Runtime] listening on http://0.0.0.0:${PORT}`);
 });
