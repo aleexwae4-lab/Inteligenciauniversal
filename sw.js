@@ -1,4 +1,4 @@
-const CACHE='wae-universal-v15-gpt-feel-v16-dynamic-core-v17-living-core';
+const CACHE='wae-universal-v15-gpt-feel-v16-dynamic-core-v17-living-core-v18-live-chat-render';
 const ASSETS=['./','./index.html','./styles.css','./polish-v2.css','./premium-v3.css','./premium-v4.css','./experience-v5.css','./experience-v6.css','./experience-v7.css','./experience-v8.css','./runtime-client.js','./voice-client.js','./premium-v4.js','./streaming-v2.js','./experience-v5.js','./experience-v6.js','./experience-v7.js','./experience-v8.js','./lib/sse-events.js','./app.js','./polish-v2.js','./manifest.webmanifest','./assets/logo.svg','./assets/logo-v2.svg'];
 self.addEventListener('install',event=>{event.waitUntil(caches.open(CACHE).then(cache=>cache.addAll(ASSETS)));self.skipWaiting()});
 self.addEventListener('activate',event=>{event.waitUntil(caches.keys().then(keys=>Promise.all(keys.filter(key=>key!==CACHE).map(key=>caches.delete(key)))).then(()=>self.clients.claim()))});
