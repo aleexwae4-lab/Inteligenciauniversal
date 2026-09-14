@@ -11,14 +11,18 @@
   const start=async()=>{
     if(started)return;started=true;
     document.documentElement.dataset.enhancement='loading';
-    const ok=await loadScript('./polish-v2.js');
+    const [polish,premium]=await Promise.all([
+      loadScript('./polish-v2.js'),
+      loadScript('./gpt-experience-v1.js?v=1')
+    ]);
+    const ok=polish&&premium;
     document.documentElement.dataset.enhancement=ok?'ready':'degraded';
-    window.dispatchEvent(new CustomEvent('wae:enhancement-ready',{detail:{ok}}));
+    window.dispatchEvent(new CustomEvent('wae:enhancement-ready',{detail:{ok,polish,premium}}));
   };
 
   const schedule=()=>{
-    if('requestIdleCallback'in window)requestIdleCallback(()=>start(),{timeout:1200});
-    else setTimeout(start,450);
+    if('requestIdleCallback'in window)requestIdleCallback(()=>start(),{timeout:700});
+    else setTimeout(start,220);
   };
 
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',schedule,{once:true});
@@ -26,5 +30,5 @@
 
   document.addEventListener('pointerdown',()=>start(),{once:true,passive:true});
   document.addEventListener('keydown',()=>start(),{once:true});
-  window.__waeProgressiveBoot={version:'v23',start};
+  window.__waeProgressiveBoot={version:'v23-premium-chat',start};
 })();
