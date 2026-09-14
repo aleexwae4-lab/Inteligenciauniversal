@@ -1,0 +1,129 @@
+name: Adaptive Router V2 Canary
+
+on:
+  push:
+    branches: [proven-streaming-v2]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  router-quality:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - run: npm install --no-audit --no-fund
+      - run: npm run check
+      - run: npm test
+
+  edge-canary:
+    needs: router-quality
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    env:
+      EDGE_URL: https://pbswcbryxawsmltyromd.supabase.co/functions/v1/wae-local-voice-demo-v61
+      ORIGIN: https://wae-inteligencia-universal.onrender.com
+    steps:
+      - name: Verify v1.7.1 control plane
+        shell: bash
+        run: |
+          set -euo pipefail
+          CAP=$(curl -fsS --max-time 30 "$EDGE_URL" -H 'content-type: application/json' -H "origin: $ORIGIN" --data '{"action":"capabilities"}')
+          jq -e '.success == true and .version == "1.7.1-adaptive-router-proven-stream-v2" and .router == "wae-adaptive-router-v2" and .response_schema == "assistant-response/v1" and .streaming_mode == "verified_only" and .ttft == "real_first_delta_only"' <<<"$CAP" >/dev/null
+          echo "$CAP" | jq '{version,router,model_count,verified_streaming_models,streaming_mode,ttft}'
+
+      - name: Bootstrap isolated canary session
+        id: boot
+        shell: bash
+        run: |
+          set -euo pipefail
+          BOOT=$(curl -fsS --max-time 30 "$EDGE_URL" -H 'content-type: application/json' -H "origin: $ORIGIN" --data '{"action":"bootstrap"}')
+          SID=$(jq -r '.session_id' <<<"$BOOT")
+          SECRET=$(jq -r '.session_secret' <<<"$BOOT")
+          test -n "$SID" && test "$SID" != null
+          test -n "$SECRET" && test "$SECRET" != null
+          echo "sid=$SID" >> "$GITHUB_OUTPUT"
+          echo "secret=$SECRET" >> "$GITHUB_OUTPUT"
+
+      - name: Verify offline and open providers are excluded
+        shell: bash
+        env:
+          SID: ${{ steps.boot.outputs.sid }}
+          SECRET: ${{ steps.boot.outputs.secret }}
+        run: |
+          set -euo pipefail
+          PREVIEW=$(jq -n --arg sid "$SID" --arg secret "$SECRET" '{action:"route_preview",session_id:$sid,session_secret:$secret,message:"Hola",mode:"general",stream:false,routing_variant:"candidate"}' | curl -fsS --max-time 30 "$EDGE_URL" -H 'content-type: application/json' -H "origin: $ORIGIN" --data-binary @-)
+          jq -e '.success == true and .task.path == "FAST" and (.candidates|length) > 0 and ([.candidates[]|select(.health == "offline" or .circuit == "OPEN")]|length) == 0' <<<"$PREVIEW" >/dev/null
+          echo "$PREVIEW" | jq '{task,requirements,candidates}'
+
+      - name: Run adaptive JSON canary samples
+        shell: bash
+        env:
+          SID: ${{ steps.boot.outputs.sid }}
+          SECRET: ${{ steps.boot.outputs.secret }}
+        run: |
+          set -euo pipefail
+          : > /tmp/json-canary.ndjson
+          for i in 1 2 3 4 5; do
+            CHAT=$(jq -n --arg sid "$SID" --arg secret "$SECRET" --arg msg "Canary $i: responde solamente OK." '{action:"chat",session_id:$sid,session_secret:$secret,message:$msg,mode:"general",web_enabled:false,stream:false,routing_variant:"candidate"}' | curl -fsS --max-time 55 "$EDGE_URL" -H 'content-type: application/json' -H "origin: $ORIGIN" --data-binary @-)
+            jq -e '.success == true and .response_schema == "assistant-response/v1" and .runtime == "1.7.1-adaptive-router-proven-stream-v2" and .ttft_ms == null and (.reply|type=="string") and (.reply|length)>0' <<<"$CHAT" >/dev/null
+            jq -c '{request_id,provider,model,latency_ms,ttft_ms,routing_path,router_variant,cost_microunits}' <<<"$CHAT" | tee -a /tmp/json-canary.ndjson
+          done
+
+      - name: Probe upstream streaming transports
+        id: probe
+        shell: bash
+        env:
+          SID: ${{ steps.boot.outputs.sid }}
+          SECRET: ${{ steps.boot.outputs.secret }}
+        run: |
+          set -euo pipefail
+          PROBE=$(jq -n --arg sid "$SID" --arg secret "$SECRET" '{action:"stream_probe",session_id:$sid,session_secret:$secret}' | curl -fsS --max-time 240 "$EDGE_URL" -H 'content-type: application/json' -H "origin: $ORIGIN" --data-binary @-)
+          jq -e '.success == true and .runtime == "1.7.1-adaptive-router-proven-stream-v2" and (.candidates_considered|type=="number")' <<<"$PROBE" >/dev/null
+          VERIFIED=$(jq -r '.verified' <<<"$PROBE")
+          echo "verified=$VERIFIED" >> "$GITHUB_OUTPUT"
+          echo "$PROBE" | jq .
+          echo '### Streaming transport probe' >> "$GITHUB_STEP_SUMMARY"
+          echo '```json' >> "$GITHUB_STEP_SUMMARY"
+          echo "$PROBE" | jq . >> "$GITHUB_STEP_SUMMARY"
+          echo '```' >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Gate real SSE deltas
+        if: steps.probe.outputs.verified == 'true'
+        shell: bash
+        env:
+          SID: ${{ steps.boot.outputs.sid }}
+          SECRET: ${{ steps.boot.outputs.secret }}
+        run: |
+          set -euo pipefail
+          jq -n --arg sid "$SID" --arg secret "$SECRET" '{action:"chat",session_id:$sid,session_secret:$secret,message:"Explica en tres frases breves por qué medir TTFT mejora una interfaz de inteligencia artificial.",mode:"general",web_enabled:false,stream:true,routing_variant:"candidate"}' > /tmp/request.json
+          curl -fsS -N --max-time 90 "$EDGE_URL" -H 'content-type: application/json' -H "origin: $ORIGIN" --data-binary @/tmp/request.json > /tmp/stream.txt
+          DELTAS=$(grep -c '^event: content.delta' /tmp/stream.txt || true)
+          test "$DELTAS" -ge 2
+          grep -q '^event: response.complete' /tmp/stream.txt
+          ! grep -q '^event: response.error' /tmp/stream.txt
+          COMPLETE=$(awk '/^event: response.complete/{getline; sub(/^data: /,""); print; exit}' /tmp/stream.txt)
+          jq -e '.stream_verified == true and (.ttft_ms|type=="number") and .ttft_ms > 0 and .ttft_ms < .latency_ms' <<<"$COMPLETE" >/dev/null
+          echo "Verified progressive deltas: $DELTAS"
+          jq '{provider,model,latency_ms,ttft_ms,router_overhead_ms,routing_path,router_variant}' <<<"$COMPLETE"
+
+      - name: Keep frontend promotion on hold when no stream is verified
+        if: steps.probe.outputs.verified != 'true'
+        run: echo 'No provider produced verified upstream token deltas. Frontend streaming promotion remains HOLD by design.'
+
+      - name: Verify history contract after canary
+        shell: bash
+        env:
+          SID: ${{ steps.boot.outputs.sid }}
+          SECRET: ${{ steps.boot.outputs.secret }}
+        run: |
+          set -euo pipefail
+          LIST=$(jq -n --arg sid "$SID" --arg secret "$SECRET" '{action:"list_conversations",session_id:$sid,session_secret:$secret}' | curl -fsS --max-time 30 "$EDGE_URL" -H 'content-type: application/json' -H "origin: $ORIGIN" --data-binary @-)
+          jq -e '.success == true and (.conversations|length) >= 5' <<<"$LIST" >/dev/null

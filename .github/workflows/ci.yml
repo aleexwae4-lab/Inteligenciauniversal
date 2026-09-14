@@ -21,26 +21,30 @@ jobs:
       - run: npm test
 
   production-smoke:
-    if: github.ref == 'refs/heads/main' && contains(github.event.head_commit.message, 'AssistantResponse')
+    if: github.ref == 'refs/heads/main' && (contains(github.event.head_commit.message, 'AssistantResponse') || contains(github.event.head_commit.message, 'AdaptiveRouter'))
     needs: quality-gate
     runs-on: ubuntu-latest
-    timeout-minutes: 12
+    timeout-minutes: 15
     env:
       APP_URL: https://wae-inteligencia-universal.onrender.com
       EDGE_URL: https://pbswcbryxawsmltyromd.supabase.co/functions/v1/wae-local-voice-demo-v61
     steps:
-      - name: Wait for Render release marker
+      - name: Wait for Render streaming release marker
         shell: bash
         run: |
           set -euo pipefail
-          for attempt in $(seq 1 36); do
-            if curl -fsS --max-time 20 "$APP_URL/sw.js?release=${GITHUB_SHA}" | grep -q "wae-universal-v10"; then
-              echo "Render release marker detected"
+          for attempt in $(seq 1 42); do
+            SW=$(curl -fsS --max-time 20 "$APP_URL/sw.js?release=${GITHUB_SHA}" || true)
+            if grep -q "wae-universal-v11-streaming-canary" <<<"$SW"; then
+              curl -fsS --max-time 20 "$APP_URL/runtime-client.js?release=${GITHUB_SHA}" | grep -q "streamChat"
+              curl -fsS --max-time 20 "$APP_URL/streaming-v2.js?release=${GITHUB_SHA}" | grep -q "wae:stream-event"
+              curl -fsS --max-time 20 "$APP_URL/lib/sse-events.js?release=${GITHUB_SHA}" | grep -q "createSSEParser"
+              echo "Render streaming release marker detected"
               exit 0
             fi
             sleep 10
           done
-          echo "Render did not expose the expected release marker" >&2
+          echo "Render did not expose the expected streaming release" >&2
           exit 1
 
       - name: Verify Render runtime health
@@ -49,22 +53,28 @@ jobs:
           set -euo pipefail
           curl -fsS --max-time 30 "$APP_URL/api/health" | jq -e '.ok == true'
 
-      - name: Verify structured runtime end to end
+      - name: Verify adaptive runtime and legacy contract
+        id: runtime
         shell: bash
         run: |
           set -euo pipefail
           ORIGIN="$APP_URL"
           CAP=$(curl -fsS --max-time 30 "$EDGE_URL" -H "content-type: application/json" -H "origin: $ORIGIN" --data '{"action":"capabilities"}')
-          jq -e '.success == true and .response_schema == "assistant-response/v1" and .structured_responses == true and .natural_voice == true and .observability == true' <<<"$CAP" >/dev/null
+          jq -e '.success == true and (.version | startswith("1.7.")) and .router == "wae-adaptive-router-v2" and .response_schema == "assistant-response/v1" and .adaptive_routing == true and .streaming_mode == "verified_only" and .verified_streaming_models >= 1 and .structured_responses == true and .natural_voice == true and .observability == true' <<<"$CAP" >/dev/null
 
           BOOT=$(curl -fsS --max-time 30 "$EDGE_URL" -H "content-type: application/json" -H "origin: $ORIGIN" --data '{"action":"bootstrap"}')
           SID=$(jq -r '.session_id' <<<"$BOOT")
           SECRET=$(jq -r '.session_secret' <<<"$BOOT")
           test -n "$SID" && test "$SID" != "null"
           test -n "$SECRET" && test "$SECRET" != "null"
+          echo "sid=$SID" >> "$GITHUB_OUTPUT"
+          echo "secret=$SECRET" >> "$GITHUB_OUTPUT"
 
-          CHAT=$(jq -n --arg sid "$SID" --arg secret "$SECRET" '{action:"chat",session_id:$sid,session_secret:$secret,message:"Responde solamente con la palabra OK.",mode:"general",web_enabled:false}' | curl -fsS --max-time 55 "$EDGE_URL" -H "content-type: application/json" -H "origin: $ORIGIN" --data-binary @-)
-          jq -e '.success == true and .response.schema == "assistant-response/v1" and (.speech_text | type == "string") and (.speech_text | length > 0) and (.components | length > 0) and (.message_id | type == "string")' <<<"$CHAT" >/dev/null
+          PREVIEW=$(jq -n --arg sid "$SID" --arg secret "$SECRET" '{action:"route_preview",session_id:$sid,session_secret:$secret,message:"Hola",mode:"general",stream:false,routing_variant:"candidate"}' | curl -fsS --max-time 30 "$EDGE_URL" -H "content-type: application/json" -H "origin: $ORIGIN" --data-binary @-)
+          jq -e '.success == true and .task.path == "FAST" and ([.candidates[] | select(.health == "offline" or .circuit == "OPEN")] | length) == 0' <<<"$PREVIEW" >/dev/null
+
+          CHAT=$(jq -n --arg sid "$SID" --arg secret "$SECRET" '{action:"chat",session_id:$sid,session_secret:$secret,message:"Responde solamente con la palabra OK.",mode:"general",web_enabled:false,stream:false,routing_variant:"candidate"}' | curl -fsS --max-time 55 "$EDGE_URL" -H "content-type: application/json" -H "origin: $ORIGIN" --data-binary @-)
+          jq -e '.success == true and .response.schema == "assistant-response/v1" and .ttft_ms == null and (.speech_text | type == "string") and (.speech_text | length > 0) and (.components | length > 0) and (.message_id | type == "string")' <<<"$CHAT" >/dev/null
           CID=$(jq -r '.conversation_id' <<<"$CHAT")
 
           LIST=$(jq -n --arg sid "$SID" --arg secret "$SECRET" '{action:"list_conversations",session_id:$sid,session_secret:$secret}' | curl -fsS --max-time 30 "$EDGE_URL" -H "content-type: application/json" -H "origin: $ORIGIN" --data-binary @-)
@@ -75,3 +85,21 @@ jobs:
 
           LEARN=$(jq -n --arg sid "$SID" --arg secret "$SECRET" '{action:"learning_status",session_id:$sid,session_secret:$secret}' | curl -fsS --max-time 30 "$EDGE_URL" -H "content-type: application/json" -H "origin: $ORIGIN" --data-binary @-)
           jq -e '.success == true and .base_model_trained == false' <<<"$LEARN" >/dev/null
+
+      - name: Verify real SSE deltas and TTFT
+        shell: bash
+        env:
+          SID: ${{ steps.runtime.outputs.sid }}
+          SECRET: ${{ steps.runtime.outputs.secret }}
+        run: |
+          set -euo pipefail
+          jq -n --arg sid "$SID" --arg secret "$SECRET" '{action:"chat",session_id:$sid,session_secret:$secret,message:"Explica en tres frases breves por qué medir TTFT mejora la experiencia de una interfaz de IA.",mode:"general",web_enabled:false,stream:true,routing_variant:"candidate"}' > /tmp/request.json
+          curl -fsS -N --max-time 90 "$EDGE_URL" -H 'content-type: application/json' -H "origin: $APP_URL" --data-binary @/tmp/request.json > /tmp/stream.txt
+          DELTAS=$(grep -c '^event: content.delta' /tmp/stream.txt || true)
+          test "$DELTAS" -ge 2
+          grep -q '^event: response.complete' /tmp/stream.txt
+          ! grep -q '^event: response.error' /tmp/stream.txt
+          COMPLETE=$(awk '/^event: response.complete/{getline; sub(/^data: /,""); print; exit}' /tmp/stream.txt)
+          jq -e '.success == true and .stream_verified == true and .response_schema == "assistant-response/v1" and (.ttft_ms|type=="number") and .ttft_ms > 0 and .ttft_ms < .latency_ms' <<<"$COMPLETE" >/dev/null
+          echo "Production SSE deltas: $DELTAS"
+          jq '{provider,model,latency_ms,ttft_ms,router_overhead_ms,routing_path,router_variant}' <<<"$COMPLETE"
