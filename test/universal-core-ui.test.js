@@ -106,14 +106,17 @@ test('Experience v8 makes the primary interface live and exposes bounded Deep or
   assert.match(server, /\/api\/orchestrate/);
 });
 
-test('PWA cache invalidates the regressed v18-v19 interaction client', async () => {
+test('PWA cache invalidates prior interaction clients and includes v22 safe composer', async () => {
   const sw = await read('sw.js');
-  assert.match(sw, /v20-stable-v8-interaction/);
+  assert.match(sw, /v22-mobile-safe-composer/);
+  assert.match(sw, /mobile-safe-composer\.js/);
+  assert.match(sw, /mobile-safe-composer\.css/);
   assert.match(sw, /voice-client\.js/);
   assert.match(sw, /experience-v5\.js/);
   assert.match(sw, /experience-v6\.js/);
   assert.match(sw, /experience-v7\.js/);
   assert.match(sw, /experience-v8\.js/);
   assert.doesNotMatch(sw, /interaction-v9\.js/);
+  assert.match(sw, /interaction-guard-v21\.js/);
   assert.match(sw, /polish-v2\.js/);
 });
