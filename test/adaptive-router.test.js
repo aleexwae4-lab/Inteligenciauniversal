@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {classifyTask,capabilityRequirements,rankModels,streamEligible,shouldOpenCircuit,estimateCostMicrounits,promotionGate} from '../lib/adaptive-router.js';
+import {classifyTask,capabilityRequirements,rankModels,streamEligible,shouldOpenCircuit,estimateCostMicrounits,promotionGate,metacognitiveCanaryGate,METACOGNITIVE_CANARY_POLICY_V1} from '../lib/adaptive-router.js';
 
 const healthy=(overrides={})=>({id:'healthy',enabled:true,effectiveHealth:'healthy',circuitState:'CLOSED',taskQuality:85,reliabilityScore:90,ewmaLatencyMs:2200,ewmaTtftMs:800,contextWindow:32768,reasoningCapable:true,structuredOutputCapable:true,streamingClaimed:true,streamingVerified:true,inputPerMillion:0,outputPerMillion:0,consecutiveFailures:0,...overrides});
 
@@ -20,3 +20,50 @@ test('auth failures open circuit for sixty minutes',()=>{assert.deepEqual(should
 test('cost engine normalizes token cost to micro-units',()=>{assert.equal(estimateCostMicrounits({inputTokens:1_000_000,outputTokens:500_000,inputPerMillion:2,outputPerMillion:4}),4_000_000);assert.equal(estimateCostMicrounits({inputTokens:5,outputTokens:5}),null);});
 test('promotion gate blocks quality, error, latency and security regression',()=>{const current={quality:90,errorRate:.01,p95Latency:5000,p95Ttft:1500,securityRegressions:0};const bad={quality:85,errorRate:.02,p95Latency:6000,p95Ttft:1800,securityRegressions:1};const g=promotionGate(current,bad);assert.equal(g.pass,false);assert.deepEqual(g.failures,['quality','error_rate','p95_latency','p95_ttft','security_regressions']);});
 test('promotion gate accepts faster candidate inside quality tolerance',()=>{const current={quality:90,errorRate:.01,p95Latency:5000,p95Ttft:1500,securityRegressions:0};const better={quality:89.5,errorRate:.01,p95Latency:4200,p95Ttft:1100,securityRegressions:0};assert.equal(promotionGate(current,better).pass,true);});
+
+test('metacognitive governor mirrors the live factual HOLD and cannot auto-apply',()=>{
+  const control={samples:20,successRate:1,p95LatencyMs:31606.65,avgTtftMs:5097};
+  const candidate={samples:146,successRate:.952054794520548,p95LatencyMs:31019.5,avgTtftMs:6216};
+  const g=metacognitiveCanaryGate(control,candidate);
+  assert.equal(g.decision,'HOLD_MULTIPLE_REGRESSIONS');
+  assert.equal(g.pass,false);
+  assert.equal(g.recommendedStagePct,0);
+  assert.equal(g.routingInfluenceEnabled,false);
+  assert.equal(g.autoApply,false);
+  assert.deepEqual(g.blockers.map(x=>x.code),['insufficient_evidence','reliability_regression','latency_improvement_insufficient','ttft_regression']);
+});
+
+test('metacognitive governor only marks a proven candidate CANARY_ELIGIBLE at five percent',()=>{
+  const control={samples:80,successRate:.99,p95LatencyMs:10000,avgTtftMs:3000};
+  const candidate={samples:85,successRate:.989,p95LatencyMs:9000,avgTtftMs:3060};
+  const g=metacognitiveCanaryGate(control,candidate);
+  assert.equal(g.decision,'CANARY_ELIGIBLE');
+  assert.equal(g.pass,true);
+  assert.equal(g.recommendedStagePct,METACOGNITIVE_CANARY_POLICY_V1.initialStagePct);
+  assert.equal(g.routingInfluenceEnabled,false);
+  assert.equal(g.autoApply,false);
+});
+
+test('metacognitive governor fails closed when candidate lane is missing',()=>{
+  const g=metacognitiveCanaryGate({samples:80,successRate:.99,p95LatencyMs:10000,avgTtftMs:3000},{});
+  assert.equal(g.decision,'HOLD_NO_CANDIDATE');
+  assert.equal(g.pass,false);
+  assert.equal(g.recommendedStagePct,0);
+});
+
+test('metacognitive governor fails closed when required metrics are missing',()=>{
+  const g=metacognitiveCanaryGate({samples:80,successRate:.99,p95LatencyMs:10000,avgTtftMs:3000},{samples:80});
+  assert.equal(g.decision,'HOLD_MULTIPLE_REGRESSIONS');
+  assert.ok(g.blockers.some(x=>x.code==='missing_reliability_metric'));
+  assert.ok(g.blockers.some(x=>x.code==='missing_latency_metric'));
+  assert.ok(g.blockers.some(x=>x.code==='missing_candidate_ttft'));
+});
+
+test('metacognitive governor isolates insufficient evidence when metrics otherwise pass',()=>{
+  const g=metacognitiveCanaryGate(
+    {samples:20,successRate:.99,p95LatencyMs:10000,avgTtftMs:3000},
+    {samples:29,successRate:.989,p95LatencyMs:9000,avgTtftMs:3060}
+  );
+  assert.equal(g.decision,'HOLD_INSUFFICIENT_EVIDENCE');
+  assert.deepEqual(g.blockers.map(x=>x.code),['insufficient_evidence']);
+});
