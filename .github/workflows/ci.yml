@@ -29,24 +29,27 @@ jobs:
       APP_URL: https://wae-inteligencia-universal.onrender.com
       EDGE_URL: https://pbswcbryxawsmltyromd.supabase.co/functions/v1/wae-local-voice-demo-v61
     steps:
-      - name: Wait for Render routing safety release marker
+      - name: Wait for Render release invariants
         shell: bash
         run: |
           set -euo pipefail
           for attempt in $(seq 1 42); do
+            HEALTH=$(curl -fsS --max-time 20 "$APP_URL/api/health?release=${GITHUB_SHA}" || true)
             SW=$(curl -fsS --max-time 20 "$APP_URL/sw.js?release=${GITHUB_SHA}" || true)
-            if grep -q "wae-universal-v12-routing-safety" <<<"$SW"; then
-              RUNTIME=$(curl -fsS --max-time 20 "$APP_URL/runtime-client.js?release=${GITHUB_SHA}")
-              SSE=$(curl -fsS --max-time 20 "$APP_URL/lib/sse-events.js?release=${GITHUB_SHA}")
-              grep -q "routing_variant:'control'" <<<"$RUNTIME"
-              grep -q "stream_continuity!==true" <<<"$RUNTIME"
-              grep -q "createSSEParser" <<<"$SSE"
-              echo "Render routing-safety marker detected"
+            RUNTIME=$(curl -fsS --max-time 20 "$APP_URL/runtime-client.js?release=${GITHUB_SHA}" || true)
+            SSE=$(curl -fsS --max-time 20 "$APP_URL/lib/sse-events.js?release=${GITHUB_SHA}" || true)
+            if jq -e '.ok == true and .service == "wae-universal-runtime"' <<<"$HEALTH" >/dev/null 2>&1 \
+              && grep -q "wae-universal-v" <<<"$SW" \
+              && grep -q "routing_variant:'control'" <<<"$RUNTIME" \
+              && grep -q "stream_continuity!==true" <<<"$RUNTIME" \
+              && grep -q "createSSEParser" <<<"$SSE"; then
+              echo "Render release invariants detected"
+              jq '{version,ready,generativeReady,continuity}' <<<"$HEALTH"
               exit 0
             fi
             sleep 10
           done
-          echo "Render did not expose the expected routing-safety release" >&2
+          echo "Render did not expose the required release invariants" >&2
           exit 1
 
       - name: Verify Render runtime health
@@ -54,7 +57,7 @@ jobs:
         run: |
           set -euo pipefail
           HEALTH=$(curl -fsS --max-time 30 "$APP_URL/api/health")
-          jq -e '.ok == true' <<<"$HEALTH" >/dev/null
+          jq -e '.ok == true and .ready == true' <<<"$HEALTH" >/dev/null
 
       - name: Verify adaptive runtime and stable control contract
         id: runtime
