@@ -1,4 +1,4 @@
-import { executeMission } from '../lib/runtime.js';
+import { executeMission, publicMissionResult } from '../lib/runtime.js';
 import { allowRequest, originAllowed, applyHeaders, getClientIp } from '../lib/security.js';
 
 export default async function handler(req,res){
@@ -14,8 +14,10 @@ export default async function handler(req,res){
       mode:body.agent||body.mode||'executive',
       userKey:body.userKey||body.sessionId||getClientIp(req)
     });
-    return res.status(200).json({ status:'completed', taskId:crypto.randomUUID(), ...result });
+    return res.status(200).json({ status:'completed', taskId:crypto.randomUUID(), ...publicMissionResult(result) });
   }catch(error){
-    return res.status(error.statusCode||502).json({error:error.code||'task_failed',message:String(error.message||error),failures:error.failures||undefined});
+    const status=error.statusCode||502;
+    const message=status<500?String(error.message||error):'No pude completar la tarea en este intento.';
+    return res.status(status).json({error:error.code||'task_failed',message});
   }
 }
