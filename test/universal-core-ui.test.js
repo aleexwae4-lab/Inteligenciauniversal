@@ -30,9 +30,35 @@ test('dynamic runtime chrome cannot expose model or provider identity', async ()
   assert.match(js, /<small>WAE OS<\/small>/);
 });
 
-test('PWA cache is invalidated for the Universal Core voice release', async () => {
+test('voice client falls back to audible browser speech when cloud TTS fails', async () => {
+  const js = await read('voice-client.js');
+  assert.match(js, /speechSynthesis/);
+  assert.match(js, /SpeechSynthesisUtterance/);
+  assert.match(js, /cloudBackoffUntil/);
+  assert.match(js, /playBrowser/);
+  assert.match(js, /es-MX/);
+  assert.match(js, /iu\.voiceEnabled/);
+  assert.match(js, /wae\.autoVoice/);
+});
+
+test('Experience v5 provides live voice state and responsive interaction layer', async () => {
+  const js = await read('experience-v5.js');
+  const css = await read('experience-v5.css');
+  assert.match(js, /wae:voice-state/);
+  assert.match(js, /v5-live-status/);
+  assert.match(js, /v5-degraded/);
+  assert.match(js, /scrollHeight/);
+  assert.match(css, /100dvh/);
+  assert.match(css, /v5MessageIn/);
+  assert.match(css, /data-voice-state/);
+  assert.match(css, /prefers-reduced-motion/);
+});
+
+test('PWA cache is invalidated for the Experience v5 voice release', async () => {
   const sw = await read('sw.js');
-  assert.match(sw, /wae-universal-v13-core-voice/);
+  assert.match(sw, /wae-universal-v14-experience-voice/);
   assert.match(sw, /voice-client\.js/);
+  assert.match(sw, /experience-v5\.js/);
+  assert.match(sw, /experience-v5\.css/);
   assert.match(sw, /polish-v2\.js/);
 });
