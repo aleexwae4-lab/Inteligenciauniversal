@@ -120,9 +120,12 @@
   if(!document.querySelector('link[data-wae-v7]')){
     const css=document.createElement('link');css.rel='stylesheet';css.href='./experience-v7.css';css.dataset.waeV7='true';document.head.appendChild(css);
   }
+  if(!document.querySelector('link[data-wae-v8]')){
+    const css=document.createElement('link');css.rel='stylesheet';css.href='./experience-v8.css';css.dataset.waeV8='true';document.head.appendChild(css);
+  }
   const load=(src,done)=>{
     if(document.querySelector(`script[data-src="${src}"]`)){done?.();return}
     const script=document.createElement('script');script.src=src;script.defer=true;script.dataset.src=src;script.onload=()=>done?.();document.head.appendChild(script);
   };
-  load('./voice-client.js',()=>load('./premium-v4.js',()=>load('./streaming-v2.js',()=>{sanitizeRuntimeMeta();enforceRuntimeIdentity();load('./experience-v7.js')})));
+  load('./voice-client.js',()=>load('./premium-v4.js',()=>load('./streaming-v2.js',()=>{sanitizeRuntimeMeta();enforceRuntimeIdentity();load('./experience-v7.js',()=>load('./experience-v8.js'))})));
 })();
