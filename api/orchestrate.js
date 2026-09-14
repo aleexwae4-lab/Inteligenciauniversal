@@ -50,6 +50,7 @@ export default async function handler(req,res){
       sessionId,
       history,
       attachments,
+      disableTools:true,
     });
     const elapsedMs=Date.now()-started;
     return res.status(200).json({
