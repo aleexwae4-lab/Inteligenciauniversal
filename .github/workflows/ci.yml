@@ -29,7 +29,7 @@ jobs:
       APP_URL: https://wae-inteligencia-universal.onrender.com
       EDGE_URL: https://pbswcbryxawsmltyromd.supabase.co/functions/v1/wae-local-voice-demo-v61
     steps:
-      - name: Wait for Render Experience v8 invariants
+      - name: Wait for Render Experience v8 mobile-live invariants
         shell: bash
         run: |
           set -euo pipefail
@@ -45,7 +45,7 @@ jobs:
             EXP8CSS=$(curl -fsS --max-time 20 "$APP_URL/experience-v8.css?release=${GITHUB_SHA}" || true)
             if jq -e '.ok == true and .service == "wae-universal-runtime" and .version == "1.4.0-deep-orchestration"' <<<"$HEALTH" >/dev/null 2>&1 \
               && jq -e '.ready == true and .interface == "experience-v8-living-core" and .orchestration.schema == "universal-orchestrator/v1" and .orchestration.maxSpecialists == 3 and (.reasoningProfiles | index("deep")) != null' <<<"$CAPS" >/dev/null 2>&1 \
-              && grep -Fq "v17-living-core" <<<"$SW" \
+              && grep -Fq "v18-live-chat-render" <<<"$SW" \
               && grep -Fq "candidate_promotable===true" <<<"$RUNTIME" \
               && grep -Fq "?'candidate':'control'" <<<"$RUNTIME" \
               && grep -Fq "createSSEParser" <<<"$SSE" \
@@ -54,15 +54,19 @@ jobs:
               && grep -Fq "experience-v8.js" <<<"$POLISH" \
               && grep -Fq "/api/orchestrate" <<<"$EXP8JS" \
               && grep -Fq "v8LiveDock" <<<"$EXP8JS" \
-              && grep -Fq ".v8-live-dock" <<<"$EXP8CSS"; then
-              echo "Render Experience v8 invariants detected"
+              && grep -Fq "mobile-live-render/v1" <<<"$EXP8JS" \
+              && grep -Fq "armLiveChatRender" <<<"$EXP8JS" \
+              && grep -Fq ".v8-live-dock" <<<"$EXP8CSS" \
+              && grep -Fq "max-height:100dvh!important" <<<"$EXP8CSS" \
+              && grep -Fq "overflow-y:auto!important" <<<"$EXP8CSS"; then
+              echo "Render Experience v8 mobile live chat invariants detected"
               jq '{version,ready,generativeReady,continuity}' <<<"$HEALTH"
               jq '{interface,reasoningProfiles,orchestration}' <<<"$CAPS"
               exit 0
             fi
             sleep 10
           done
-          echo "Render did not expose the required Experience v8 invariants" >&2
+          echo "Render did not expose the required Experience v8 mobile live chat invariants" >&2
           exit 1
 
       - name: Verify Render runtime health
