@@ -3,6 +3,8 @@ name: Adaptive Router V2 Canary
 on:
   push:
     branches: [proven-streaming-v2]
+  pull_request:
+    branches: [main]
   workflow_dispatch:
 
 permissions:
@@ -114,8 +116,7 @@ jobs:
 
       - name: Keep frontend promotion on hold when no stream is verified
         if: steps.probe.outputs.verified != 'true'
-        run: |
-          echo 'No provider produced verified upstream token deltas. Frontend streaming promotion remains HOLD by design.'
+        run: echo 'No provider produced verified upstream token deltas. Frontend streaming promotion remains HOLD by design.'
 
       - name: Verify history contract after canary
         shell: bash
