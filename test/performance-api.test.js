@@ -18,9 +18,17 @@ test('performance endpoint rejects non-GET requests',async()=>{
   assert.equal(res.payload.error,'method_not_allowed');
 });
 
-test('performance endpoint fails closed without server credentials',async()=>{
-  const previousUrl=process.env.SUPABASE_URL,previousKey=process.env.SUPABASE_SERVICE_ROLE_KEY;
-  delete process.env.SUPABASE_URL;delete process.env.SUPABASE_SERVICE_ROLE_KEY;
+test('performance endpoint fails closed without any Supabase credential',async()=>{
+  const previous={
+    url:process.env.SUPABASE_URL,
+    service:process.env.SUPABASE_SERVICE_ROLE_KEY,
+    publishable:process.env.SUPABASE_PUBLISHABLE_KEY,
+    anon:process.env.SUPABASE_ANON_KEY,
+  };
+  delete process.env.SUPABASE_URL;
+  delete process.env.SUPABASE_SERVICE_ROLE_KEY;
+  delete process.env.SUPABASE_PUBLISHABLE_KEY;
+  delete process.env.SUPABASE_ANON_KEY;
   try{
     const res=responseMock();
     await performanceHandler({method:'GET'},res);
@@ -31,7 +39,10 @@ test('performance endpoint fails closed without server credentials',async()=>{
     assert.equal(res.payload.performance.candidate_promotable,false);
     assert.equal(res.payload.performance.stream_ready,false);
   } finally {
-    if(previousUrl===undefined)delete process.env.SUPABASE_URL;else process.env.SUPABASE_URL=previousUrl;
-    if(previousKey===undefined)delete process.env.SUPABASE_SERVICE_ROLE_KEY;else process.env.SUPABASE_SERVICE_ROLE_KEY=previousKey;
+    const restore=(name,value)=>value===undefined?delete process.env[name]:process.env[name]=value;
+    restore('SUPABASE_URL',previous.url);
+    restore('SUPABASE_SERVICE_ROLE_KEY',previous.service);
+    restore('SUPABASE_PUBLISHABLE_KEY',previous.publishable);
+    restore('SUPABASE_ANON_KEY',previous.anon);
   }
 });
