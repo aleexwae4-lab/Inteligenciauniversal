@@ -20,14 +20,26 @@ jobs:
           set -euo pipefail
           HEALTH=$(curl -fsS --max-time 30 "$APP/api/health")
           jq -e '.ok == true and .service == "wae-universal-runtime" and .ready == true' <<<"$HEALTH" >/dev/null
+          jq -e '[.providers[] | select(.id == "wae_supabase" and .configured == true)] | length == 1' <<<"$HEALTH" >/dev/null
           jq '{ok,version,ready,providers,memory}' <<<"$HEALTH"
 
-      - name: Verify Render can answer independently
+      - name: Verify normal Render answer path
         shell: bash
         run: |
           set -euo pipefail
-          PAYLOAD=$(jq -n '{message:"Responde solamente con la palabra OK.",mode:"general",sessionId:"continuity-e2e-v4",history:[],attachments:[],tools:[]}')
+          PAYLOAD=$(jq -n '{message:"Responde solamente con la palabra OK.",mode:"general",sessionId:"continuity-e2e-v4-auto",history:[],attachments:[],tools:[]}')
           RESULT=$(curl -fsS --max-time 90 "$APP/api/chat" -H 'content-type: application/json' --data-binary @- <<<"$PAYLOAD")
+          jq -e '(.reply // "") | type == "string" and length > 0' <<<"$RESULT" >/dev/null
+          jq -e '(.response_schema // .response.schema // "") == "assistant-response/v1"' <<<"$RESULT" >/dev/null
+          jq '{provider,model,latencyMs,fallbackFailures,reply}' <<<"$RESULT"
+
+      - name: Verify independent gateway lane
+        shell: bash
+        run: |
+          set -euo pipefail
+          PAYLOAD=$(jq -n '{message:"Responde solamente con la palabra OK.",mode:"general",provider:"wae_supabase",sessionId:"continuity-e2e-v4-gateway",history:[],attachments:[],tools:[]}')
+          RESULT=$(curl -fsS --max-time 90 "$APP/api/chat" -H 'content-type: application/json' --data-binary @- <<<"$PAYLOAD")
+          jq -e '.provider == "wae_supabase"' <<<"$RESULT" >/dev/null
           jq -e '(.reply // "") | type == "string" and length > 0' <<<"$RESULT" >/dev/null
           jq -e '(.response_schema // .response.schema // "") == "assistant-response/v1"' <<<"$RESULT" >/dev/null
           jq '{provider,model,latencyMs,fallbackFailures,reply}' <<<"$RESULT"
