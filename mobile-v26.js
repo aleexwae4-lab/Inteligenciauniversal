@@ -3,7 +3,7 @@
   const nativeFetch=window.fetch.bind(window);
   const EDGE_MARK='/functions/v1/wae-local-voice-demo-v61';
   const html=document.documentElement;
-  html.dataset.mobileRelease='v26.1-cognitive';
+  html.dataset.mobileRelease='v26.2-cognitive-gated';
 
   const CURRENT_RX=/\b(hoy|ahora|actual(?:es|idad|izado|izada)?|reciente|últim[oa]s?|latest|today|current|news|noticias|precio|cotización|jurisprudencia|reforma|ley vigente|verifica|fuentes?|evidencia|web)\b/i;
   const RESEARCH_RX=/\b(investiga|investigación|mercado|competidor|benchmark|tendencia|estadística)\b/i;
@@ -40,10 +40,11 @@
   }
   function smartBody(body={}){
     if(body?.action!=='chat')return body;
-    const route=infer(body);
-    return{...body,mode:route.mode,web_enabled:route.webEnabled,routing_variant:body.routing_variant||'candidate'};
+    const route=infer(body),next={...body,mode:route.mode,web_enabled:route.webEnabled};
+    delete next.routing_variant;
+    return next;
   }
-  function jsonResponse(data,status=200){return new Response(JSON.stringify(data),{status,headers:{'content-type':'application/json; charset=utf-8','cache-control':'no-store','x-wae-runtime':'universal-core-mobile-cognitive-v26.1'}})}
+  function jsonResponse(data,status=200){return new Response(JSON.stringify(data),{status,headers:{'content-type':'application/json; charset=utf-8','cache-control':'no-store','x-wae-runtime':'universal-core-mobile-cognitive-v26.2'}})}
   async function renderFallback(body,signal){
     const route=infer(body);
     const r=await nativeFetch('/api/chat',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({message:String(body.message||''),mode:route.mode,sessionId:String(body.session_id||''),attachments:Array.isArray(body.attachments)?body.attachments:[],preferences:{responseStyle:'premium-rich',voiceNatural:true}}),cache:'no-store',signal});
