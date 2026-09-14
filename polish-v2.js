@@ -95,7 +95,9 @@
   if(drawer){
     const dbrand=drawer.querySelector('.brand div');if(dbrand)dbrand.innerHTML='<strong>WAE OS Enterprise</strong><span>Universal Core</span>';
     const coreNav=drawer.querySelector('.nav-list button[data-view="ai"] span');if(coreNav)coreNav.textContent='Universal Core';
-    const foot=drawer.querySelector('.drawer-foot');if(foot)foot.innerHTML='<small>MEMORIA</small><div class="memory-meter"><span style="width:18%"></span></div><strong>ACTIVA</strong>';
+    const marketNav=drawer.querySelector('.nav-list button[data-view="market"] span');if(marketNav)marketNav.textContent='Herramientas';
+    const marketBadge=drawer.querySelector('.nav-list button[data-view="market"] .new-badge');marketBadge?.remove();
+    const foot=drawer.querySelector('.drawer-foot');if(foot)foot.innerHTML='<small>MEMORIA</small><div class="memory-meter"><span style="width:100%"></span></div><strong>ACTIVA</strong>';
   }
 
   // Response metadata can expose telemetry, never provider/model identity.
@@ -115,9 +117,12 @@
   if(!document.querySelector('link[data-wae-v4]')){
     const css=document.createElement('link');css.rel='stylesheet';css.href='./premium-v4.css';css.dataset.waeV4='true';document.head.appendChild(css);
   }
+  if(!document.querySelector('link[data-wae-v7]')){
+    const css=document.createElement('link');css.rel='stylesheet';css.href='./experience-v7.css';css.dataset.waeV7='true';document.head.appendChild(css);
+  }
   const load=(src,done)=>{
     if(document.querySelector(`script[data-src="${src}"]`)){done?.();return}
     const script=document.createElement('script');script.src=src;script.defer=true;script.dataset.src=src;script.onload=()=>done?.();document.head.appendChild(script);
   };
-  load('./voice-client.js',()=>load('./premium-v4.js',()=>load('./streaming-v2.js',()=>{sanitizeRuntimeMeta();enforceRuntimeIdentity()})));
+  load('./voice-client.js',()=>load('./premium-v4.js',()=>load('./streaming-v2.js',()=>{sanitizeRuntimeMeta();enforceRuntimeIdentity();load('./experience-v7.js')})));
 })();
