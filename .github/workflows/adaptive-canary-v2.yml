@@ -31,13 +31,13 @@ jobs:
       EDGE_URL: https://pbswcbryxawsmltyromd.supabase.co/functions/v1/wae-local-voice-demo-v61
       ORIGIN: https://wae-inteligencia-universal.onrender.com
     steps:
-      - name: Verify v1.7.1 control plane
+      - name: Verify adaptive control-plane invariants
         shell: bash
         run: |
           set -euo pipefail
           CAP=$(curl -fsS --max-time 30 "$EDGE_URL" -H 'content-type: application/json' -H "origin: $ORIGIN" --data '{"action":"capabilities"}')
-          jq -e '.success == true and .version == "1.7.1-adaptive-router-proven-stream-v2" and .router == "wae-adaptive-router-v2" and .response_schema == "assistant-response/v1" and .streaming_mode == "verified_only" and .ttft == "real_first_delta_only"' <<<"$CAP" >/dev/null
-          echo "$CAP" | jq '{version,router,model_count,verified_streaming_models,streaming_mode,ttft}'
+          jq -e '.success == true and (.version|type=="string" and test("^1\\.")) and (.router|type=="string" and test("^wae-adaptive-router-v")) and .response_schema == "assistant-response/v1" and .streaming_mode == "verified_only" and .ttft == "real_first_delta_only" and .adaptive_routing == true and .circuit_breaker == true' <<<"$CAP" >/dev/null
+          echo "$CAP" | jq '{version,router,model_count,verified_streaming_models,streaming_mode,ttft,canary_pct}'
 
       - name: Bootstrap isolated canary session
         id: boot
@@ -61,8 +61,8 @@ jobs:
           set -euo pipefail
           PREVIEW=$(jq -n --arg sid "$SID" --arg secret "$SECRET" '{action:"route_preview",session_id:$sid,session_secret:$secret,message:"Hola",mode:"general",stream:false,routing_variant:"candidate"}' | curl -fsS --max-time 30 "$EDGE_URL" -H 'content-type: application/json' -H "origin: $ORIGIN" --data-binary @-)
           jq -e '.success == true and .task.path == "FAST" and (.candidates|length) > 0 and ([.candidates[]|select(.health == "offline" or .circuit == "OPEN")]|length) == 0' <<<"$PREVIEW" >/dev/null
-          echo "$PREVIEW" | jq '{task,requirements,candidates}'
-          echo 'Candidate live execution remains separated from production continuity until Edge router parity is promoted.' >> "$GITHUB_STEP_SUMMARY"
+          echo "$PREVIEW" | jq '{router,task,requirements,candidates}'
+          echo 'Candidate live execution remains separated from production continuity until the performance gate proves promotion eligibility.' >> "$GITHUB_STEP_SUMMARY"
 
       - name: Run stable control JSON samples
         shell: bash
@@ -74,8 +74,8 @@ jobs:
           : > /tmp/json-canary.ndjson
           for i in 1 2 3 4 5; do
             CHAT=$(jq -n --arg sid "$SID" --arg secret "$SECRET" --arg msg "Canary $i: responde solamente OK." '{action:"chat",session_id:$sid,session_secret:$secret,message:$msg,mode:"general",web_enabled:false,stream:false,routing_variant:"control"}' | curl -fsS --max-time 55 "$EDGE_URL" -H 'content-type: application/json' -H "origin: $ORIGIN" --data-binary @-)
-            jq -e '.success == true and .response_schema == "assistant-response/v1" and .runtime == "1.7.1-adaptive-router-proven-stream-v2" and .ttft_ms == null and (.reply|type=="string") and (.reply|length)>0' <<<"$CHAT" >/dev/null
-            jq -c '{request_id,provider,model,latency_ms,ttft_ms,routing_path,router_variant,cost_microunits}' <<<"$CHAT" | tee -a /tmp/json-canary.ndjson
+            jq -e '.success == true and .response_schema == "assistant-response/v1" and (.runtime|type=="string" and test("^1\\.")) and .ttft_ms == null and (.reply|type=="string") and (.reply|length)>0' <<<"$CHAT" >/dev/null
+            jq -c '{request_id,provider,model,latency_ms,ttft_ms,routing_path,router_variant,cost_microunits,runtime}' <<<"$CHAT" | tee -a /tmp/json-canary.ndjson
           done
 
       - name: Probe upstream streaming transports
@@ -87,7 +87,7 @@ jobs:
         run: |
           set -euo pipefail
           PROBE=$(jq -n --arg sid "$SID" --arg secret "$SECRET" '{action:"stream_probe",session_id:$sid,session_secret:$secret}' | curl -fsS --max-time 240 "$EDGE_URL" -H 'content-type: application/json' -H "origin: $ORIGIN" --data-binary @-)
-          jq -e '.success == true and .runtime == "1.7.1-adaptive-router-proven-stream-v2" and (.candidates_considered|type=="number")' <<<"$PROBE" >/dev/null
+          jq -e '.success == true and (.runtime|type=="string" and test("^1\\.")) and (.router|type=="string" and test("^wae-adaptive-router-v")) and (.candidates_considered|type=="number")' <<<"$PROBE" >/dev/null
           VERIFIED=$(jq -r '.verified' <<<"$PROBE")
           echo "verified=$VERIFIED" >> "$GITHUB_OUTPUT"
           echo "$PROBE" | jq .
@@ -104,7 +104,7 @@ jobs:
           SECRET: ${{ steps.boot.outputs.secret }}
         run: |
           set -euo pipefail
-          jq -n --arg sid "$SID" --arg secret "$SECRET" '{action:"chat",session_id:$sid,session_secret:$secret,message:"Explica en tres frases breves por qué medir TTFT mejora una interfaz de inteligencia artificial.",mode:"general",web_enabled:false,stream:true,routing_variant:"candidate"}' > /tmp/request.json
+          jq -n --arg sid "$SID" --arg secret "$SECRET" '{action:"chat",session_id:$sid,session_secret:$secret,message:"Explica en tres frases breves por qué medir TTFT mejora una interfaz de inteligencia.",mode:"general",web_enabled:false,stream:true,routing_variant:"candidate"}' > /tmp/request.json
           curl -fsS -N --max-time 90 "$EDGE_URL" -H 'content-type: application/json' -H "origin: $ORIGIN" --data-binary @/tmp/request.json > /tmp/stream.txt
           DELTAS=$(grep -c '^event: content.delta' /tmp/stream.txt || true)
           test "$DELTAS" -ge 2
@@ -113,7 +113,7 @@ jobs:
           COMPLETE=$(awk '/^event: response.complete/{getline; sub(/^data: /,""); print; exit}' /tmp/stream.txt)
           jq -e '.stream_verified == true and (.ttft_ms|type=="number") and .ttft_ms > 0 and .ttft_ms < .latency_ms' <<<"$COMPLETE" >/dev/null
           echo "Verified progressive deltas: $DELTAS"
-          jq '{provider,model,latency_ms,ttft_ms,router_overhead_ms,routing_path,router_variant}' <<<"$COMPLETE"
+          jq '{latency_ms,ttft_ms,router_overhead_ms,routing_path,router_variant,runtime}' <<<"$COMPLETE"
 
       - name: Keep progressive promotion on hold when no stream is verified
         if: steps.probe.outputs.verified != 'true'
