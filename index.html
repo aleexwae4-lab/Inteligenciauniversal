@@ -1,0 +1,218 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="theme-color" content="#07110f" />
+  <meta name="description" content="WAE Inteligencia Universal — interfaz ejecutiva de inteligencia, investigación, programación, análisis y diseño." />
+  <link rel="manifest" href="./manifest.webmanifest" />
+  <link rel="icon" href="./assets/logo.svg" type="image/svg+xml" />
+  <link rel="stylesheet" href="./styles.css" />
+  <title>WAE · Inteligencia Universal</title>
+</head>
+<body>
+  <div id="app" class="app-shell">
+    <header class="topbar">
+      <button class="icon-btn" id="menuBtn" aria-label="Abrir menú">☰</button>
+      <div class="brand">
+        <img src="./assets/logo.svg" alt="WAE" />
+        <div>
+          <strong>WAE OS</strong>
+          <span>Inteligencia Universal</span>
+        </div>
+      </div>
+      <div class="top-actions">
+        <button class="chip" id="newChatBtn">＋ Nueva</button>
+        <button class="icon-btn" id="workspaceBtn" title="Workspace">◇</button>
+        <button class="avatar" aria-label="Perfil">AW</button>
+      </div>
+    </header>
+
+    <div class="status-strip">
+      <span class="status-dot"></span>
+      <span>Universal Core · online</span>
+      <span class="status-meta">4 capacidades activas</span>
+    </div>
+
+    <main class="chat-layout">
+      <section class="chat-column">
+        <div class="chat-heading">
+          <p class="eyebrow">NÚCLEO UNIVERSAL</p>
+          <h1>¿Qué quieres construir hoy?</h1>
+          <p>Investiga, programa, analiza, diseña y convierte ideas en entregables desde una sola interfaz.</p>
+        </div>
+
+        <div class="messages" id="messages" aria-live="polite"></div>
+
+        <div class="capability-grid" id="capabilityGrid">
+          <button class="capability-card" data-mode="research">
+            <span class="cap-icon">⌕</span>
+            <span><strong>Investigar</strong><small>Fuentes, contexto, síntesis</small></span>
+          </button>
+          <button class="capability-card" data-mode="code">
+            <span class="cap-icon">⌘</span>
+            <span><strong>Programar</strong><small>Arquitectura, código, pruebas</small></span>
+          </button>
+          <button class="capability-card" data-mode="analysis">
+            <span class="cap-icon">▦</span>
+            <span><strong>Analizar</strong><small>Datos, riesgos, decisiones</small></span>
+          </button>
+          <button class="capability-card" data-mode="design">
+            <span class="cap-icon">✦</span>
+            <span><strong>Diseñar</strong><small>Producto, UX, sistemas</small></span>
+          </button>
+        </div>
+      </section>
+    </main>
+
+    <form class="composer" id="composer">
+      <div class="mode-pill" id="modePill">General</div>
+      <textarea id="messageInput" rows="1" placeholder="Describe una misión, crea un sistema o pide un análisis…"></textarea>
+      <div class="composer-actions">
+        <div>
+          <button type="button" class="mini-btn" id="attachBtn" title="Adjuntar">＋</button>
+          <button type="button" class="mini-btn" id="voiceBtn" title="Voz">◉</button>
+        </div>
+        <button class="send-btn" type="submit" aria-label="Enviar">➜</button>
+      </div>
+    </form>
+
+    <footer class="runtime-bar">
+      <div><span class="pulse"></span><strong>Operativo</strong><small> · núcleo local</small></div>
+      <strong class="health">100%</strong>
+    </footer>
+
+    <aside class="drawer" id="drawer" aria-hidden="true">
+      <div class="drawer-head">
+        <div class="brand compact">
+          <img src="./assets/logo.svg" alt="WAE" />
+          <div><strong>WAE OS</strong><span>Universal Core</span></div>
+        </div>
+        <button class="icon-btn" id="closeDrawerBtn">×</button>
+      </div>
+      <button class="primary-wide" id="drawerNewChat">＋ Nueva conversación</button>
+      <button class="secondary-wide" id="drawerWorkspace">◇ Workspace</button>
+      <p class="nav-label">NAVEGACIÓN</p>
+      <nav class="nav-list">
+        <button data-view="control">◫ <span>Centro de Control</span></button>
+        <button data-view="comms">◌ <span>Comunicaciones</span></button>
+        <button data-view="projects">◇ <span>Proyectos</span></button>
+        <button data-view="agents">✣ <span>Agentes</span><em>4</em></button>
+        <button data-view="automations">↻ <span>Automatizaciones</span></button>
+        <button data-view="memory">◈ <span>Memoria</span></button>
+        <button data-view="knowledge">▤ <span>Base de Conocimiento</span></button>
+        <button data-view="ai">✦ <span>AI Center</span></button>
+        <button data-view="market">▧ <span>Marketplace</span><em class="new-badge">NEW</em></button>
+        <button id="settingsBtn">⚙ <span>Configuración</span></button>
+      </nav>
+      <div class="drawer-foot">
+        <small>MEMORIA UNIVERSAL</small>
+        <div class="memory-meter"><span style="width: 18%"></span></div>
+        <small>18% utilizada</small>
+      </div>
+    </aside>
+    <div class="scrim" id="scrim"></div>
+
+    <section class="workspace" id="workspace" aria-hidden="true">
+      <header class="workspace-topbar">
+        <button class="icon-btn" id="closeWorkspaceBtn">←</button>
+        <div class="workspace-title">
+          <span class="workspace-icon">◆</span>
+          <div><strong>Workspace</strong><small id="saveState">Guardado</small></div>
+        </div>
+        <div class="workspace-actions">
+          <button class="chip" id="exportBtn">Exportar</button>
+          <button class="save-btn" id="saveBtn">Guardar</button>
+        </div>
+      </header>
+
+      <div class="workspace-tabs">
+        <button class="active" data-tab="document">Documento</button>
+        <button data-tab="html">Canvas HTML</button>
+        <button data-tab="plans">Planes</button>
+      </div>
+
+      <div class="workspace-body">
+        <section class="tab-panel active" id="panel-document">
+          <div class="toolbar" aria-label="Formato">
+            <button data-format="bold"><b>B</b></button>
+            <button data-format="italic"><i>I</i></button>
+            <button data-format="underline"><u>U</u></button>
+            <button data-format="insertUnorderedList">• Lista</button>
+            <button data-format="formatBlock" data-value="h2">H2</button>
+            <button data-format="formatBlock" data-value="blockquote">❝</button>
+          </div>
+          <div class="document-sheet" id="documentEditor" contenteditable="true">
+            <p class="placeholder-line">Comienza a escribir o pega el texto de una respuesta para editarlo…</p>
+          </div>
+        </section>
+
+        <section class="tab-panel split-panel" id="panel-html">
+          <div class="code-pane">
+            <div class="pane-label">HTML</div>
+            <textarea id="htmlEditor" spellcheck="false">&lt;!doctype html&gt;
+&lt;html lang="es"&gt;
+&lt;head&gt;
+  &lt;meta charset="utf-8"&gt;
+  &lt;style&gt;
+    body { font-family: Inter, system-ui; padding: 32px; color: #101316; }
+    h1 { margin-bottom: 8px; }
+  &lt;/style&gt;
+&lt;/head&gt;
+&lt;body&gt;
+  &lt;h1&gt;Hola WAE OS&lt;/h1&gt;
+  &lt;p&gt;Edita este HTML y mira la vista previa.&lt;/p&gt;
+&lt;/body&gt;
+&lt;/html&gt;</textarea>
+          </div>
+          <div class="preview-pane">
+            <div class="pane-label">VISTA PREVIA</div>
+            <iframe id="htmlPreview" title="Vista previa HTML" sandbox="allow-scripts"></iframe>
+          </div>
+        </section>
+
+        <section class="tab-panel" id="panel-plans">
+          <div class="plan-board">
+            <article>
+              <span>01</span>
+              <div><strong>Definir objetivo</strong><p>Resultado, restricciones y criterio de éxito.</p></div>
+            </article>
+            <article>
+              <span>02</span>
+              <div><strong>Diseñar arquitectura</strong><p>Datos, componentes, integraciones y seguridad.</p></div>
+            </article>
+            <article>
+              <span>03</span>
+              <div><strong>Ejecutar</strong><p>Construcción, pruebas, corrección y entrega.</p></div>
+            </article>
+          </div>
+        </section>
+      </div>
+    </section>
+
+    <dialog id="settingsDialog">
+      <form method="dialog" class="settings-card">
+        <div class="settings-head">
+          <div><p class="eyebrow">CONFIGURACIÓN</p><h2>Conectar inteligencia real</h2></div>
+          <button class="icon-btn" value="cancel">×</button>
+        </div>
+        <label>Endpoint IA
+          <input id="apiEndpoint" type="url" placeholder="https://tu-api.com/api/chat" />
+        </label>
+        <label>Nombre del núcleo
+          <input id="coreName" type="text" placeholder="Universal Core" />
+        </label>
+        <p class="help">El endpoint debe aceptar POST JSON con <code>message</code> y <code>mode</code>, y devolver <code>{ "reply": "..." }</code>.</p>
+        <div class="dialog-actions">
+          <button value="cancel" class="secondary-wide">Cancelar</button>
+          <button type="button" id="saveSettingsBtn" class="save-btn">Guardar</button>
+        </div>
+      </form>
+    </dialog>
+
+    <input id="fileInput" type="file" hidden multiple />
+  </div>
+
+  <script src="./app.js" defer></script>
+</body>
+</html>
