@@ -23,7 +23,7 @@ jobs:
       - run: npm run check
       - run: npm test
       - name: Check Supabase adaptive runtime
-        run: deno check supabase/functions/wae-local-voice-demo-v61/index.ts
+        run: deno check --config supabase/functions/wae-local-voice-demo-v61/deno.json supabase/functions/wae-local-voice-demo-v61/index.ts
 
   router-canary:
     if: github.ref == 'refs/heads/adaptive-router-streaming-v1'
