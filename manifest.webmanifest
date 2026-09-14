@@ -1,0 +1,17 @@
+{
+  "name": "WAE · Inteligencia Universal",
+  "short_name": "WAE Universal",
+  "start_url": "./",
+  "display": "standalone",
+  "background_color": "#050806",
+  "theme_color": "#07110f",
+  "description": "Núcleo mobile-first para investigar, programar, analizar y diseñar.",
+  "icons": [
+    {
+      "src": "./assets/logo.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
