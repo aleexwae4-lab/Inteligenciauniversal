@@ -1,0 +1,49 @@
+/* WAE Inteligencia Universal v3 — mobile/runtime hardening */
+:root{--wae-safe-bottom:max(10px,env(safe-area-inset-bottom))}
+html,body{max-width:100%;overflow-x:hidden}
+.message p{white-space:pre-wrap;overflow-wrap:anywhere;word-break:break-word}
+.send-btn:disabled{opacity:.55;cursor:wait;transform:none!important}
+html[data-ai-busy="true"] .v2-runtime-icon{animation:waePulse 1.25s ease-in-out infinite}
+@keyframes waePulse{50%{box-shadow:0 0 0 8px rgba(81,235,207,.06),0 0 22px rgba(81,235,207,.18)}}
+.v2-runtime-copy{min-width:0}.v2-runtime-copy strong,.v2-runtime-copy small{display:block;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.settings-card input:disabled{opacity:.72;cursor:not-allowed}
+@media(max-width:700px){
+  .app-shell{height:100dvh!important;min-height:100dvh!important;max-height:100dvh!important;overflow:hidden!important;grid-template-rows:auto minmax(0,1fr) auto auto auto!important}
+  .chat-layout{min-height:0!important;overflow-y:auto!important;overscroll-behavior:contain;-webkit-overflow-scrolling:touch}
+  .v2-has-messages .chat-heading{display:none!important}
+  .chat-column{padding-top:12px!important;padding-bottom:10px!important}
+  .messages{padding-bottom:6px!important}
+  .message{max-width:94%!important;padding:14px 15px!important;border-radius:17px!important}
+  .message p{font-size:.88rem!important;line-height:1.58!important}
+  .message-meta{margin-bottom:8px!important}
+  .composer{width:calc(100% - 16px)!important;margin:0 8px!important;padding:10px 11px 8px!important;border-radius:18px!important;gap:7px!important;box-shadow:0 -8px 30px rgba(0,0,0,.18)!important}
+  .composer textarea{box-sizing:border-box!important;min-height:28px!important;height:auto!important;max-height:92px!important;line-height:1.45!important;font-size:.86rem!important;resize:none!important}
+  .composer-actions{min-height:38px!important}
+  .mini-btn{width:29px!important;min-width:29px!important;height:29px!important}
+  .send-btn{width:40px!important;height:40px!important;border-radius:13px!important}
+  .v2-composer-hint{display:none!important}
+  .runtime-bar.v2-runtime{width:calc(100% - 16px)!important;margin:6px 8px var(--wae-safe-bottom)!important;padding:7px 10px!important;gap:8px!important;min-height:48px!important;border-radius:16px!important}
+  .v2-runtime-icon{width:30px!important;height:30px!important;font-size:.78rem!important}
+  .v2-runtime-copy{gap:2px!important}
+  .v2-runtime-copy strong{font-size:.7rem!important}
+  .v2-runtime-copy small{font-size:.55rem!important;max-width:48vw}
+  .v2-efficiency strong{font-size:.84rem!important}
+  .v2-efficiency small{display:none!important}
+}
+@media(max-width:420px){
+  .topbar{height:58px!important}
+  .topbar .brand img{width:31px!important;height:31px!important}
+  .topbar .brand strong{font-size:.72rem!important}
+  .v2-tier{height:32px!important;padding:0 7px!important}
+  .topbar .avatar{width:32px!important;height:32px!important}
+  .message{max-width:96%!important}
+  .message p{font-size:.84rem!important}
+  .composer{padding-inline:9px!important}
+  .runtime-bar.v2-runtime{grid-template-columns:auto minmax(0,1fr) auto!important}
+  .v2-runtime-copy small{max-width:52vw}
+}
+@media(max-height:700px) and (max-width:700px){
+  .runtime-bar.v2-runtime{min-height:42px!important;padding-block:5px!important}
+  .v2-runtime-icon{width:27px!important;height:27px!important}
+  .composer{padding-top:8px!important}
+}
