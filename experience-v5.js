@@ -5,6 +5,11 @@
   const hint=()=>$('.v2-composer-hint');
   let lastAssistantCount=0;
 
+  function loadV6(){
+    if(!document.querySelector('link[data-wae-v6]')){const css=document.createElement('link');css.rel='stylesheet';css.href='./experience-v6.css';css.dataset.waeV6='true';document.head.appendChild(css)}
+    if(!document.querySelector('script[data-wae-v6]')){const js=document.createElement('script');js.src='./experience-v6.js';js.defer=true;js.dataset.waeV6='true';document.head.appendChild(js)}
+  }
+
   function ensureStatus(){
     const h=hint();if(!h)return null;
     let status=h.querySelector('.v5-live-status');
@@ -62,6 +67,7 @@
 
   function init(){
     html.classList.add('v5-experience');
+    loadV6();
     syncVoice({enabled:window.__waeVoice?.enabled??localStorage.getItem('iu.voiceEnabled')!=='false'});
     composerDynamics();enhanceRuntime();animateMessages();
     const messages=$('#messages');if(messages)new MutationObserver(()=>{animateMessages();syncRuntime()}).observe(messages,{childList:true,subtree:true});
