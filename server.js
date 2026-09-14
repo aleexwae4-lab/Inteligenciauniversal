@@ -5,6 +5,7 @@ import { extname, join, normalize } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import chatHandler from './api/chat.js';
 import continuityHandler from './api/continuity.js';
+import performanceHandler from './api/performance.js';
 import healthHandler from './api/health.js';
 import capabilitiesHandler from './api/capabilities.js';
 import tasksHandler from './api/tasks.js';
@@ -17,6 +18,7 @@ const MAX_BODY_BYTES = Number(process.env.WAE_MAX_BODY_BYTES || 2_000_000);
 const apiRoutes = new Map([
   ['/api/chat', chatHandler],
   ['/api/continuity/chat/completions', continuityHandler],
+  ['/api/performance', performanceHandler],
   ['/api/health', healthHandler],
   ['/api/capabilities', capabilitiesHandler],
   ['/api/tasks', tasksHandler],
@@ -30,7 +32,7 @@ const contentTypes = {
   '.webmanifest': 'application/manifest+json; charset=utf-8',
   '.svg': 'image/svg+xml',
   '.png': 'image/png',
-  '.jpg': 'image/jpeg',
+  '.jpg': 'image/jpg',
   '.jpeg': 'image/jpeg',
   '.webp': 'image/webp',
   '.ico': 'image/x-icon',
