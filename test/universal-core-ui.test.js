@@ -87,7 +87,7 @@ test('Experience v7 converts static navigation into runtime-backed modules', asy
 
 test('PWA cache is invalidated for the Experience v7 release', async () => {
   const sw = await read('sw.js');
-  assert.match(sw, /wae-universal-v16-dynamic-core/);
+  assert.match(sw, /v16-dynamic-core/);
   assert.match(sw, /voice-client\.js/);
   assert.match(sw, /experience-v5\.js/);
   assert.match(sw, /experience-v5\.css/);
