@@ -4,6 +4,10 @@
   const priorFetch=window.fetch.bind(window);
   let caps=null,perf=null,lastSync=0,activityTimer=null;
 
+  if(!document.querySelector('script[data-iu-interaction-guard]')){
+    const guard=document.createElement('script');guard.src='./interaction-guard-v21.js';guard.defer=true;guard.dataset.iuInteractionGuard='true';document.head.appendChild(guard);
+  }
+
   const profile=()=>localStorage.getItem(PROFILE_KEY)==='deep'?'deep':'auto';
   const setProfile=value=>{localStorage.setItem(PROFILE_KEY,value==='deep'?'deep':'auto');document.documentElement.dataset.reasoningProfile=profile();renderProfile();syncLive(true)};
   const safe=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
