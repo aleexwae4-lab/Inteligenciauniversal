@@ -30,6 +30,11 @@
       #htmlEditor,#htmlPreview{box-sizing:border-box!important;width:100%!important;max-width:100%!important;min-width:0!important}
       #htmlEditor{overflow:auto!important;-webkit-overflow-scrolling:touch}
       .plan-board{box-sizing:border-box!important;width:100%!important;max-width:100%!important;min-width:0!important;overflow:auto!important;-webkit-overflow-scrolling:touch}
+      #composer{display:none!important}
+      #mobileSafeComposer{position:fixed!important;left:8px!important;right:8px!important;bottom:max(8px,env(safe-area-inset-bottom))!important;z-index:2147483647!important;display:flex!important;align-items:flex-end!important;gap:8px!important;box-sizing:border-box!important;padding:8px!important;border:1px solid rgba(40,247,164,.22)!important;border-radius:16px!important;background:#080e0c!important;pointer-events:auto!important;touch-action:manipulation!important}
+      #mobileSafeInput{display:block!important;flex:1 1 auto!important;min-width:0!important;min-height:42px!important;max-height:132px!important;font-size:16px!important;line-height:1.35!important;padding:10px 11px!important;border:0!important;outline:0!important;border-radius:11px!important;background:#0d1512!important;color:#edf7f1!important;resize:none!important;pointer-events:auto!important;touch-action:manipulation!important;-webkit-user-select:text!important;user-select:text!important}
+      #mobileSafeSend{flex:0 0 42px!important;width:42px!important;height:42px!important;border:0!important;border-radius:11px!important;background:#28f7a4!important;color:#001b10!important;font-weight:900!important;pointer-events:auto!important;touch-action:manipulation!important}
+      .runtime-bar{padding-bottom:72px!important}
     }
     @media(max-width:420px){
       .workspace-topbar>.icon-btn{min-width:32px!important;width:32px!important;height:32px!important}.workspace-icon{display:none}.workspace-actions .chip,.workspace-actions .save-btn{padding:7px 8px!important}.document-sheet{padding:16px!important}
@@ -113,9 +118,10 @@
     <button id="mobileSafeSend" type="submit" aria-label="Enviar">➜</button>
   </form>
 
+  <script src="./startup-guard-v23.js" defer></script>
   <script src="./runtime-client.js" defer></script>
   <script src="./app.js" defer></script>
   <script src="./mobile-safe-composer.js" defer></script>
-  <script src="./polish-v2.js" defer></script>
+  <script src="./progressive-boot-v23.js" defer></script>
 </body>
 </html>
