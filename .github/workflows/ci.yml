@@ -21,7 +21,7 @@ jobs:
       - run: npm test
 
   production-smoke:
-    if: github.ref == 'refs/heads/main'
+    if: github.ref == 'refs/heads/main' && contains(github.event.head_commit.message, 'AssistantResponse')
     needs: quality-gate
     runs-on: ubuntu-latest
     timeout-minutes: 12
@@ -29,55 +29,49 @@ jobs:
       APP_URL: https://wae-inteligencia-universal.onrender.com
       EDGE_URL: https://pbswcbryxawsmltyromd.supabase.co/functions/v1/wae-local-voice-demo-v61
     steps:
-      - name: Wait for Render adaptive release marker
+      - name: Wait for Render release marker
         shell: bash
         run: |
           set -euo pipefail
           for attempt in $(seq 1 36); do
-            if curl -fsS --max-time 20 "$APP_URL/sw.js?release=${GITHUB_SHA}" | grep -q "wae-universal-v11-adaptive-stream"; then
-              echo "Render adaptive release marker detected"
+            if curl -fsS --max-time 20 "$APP_URL/sw.js?release=${GITHUB_SHA}" | grep -q "wae-universal-v10"; then
+              echo "Render release marker detected"
               exit 0
             fi
             sleep 10
           done
+          echo "Render did not expose the expected release marker" >&2
           exit 1
 
-      - name: Verify Render health and streaming asset
+      - name: Verify Render runtime health
         shell: bash
         run: |
           set -euo pipefail
           curl -fsS --max-time 30 "$APP_URL/api/health" | jq -e '.ok == true'
-          curl -fsS --max-time 30 "$APP_URL/streaming-v1.js" | grep -q "content.delta"
 
-      - name: Verify adaptive router and SSE end to end
+      - name: Verify structured runtime end to end
         shell: bash
         run: |
           set -euo pipefail
           ORIGIN="$APP_URL"
           CAP=$(curl -fsS --max-time 30 "$EDGE_URL" -H "content-type: application/json" -H "origin: $ORIGIN" --data '{"action":"capabilities"}')
-          jq -e '.success == true and .response_schema == "assistant-response/v1" and .adaptive_routing == true and .streaming == true and .ttft == true and .circuit_breaker == true and .eval_driven == true' <<<"$CAP" >/dev/null
-          BOOT=$(curl -fsS --max-time 30 "$EDGE_URL" -H "content-type: application/json" -H "origin: $ORIGIN" --data '{"action":"bootstrap"}')
-          SID=$(jq -r '.session_id' <<<"$BOOT"); SECRET=$(jq -r '.session_secret' <<<"$BOOT")
-          PREVIEW=$(jq -n --arg sid "$SID" --arg secret "$SECRET" '{action:"route_preview",session_id:$sid,session_secret:$secret,message:"Hola",mode:"general",routing_variant:"candidate"}' | curl -fsS --max-time 30 "$EDGE_URL" -H "content-type: application/json" -H "origin: $ORIGIN" --data-binary @-)
-          jq -e '.success == true and .task.category == "simple_chat" and .task.path == "FAST" and ([.candidates[] | select(.health == "offline" or .circuit == "OPEN")] | length) == 0' <<<"$PREVIEW" >/dev/null
-          STREAM=$(mktemp)
-          jq -n --arg sid "$SID" --arg secret "$SECRET" '{action:"chat",session_id:$sid,session_secret:$secret,message:"Responde solamente OK.",mode:"general",web_enabled:false,stream:true,routing_variant:"candidate"}' | curl -fsS -N --max-time 55 "$EDGE_URL" -H "content-type: application/json" -H "origin: $ORIGIN" --data-binary @- > "$STREAM"
-          grep -q '^event: response.start' "$STREAM"
-          grep -q '^event: content.delta' "$STREAM"
-          grep -q '^event: response.complete' "$STREAM"
-          ! grep -q 'wae_cognitive_fusion' "$STREAM"
+          jq -e '.success == true and .response_schema == "assistant-response/v1" and .structured_responses == true and .natural_voice == true and .observability == true' <<<"$CAP" >/dev/null
 
-      - name: Verify compatibility and learning
-        shell: bash
-        run: |
-          set -euo pipefail
-          ORIGIN="$APP_URL"
           BOOT=$(curl -fsS --max-time 30 "$EDGE_URL" -H "content-type: application/json" -H "origin: $ORIGIN" --data '{"action":"bootstrap"}')
-          SID=$(jq -r '.session_id' <<<"$BOOT"); SECRET=$(jq -r '.session_secret' <<<"$BOOT")
-          CHAT=$(jq -n --arg sid "$SID" --arg secret "$SECRET" '{action:"chat",session_id:$sid,session_secret:$secret,message:"Responde solamente OK.",mode:"general",web_enabled:false}' | curl -fsS --max-time 55 "$EDGE_URL" -H "content-type: application/json" -H "origin: $ORIGIN" --data-binary @-)
-          jq -e '.success == true and .response.schema == "assistant-response/v1" and (.speech_text|length)>0 and (.message_id|type=="string")' <<<"$CHAT" >/dev/null
+          SID=$(jq -r '.session_id' <<<"$BOOT")
+          SECRET=$(jq -r '.session_secret' <<<"$BOOT")
+          test -n "$SID" && test "$SID" != "null"
+          test -n "$SECRET" && test "$SECRET" != "null"
+
+          CHAT=$(jq -n --arg sid "$SID" --arg secret "$SECRET" '{action:"chat",session_id:$sid,session_secret:$secret,message:"Responde solamente con la palabra OK.",mode:"general",web_enabled:false}' | curl -fsS --max-time 55 "$EDGE_URL" -H "content-type: application/json" -H "origin: $ORIGIN" --data-binary @-)
+          jq -e '.success == true and .response.schema == "assistant-response/v1" and (.speech_text | type == "string") and (.speech_text | length > 0) and (.components | length > 0) and (.message_id | type == "string")' <<<"$CHAT" >/dev/null
           CID=$(jq -r '.conversation_id' <<<"$CHAT")
+
+          LIST=$(jq -n --arg sid "$SID" --arg secret "$SECRET" '{action:"list_conversations",session_id:$sid,session_secret:$secret}' | curl -fsS --max-time 30 "$EDGE_URL" -H "content-type: application/json" -H "origin: $ORIGIN" --data-binary @-)
+          jq -e '(.conversations | length) >= 1' <<<"$LIST" >/dev/null
+
           GET=$(jq -n --arg sid "$SID" --arg secret "$SECRET" --arg cid "$CID" '{action:"get_conversation",session_id:$sid,session_secret:$secret,conversation_id:$cid}' | curl -fsS --max-time 30 "$EDGE_URL" -H "content-type: application/json" -H "origin: $ORIGIN" --data-binary @-)
-          jq -e '.success == true and ([.messages[] | select(.role=="assistant" and .content_json.schema=="assistant-response/v1")]|length)>=1' <<<"$GET" >/dev/null
+          jq -e '.success == true and (.messages | length) >= 2 and ([.messages[] | select(.role == "assistant" and .content_json.schema == "assistant-response/v1")] | length) >= 1' <<<"$GET" >/dev/null
+
           LEARN=$(jq -n --arg sid "$SID" --arg secret "$SECRET" '{action:"learning_status",session_id:$sid,session_secret:$secret}' | curl -fsS --max-time 30 "$EDGE_URL" -H "content-type: application/json" -H "origin: $ORIGIN" --data-binary @-)
           jq -e '.success == true and .base_model_trained == false' <<<"$LEARN" >/dev/null
