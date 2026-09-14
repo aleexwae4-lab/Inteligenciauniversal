@@ -1,12 +1,12 @@
 {
   "name": "wae-inteligencia-universal",
-  "version": "0.10.3",
+  "version": "0.10.4",
   "private": true,
   "type": "module",
   "engines": { "node": ">=20" },
   "scripts": {
     "start": "node server.js",
     "test": "node --test",
-    "check": "node --check server.js && node --check api/chat.js && node --check api/continuity.js && node --check api/performance.js && node --check api/health.js && node --check api/capabilities.js && node --check api/tasks.js && node --check api/orchestrate.js && node --check lib/providers.js && node --check lib/tools.js && node --check lib/memory.js && node --check lib/agents.js && node --check lib/orchestrator.js && node --check lib/response.js && node --check lib/runtime.js && node --check lib/continuity.js && node --check lib/performance.js && node --check lib/security.js && node --check lib/adaptive-router.js && node --check lib/sse-events.js && node --check startup-guard-v23.js && node --check runtime-client.js && node --check mobile-safe-composer.js && node --check progressive-boot-v23.js && node --check voice-client.js && node --check premium-v4.js && node --check streaming-v2.js && node --check experience-v5.js && node --check experience-v6.js && node --check experience-v7.js && node --check experience-v8.js && node --check interaction-guard-v21.js && node --check app.js && node --check polish-v2.js && node --check sw.js"
+    "check": "node --check server.js && node --check api/chat.js && node --check api/continuity.js && node --check api/performance.js && node --check api/health.js && node --check api/capabilities.js && node --check api/tasks.js && node --check api/orchestrate.js && node --check api/mobile.js && node --check api/ui-diagnostics.js && node --check lib/providers.js && node --check lib/tools.js && node --check lib/memory.js && node --check lib/agents.js && node --check lib/orchestrator.js && node --check lib/response.js && node --check lib/runtime.js && node --check lib/continuity.js && node --check lib/performance.js && node --check lib/security.js && node --check lib/adaptive-router.js && node --check lib/sse-events.js && node --check startup-guard-v23.js && node --check runtime-client.js && node --check mobile-safe-composer.js && node --check progressive-boot-v23.js && node --check voice-client.js && node --check premium-v4.js && node --check streaming-v2.js && node --check experience-v5.js && node --check experience-v6.js && node --check experience-v7.js && node --check experience-v8.js && node --check interaction-guard-v21.js && node --check app.js && node --check polish-v2.js && node --check sw.js"
   }
 }
