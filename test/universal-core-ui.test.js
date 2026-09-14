@@ -69,13 +69,31 @@ test('Experience v6 makes the conversation primary and verifies voice activation
   assert.match(css, /composer/);
 });
 
-test('PWA cache is invalidated for the Experience v6 release', async () => {
+test('Experience v7 converts static navigation into runtime-backed modules', async () => {
+  const js = await read('experience-v7.js');
+  const css = await read('experience-v7.css');
+  const shell = await read('polish-v2.js');
+  assert.match(js, /\/api\/capabilities/);
+  assert.match(js, /\/api\/performance/);
+  assert.match(js, /\/api\/tasks/);
+  assert.match(js, /__waeRuntimeAttachments/);
+  assert.match(js, /data-agent/);
+  assert.match(js, /iu\.projects/);
+  assert.match(css, /\.v7-panel/);
+  assert.match(css, /100dvh/);
+  assert.match(shell, /experience-v7\.css/);
+  assert.match(shell, /experience-v7\.js/);
+});
+
+test('PWA cache is invalidated for the Experience v7 release', async () => {
   const sw = await read('sw.js');
-  assert.match(sw, /wae-universal-v15-gpt-feel/);
+  assert.match(sw, /wae-universal-v16-dynamic-core/);
   assert.match(sw, /voice-client\.js/);
   assert.match(sw, /experience-v5\.js/);
   assert.match(sw, /experience-v5\.css/);
   assert.match(sw, /experience-v6\.js/);
   assert.match(sw, /experience-v6\.css/);
+  assert.match(sw, /experience-v7\.js/);
+  assert.match(sw, /experience-v7\.css/);
   assert.match(sw, /polish-v2\.js/);
 });
