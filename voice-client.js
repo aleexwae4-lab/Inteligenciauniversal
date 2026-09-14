@@ -27,7 +27,9 @@
   async function setEnabled(value){enabled=!!value;localStorage.setItem(VOICE_ENABLED,String(enabled));localStorage.setItem(LEGACY,String(enabled));if(!enabled)stop();else emitState('ready','idle');const s=session();if(s.session_id&&s.session_secret){fetch(VOICE_ENDPOINT,{method:'POST',headers:{'content-type':'application/json','apikey':SUPABASE_KEY},body:JSON.stringify({action:'preferences',...s,set:{voice_enabled:enabled,voice_name:voice}}),cache:'no-store'}).catch(()=>{})}return enabled}
   async function toggle(){const value=await setEnabled(!enabled);toast(value?'Voz automática activada':'Voz automática desactivada');return value}
   async function setVoice(name){voice=String(name||'Kore');localStorage.setItem(VOICE_NAME,voice);return voice}
+  function loadExperience(){if(!document.querySelector('link[data-wae-v5]')){const css=document.createElement('link');css.rel='stylesheet';css.href='./experience-v5.css';css.dataset.waeV5='true';document.head.appendChild(css)}if(!document.querySelector('script[data-wae-v5]')){const js=document.createElement('script');js.src='./experience-v5.js';js.defer=true;js.dataset.waeV5='true';document.head.appendChild(js)}}
   emitState(enabled?'ready':'disabled','idle');
   if('speechSynthesis'in window)speechSynthesis.addEventListener?.('voiceschanged',()=>emitState(enabled?'ready':'disabled',lastEngine));
   window.__waeVoice={speak,enqueue,prepareQueue,stop,toggle,unlock,setEnabled,setVoice,get enabled(){return enabled},get voice(){return voice},get queueLength(){return queue.length},get engine(){return lastEngine},get cloudBackoff(){return Math.max(0,cloudBackoffUntil-Date.now())}};
+  loadExperience();
 })();
