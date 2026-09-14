@@ -52,7 +52,7 @@ jobs:
           echo "sid=$SID" >> "$GITHUB_OUTPUT"
           echo "secret=$SECRET" >> "$GITHUB_OUTPUT"
 
-      - name: Verify offline and open providers are excluded
+      - name: Inspect candidate route safety
         shell: bash
         env:
           SID: ${{ steps.boot.outputs.sid }}
@@ -62,8 +62,9 @@ jobs:
           PREVIEW=$(jq -n --arg sid "$SID" --arg secret "$SECRET" '{action:"route_preview",session_id:$sid,session_secret:$secret,message:"Hola",mode:"general",stream:false,routing_variant:"candidate"}' | curl -fsS --max-time 30 "$EDGE_URL" -H 'content-type: application/json' -H "origin: $ORIGIN" --data-binary @-)
           jq -e '.success == true and .task.path == "FAST" and (.candidates|length) > 0 and ([.candidates[]|select(.health == "offline" or .circuit == "OPEN")]|length) == 0' <<<"$PREVIEW" >/dev/null
           echo "$PREVIEW" | jq '{task,requirements,candidates}'
+          echo 'Candidate live execution remains separated from production continuity until Edge router parity is promoted.' >> "$GITHUB_STEP_SUMMARY"
 
-      - name: Run adaptive JSON canary samples
+      - name: Run stable control JSON samples
         shell: bash
         env:
           SID: ${{ steps.boot.outputs.sid }}
@@ -72,7 +73,7 @@ jobs:
           set -euo pipefail
           : > /tmp/json-canary.ndjson
           for i in 1 2 3 4 5; do
-            CHAT=$(jq -n --arg sid "$SID" --arg secret "$SECRET" --arg msg "Canary $i: responde solamente OK." '{action:"chat",session_id:$sid,session_secret:$secret,message:$msg,mode:"general",web_enabled:false,stream:false,routing_variant:"candidate"}' | curl -fsS --max-time 55 "$EDGE_URL" -H 'content-type: application/json' -H "origin: $ORIGIN" --data-binary @-)
+            CHAT=$(jq -n --arg sid "$SID" --arg secret "$SECRET" --arg msg "Canary $i: responde solamente OK." '{action:"chat",session_id:$sid,session_secret:$secret,message:$msg,mode:"general",web_enabled:false,stream:false,routing_variant:"control"}' | curl -fsS --max-time 55 "$EDGE_URL" -H 'content-type: application/json' -H "origin: $ORIGIN" --data-binary @-)
             jq -e '.success == true and .response_schema == "assistant-response/v1" and .runtime == "1.7.1-adaptive-router-proven-stream-v2" and .ttft_ms == null and (.reply|type=="string") and (.reply|length)>0' <<<"$CHAT" >/dev/null
             jq -c '{request_id,provider,model,latency_ms,ttft_ms,routing_path,router_variant,cost_microunits}' <<<"$CHAT" | tee -a /tmp/json-canary.ndjson
           done
@@ -114,9 +115,9 @@ jobs:
           echo "Verified progressive deltas: $DELTAS"
           jq '{provider,model,latency_ms,ttft_ms,router_overhead_ms,routing_path,router_variant}' <<<"$COMPLETE"
 
-      - name: Keep frontend promotion on hold when no stream is verified
+      - name: Keep progressive promotion on hold when no stream is verified
         if: steps.probe.outputs.verified != 'true'
-        run: echo 'No provider produced verified upstream token deltas. Frontend streaming promotion remains HOLD by design.'
+        run: echo 'No provider produced verified upstream token deltas. Progressive client promotion remains HOLD by design.'
 
       - name: Verify history contract after canary
         shell: bash
