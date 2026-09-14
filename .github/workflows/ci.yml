@@ -29,7 +29,7 @@ jobs:
       APP_URL: https://wae-inteligencia-universal.onrender.com
       EDGE_URL: https://pbswcbryxawsmltyromd.supabase.co/functions/v1/wae-local-voice-demo-v61
     steps:
-      - name: Wait for Render release invariants
+      - name: Wait for Render Experience v6 invariants
         shell: bash
         run: |
           set -euo pipefail
@@ -38,18 +38,24 @@ jobs:
             SW=$(curl -fsS --max-time 20 "$APP_URL/sw.js?release=${GITHUB_SHA}" || true)
             RUNTIME=$(curl -fsS --max-time 20 "$APP_URL/runtime-client.js?release=${GITHUB_SHA}" || true)
             SSE=$(curl -fsS --max-time 20 "$APP_URL/lib/sse-events.js?release=${GITHUB_SHA}" || true)
+            VOICE=$(curl -fsS --max-time 20 "$APP_URL/voice-client.js?release=${GITHUB_SHA}" || true)
+            EXP6JS=$(curl -fsS --max-time 20 "$APP_URL/experience-v6.js?release=${GITHUB_SHA}" || true)
+            EXP6CSS=$(curl -fsS --max-time 20 "$APP_URL/experience-v6.css?release=${GITHUB_SHA}" || true)
             if jq -e '.ok == true and .service == "wae-universal-runtime"' <<<"$HEALTH" >/dev/null 2>&1 \
-              && grep -q "wae-universal-v" <<<"$SW" \
+              && grep -q "wae-universal-v15-gpt-feel" <<<"$SW" \
               && grep -q "routing_variant:'control'" <<<"$RUNTIME" \
-              && grep -q "stream_continuity!==true" <<<"$RUNTIME" \
-              && grep -q "createSSEParser" <<<"$SSE"; then
-              echo "Render release invariants detected"
+              && grep -q "createSSEParser" <<<"$SSE" \
+              && grep -q "speechSynthesis" <<<"$VOICE" \
+              && grep -q "playBrowser" <<<"$VOICE" \
+              && grep -q "v6-gpt-feel" <<<"$EXP6JS" \
+              && grep -q "message.assistant" <<<"$EXP6CSS"; then
+              echo "Render Experience v6 invariants detected"
               jq '{version,ready,generativeReady,continuity}' <<<"$HEALTH"
               exit 0
             fi
             sleep 10
           done
-          echo "Render did not expose the required release invariants" >&2
+          echo "Render did not expose the required Experience v6 invariants" >&2
           exit 1
 
       - name: Verify Render runtime health
