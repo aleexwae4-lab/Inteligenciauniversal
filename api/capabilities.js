@@ -9,6 +9,7 @@ import { EXECUTIVE_ORCHESTRATION_VERSION } from '../lib/executive-orchestration-
 import { LIBRARY_INTELLIGENCE_VERSION } from '../lib/library-intelligence-v52.js';
 import { UNIVERSAL_CONTEXT_VERSION, getUniversalSelfDescription } from '../lib/universal-context-v52.js';
 import { benchmarkSuiteManifest } from '../lib/supremacy-benchmark-v53.js';
+import { continuousImprovementCapabilities, getContinuousImprovementStatus } from '../lib/continuous-improvement-v54.js';
 import { applyHeaders } from '../lib/security.js';
 
 export default async function handler(req,res){
@@ -34,7 +35,8 @@ export default async function handler(req,res){
   }
 
   let coreContext=null;
-  try{coreContext=await getUniversalSelfDescription()}catch{}
+  let improvementStatus=null;
+  try{[coreContext,improvementStatus]=await Promise.all([getUniversalSelfDescription(),getContinuousImprovementStatus()])}catch{}
   const executive=coreContext?.executiveOrchestration||{};
   const library=coreContext?.library||{};
 
@@ -70,6 +72,7 @@ export default async function handler(req,res){
     },
     evaluationPlane:{...evaluationPlaneCapabilities(),endpoint:'/api/evals'},
     supremacyBenchmark:{...benchmarkSuiteManifest(),endpoint:'/api/evals',actions:['suite','certify']},
+    continuousImprovement:continuousImprovementCapabilities(improvementStatus||undefined),
     executionPlane:{...executionPlane,endpoint:'/api/execute'},
     toolFabric,
     capabilityKernel:kernel,
