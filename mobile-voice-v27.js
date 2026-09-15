@@ -1,0 +1,33 @@
+(()=>{
+  'use strict';
+  const downstream=window.fetch.bind(window);
+  const KEY='wae.autoVoice';
+  let enabled=localStorage.getItem(KEY)!=='false';
+  let queue=[],speaking=false,run=0,suppressFinalUntil=0;
+  const synth=()=>window.speechSynthesis;
+  const supported=()=>('speechSynthesis'in window)&&('SpeechSynthesisUtterance'in window);
+  function clean(raw){return String(raw||'').normalize('NFKC').replace(/```[\s\S]*?```/g,' ').replace(/!\[[^\]]*\]\([^)]*\)/g,' ').replace(/\[([^\]]+)\]\([^)]*\)/g,'$1').replace(/\[(?:W|M)\d+\]/gi,' ').replace(/https?:\/\/\S+|www\.\S+/gi,' enlace disponible ').replace(/<[^>]+>/g,' ').replace(/(^|\n)\s{0,3}#{1,6}\s*/g,'$1').replace(/(^|\n)\s*(?:[-+*•▪◦●○■□◆◇►▶]|\d+[.)])\s+/gu,'$1').replace(/\*\*|__|~~|[*_~`]/g,'').replace(/[→⇒➜➝➞➡⟶⟹↦↪]/gu,', ').replace(/[•▪◦●○■□◆◇►▶]/gu,', ').replace(/[\p{Extended_Pictographic}\uFE0F\u200D]/gu,'').replace(/[#@|]/g,' ').replace(/\b(\d+(?:[.,]\d+)?)\s*%/g,'$1 por ciento').replace(/\s*\n\s*/g,'. ').replace(/\s+/g,' ').trim()}
+  function bestVoice(){if(!supported())return null;const voices=synth().getVoices()||[];const score=v=>{const lang=String(v.lang||'').replace('_','-').toLowerCase(),name=String(v.name||'').toLowerCase();let n=0;if(lang==='es-mx')n+=100;else if(lang.startsWith('es-419'))n+=90;else if(lang.startsWith('es-us'))n+=80;else if(lang.startsWith('es'))n+=70;if(/google|microsoft|natural|premium|enhanced|neural/.test(name))n+=20;if(v.localService)n+=2;return n};return voices.filter(v=>/^es/i.test(v.lang||'')).sort((a,b)=>score(b)-score(a))[0]||voices[0]||null}
+  function syncUI(){const state=document.getElementById('voiceState'),quick=document.getElementById('voiceQuick');if(state)state.textContent=!supported()?'No disponible':enabled?'Activada':'Desactivada';if(quick){quick.setAttribute('aria-pressed',String(enabled&&supported()));quick.title=enabled?'Voz automática activa':'Activar voz automática';quick.style.color=enabled?'#79e8a4':'#aab2bd';quick.style.background=enabled?'#1b2924':'transparent'}}
+  function stop(){run++;queue.length=0;speaking=false;if(supported())try{synth().cancel()}catch{}}
+  function setEnabled(value){enabled=!!value&&supported();localStorage.setItem(KEY,String(enabled));if(!enabled)stop();syncUI();document.documentElement.dataset.voiceEnabled=String(enabled);window.dispatchEvent(new CustomEvent('wae:voice-state',{detail:{enabled,state:enabled?'ready':'disabled',engine:'browser'}}));return enabled}
+  function toggle(){setEnabled(!enabled)}
+  function speakOne(text,myRun){return new Promise(resolve=>{if(!enabled||!supported()||myRun!==run)return resolve(false);const t=clean(text);if(!t)return resolve(false);const u=new SpeechSynthesisUtterance(t);u.lang='es-MX';u.rate=.98;u.pitch=1;u.volume=1;const v=bestVoice();if(v)u.voice=v;u.onstart=()=>window.dispatchEvent(new CustomEvent('wae:voice-state',{detail:{enabled:true,state:'playing',engine:'browser'}}));u.onend=()=>resolve(true);u.onerror=()=>resolve(false);try{synth().speak(u)}catch{return resolve(false)}})}
+  async function pump(){if(speaking||!enabled)return;speaking=true;const myRun=run;while(queue.length&&enabled&&myRun===run){const text=queue.shift();await speakOne(text,myRun)}speaking=false;if(enabled)window.dispatchEvent(new CustomEvent('wae:voice-state',{detail:{enabled:true,state:'ready',engine:'browser'}}))}
+  function enqueue(text){const t=clean(text);if(!enabled||!t)return;queue.push(t);pump()}
+  function speakFinal(text){if(!enabled)return;stop();queue=[clean(text)];pump()}
+  async function monitorSSE(response){if(!enabled||!response?.body)return;let reader;try{reader=response.body.getReader()}catch{return}const dec=new TextDecoder();let buf='';const consume=block=>{let event='',data='';for(const line of block.split(/\r?\n/)){if(line.startsWith('event:'))event=line.slice(6).trim();else if(line.startsWith('data:'))data+=line.slice(5).trim()}if(!data)return;let obj={};try{obj=JSON.parse(data)}catch{return}if(event==='response.start'){suppressFinalUntil=Date.now()+30000;stop()}if(event==='speech.delta'&&obj.text){suppressFinalUntil=Date.now()+30000;enqueue(obj.text)}if(event==='response.complete')suppressFinalUntil=Date.now()+10000};try{while(true){const {done,value}=await reader.read();if(done)break;buf+=dec.decode(value,{stream:true});let i;while((i=buf.indexOf('\n\n'))>=0){consume(buf.slice(0,i));buf=buf.slice(i+2)}}if(buf.trim())consume(buf)}catch{}}
+  window.fetch=async(input,init={})=>{const response=await downstream(input,init);try{const type=(response.headers.get('content-type')||'').toLowerCase();if(enabled&&type.includes('text/event-stream'))void monitorSSE(response.clone())}catch{}return response};
+  function install(){
+    const toggleBtn=document.getElementById('voiceToggle'),voiceState=document.getElementById('voiceState'),mic=document.getElementById('mic');
+    if(toggleBtn){toggleBtn.addEventListener('click',e=>{e.preventDefault();e.stopImmediatePropagation();toggle()},{capture:true});toggleBtn.setAttribute('aria-pressed',String(enabled))}
+    if(mic?.parentElement&&!document.getElementById('voiceQuick')){const b=document.createElement('button');b.type='button';b.className='round';b.id='voiceQuick';b.textContent='♪';b.setAttribute('aria-label','Voz automática');b.addEventListener('click',toggle);mic.parentElement.insertBefore(b,mic)}
+    syncUI();
+    const root=document.getElementById('messages');if(root){const seen=new WeakSet();const scan=()=>{const turns=[...root.querySelectorAll('.turn.assistant')];for(const turn of turns){const actions=turn.querySelector('.actions'),body=turn.querySelector('.assistant-body');if(!actions||!body||actions.classList.contains('hidden')||body.classList.contains('error-text')||seen.has(turn))continue;seen.add(turn);if(Date.now()<suppressFinalUntil)continue;speakFinal(body.textContent||'')}};new MutationObserver(scan).observe(root,{childList:true,subtree:true,attributes:true,attributeFilter:['class']});scan()}
+    const unlock=()=>{if(supported())void synth().getVoices()};document.addEventListener('pointerdown',unlock,{capture:true,once:true});document.addEventListener('keydown',unlock,{capture:true,once:true});
+    if(supported())synth().addEventListener?.('voiceschanged',syncUI);
+    setEnabled(enabled);
+  }
+  document.readyState==='loading'?document.addEventListener('DOMContentLoaded',install,{once:true}):install();
+  window.__waeMobileVoice={toggle,setEnabled,enqueue,speak:speakFinal,get enabled(){return enabled},version:'v27'};
+})();
