@@ -58,7 +58,7 @@ test('server routes both chat endpoints through v58 live gateway while preservin
   assert.match(server,/api\/capacity-chat-v58\.js/);
   assert.match(server,/\['\/api\/chat', chatHandler\]/);
   assert.match(server,/\['\/api\/fast-chat', chatHandler\]/);
-  assert.match(liveGateway,/api\/capacity-chat\.js/);
+  assert.match(liveGateway,/from '\.\/capacity-chat\.js'/);
   assert.match(liveGateway,/tryAcquireChatSlot/);
   assert.match(liveGateway,/slot\.release\(\)/);
   assert.match(liveGateway,/CAPACITY_BUSY/);
