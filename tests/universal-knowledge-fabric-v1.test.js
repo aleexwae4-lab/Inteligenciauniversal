@@ -12,11 +12,12 @@ function fixtureRecord(source,id,{doi,title='Shared paper',author='Ada Lovelace'
   return{id:`${source}:${id}`,type:'paper',title,authors:[{name:author}],identifiers:{doi},topics:['computing'],source:{id,canonical_url:`https://example.org/${id}`,retrieved_at:new Date().toISOString()},license:metadataOnlyLicense(),quality:{source_authority:.9,citation_count:10,retraction_status:'unknown',author_identity:'partial',primary_vs_secondary_source:'bibliographic_index'},provenance:{source,source_record_id:id}};
 }
 
-test('v1 registry exposes 12 requested foundation sources but only eight are candidate-integrated',()=>{
+test('v70 registry exposes 13 foundation/scientific sources and nine candidate-integrated connectors',()=>{
   const sources=listKnowledgeSources();
-  assert.equal(sources.length,12);
+  assert.equal(sources.length,13);
   const candidates=sources.filter(x=>x.certification==='candidate_integrated');
-  assert.deepEqual(candidates.map(x=>x.source_id),['openalex','crossref','wikidata','wikipedia','pubmed','arxiv','open_library','zenodo']);
+  assert.deepEqual(candidates.map(x=>x.source_id),['openalex','crossref','wikidata','wikipedia','pubmed','europe_pmc','arxiv','open_library','zenodo']);
+  assert.equal(getKnowledgeSource('europe_pmc').trust_score,0.97);
   assert.equal(getKnowledgeSource('core').health,'disabled');
   assert.equal(getKnowledgeSource('project_gutenberg').certification,'pending_bulk_connector_certification');
 });
@@ -50,10 +51,10 @@ test('retrieval security removes document prompt-injection directives and blocks
   assert.equal(validateConnectorUrl('https://evil.example/prompt').ok,false);
 });
 
-test('medicine query routes PubMed first while simple literature routes Open Library first',()=>{
+test('medicine query routes PubMed then Europe PMC while simple literature routes Open Library first',()=>{
   const med=understandKnowledgeQuery('¿Cuál es la evidencia clínica reciente sobre hipertensión?');
   assert.equal(med.domains.includes('medicine'),true);
-  assert.equal(selectKnowledgeSources(med)[0],'pubmed');
+  assert.deepEqual(selectKnowledgeSources(med).slice(0,2),['pubmed','europe_pmc']);
   const lit=understandKnowledgeQuery('Háblame del libro Don Quijote y su autor');
   assert.equal(lit.domains.includes('literature'),true);
   assert.equal(selectKnowledgeSources(lit)[0],'open_library');
@@ -107,7 +108,7 @@ test('fabric performs parallel multi-source retrieval, DOI dedupe and produces o
     if(parsed.hostname==='api.crossref.org')return json({message:{items:[{DOI:'10.7777/shared',title:['Universal evidence'],author:[{given:'A.',family:'Author'}],type:'journal-article',URL:'https://doi.org/10.7777/shared','is-referenced-by-count':12,published:{'date-parts':[[2025,1,1]]}}]}});
     throw new Error(`unexpected ${parsed.hostname}`);
   };
-  const result=await searchKnowledge('Universal evidence',{sources:['openalex','crossref'],fetchImpl,perSource:2,limit:5,requestId:'test-request'});
+  const result=await searchKnowledge('Universal evidence',{sources:['openalex','crossref'],fetchImpl,perSource:2,limit:5,requestId:'test-request',includeGlobalIndex:false});
   assert.equal(result.documents_retrieved,2);
   assert.equal(result.documents_after_dedup,1);
   assert.equal(result.records.length,1);
@@ -118,9 +119,11 @@ test('fabric performs parallel multi-source retrieval, DOI dedupe and produces o
   assert.equal(result.records[0].quality.cross_source_confirmation,2);
 });
 
-test('architecture map reuses pgvector and tsvector substrate instead of inventing duplicate stores',()=>{
+test('architecture map reuses real HNSW/FTS substrate instead of inventing duplicate stores',()=>{
   const architecture=existingKnowledgeArchitecture();
-  assert.ok(architecture.reused.some(x=>/wae_rag_chunks \(pgvector\)/.test(x)));
+  assert.ok(architecture.reused.some(x=>/wae_rag_chunks \(pgvector \+ HNSW\)/.test(x)));
   assert.ok(architecture.reused.some(x=>/tsvector/.test(x)));
+  assert.ok(architecture.reused.includes('wae_retrieve_knowledge_v91 (tenant-aware vector hybrid)'));
   assert.ok(architecture.legacy_or_duplicated.some(x=>/jsonb embedding/.test(x)));
+  assert.equal(architecture.vector_policy.integrated_into_public_fabric,false);
 });
