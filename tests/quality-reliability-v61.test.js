@@ -18,6 +18,18 @@ test('v61 fails closed on unsupported live factual claims',()=>{
   assert.match(out.reply,/No puedo certificar/i);
 });
 
+test('v61 HOLD neutralizes stale voice components and actions',()=>{
+  const payload={reply:'El precio actual es 99 pesos.',speech_text:'El precio actual es 99 pesos.',components:[{type:'metric',value:99}],actions:[{type:'buy'}],live_data:{used:true},response:{speechText:'El precio actual es 99 pesos.',components:[{type:'metric'}],actions:[{type:'buy'}],metadata:{liveDataMesh:'live-data-mesh/v58'}}};
+  const out=applyQualityReliability(payload,{prompt:'¿Cuál es el precio actual?'});
+  assert.equal(out.quality_reliability.critical_failure,true);
+  assert.equal(out.speech_text,out.reply);
+  assert.deepEqual(out.components,[]);
+  assert.deepEqual(out.actions,[]);
+  assert.equal(out.response.speechText,out.reply);
+  assert.deepEqual(out.response.components,[]);
+  assert.deepEqual(out.response.actions,[]);
+});
+
 test('v61 catches hard JSON instruction violations',()=>{
   const payload={reply:'El resultado es 42.'};
   const out=applyQualityReliability(payload,{prompt:'Devuelve SOLO JSON válido con {"result":number}.'});
