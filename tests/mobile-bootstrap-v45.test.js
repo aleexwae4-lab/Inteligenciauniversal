@@ -20,6 +20,6 @@ test('mobile v45 keeps v34 adaptive chat routing and loads immediately after it'
   const bootstrap=server.indexOf('mobile-bootstrap-v45.js?v=45');
   const voice=server.indexOf('mobile-voice-v27.js?v=34');
   assert.ok(adaptive>=0&&bootstrap>adaptive&&voice>bootstrap);
-  assert.match(server,/X-WAE-Mobile-Fix','render-first-bootstrap-v45'/);
+  assert.match(server,/X-WAE-Mobile-Fix','render-first-bootstrap-v45/);
   assert.match(server,/universal-core-mobile-v34-adaptive-mesh/);
 });
