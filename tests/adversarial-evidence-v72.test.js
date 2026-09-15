@@ -70,3 +70,14 @@ test('v72 API exposes trusted 64-case recording and never stores raw answers in 
   assert.doesNotMatch(migration,/reference_answer\s+text/i);
   assert.match(migration,/enable row level security/i);
 });
+
+test('v72 hardened recorder recomputes outcomes and fails closed on forged comparative claims',()=>{
+  const hardening=fs.readFileSync(new URL('../supabase/migrations/20260916000100_trusted_evidence_certification_v72_hardening.sql',import.meta.url),'utf8');
+  for(const contract of ['benchmark_threshold_contract_mismatch','aggregate_outcome_mismatch','adjusted_win_rate_mismatch','critical_failure_rate_mismatch','complete_case_scores_required','target_mean_score_mismatch','reference_mean_score_mismatch','mean_score_delta_mismatch','claim_gate_inconsistency','claim_metric_threshold_failure','claim_with_open_regressions_forbidden'])assert.match(hardening,new RegExp(contract));
+  assert.match(hardening,/v_calc_wins/);
+  assert.match(hardening,/v_calc_target_mean/);
+  assert.match(hardening,/pg_column_size\(p_entries\)>2097152/);
+  assert.match(hardening,/versioned_external_reference_required/);
+  assert.doesNotMatch(hardening,/target_answer\s+text/i);
+  assert.doesNotMatch(hardening,/reference_answer\s+text/i);
+});
