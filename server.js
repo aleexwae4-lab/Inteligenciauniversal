@@ -31,6 +31,7 @@ function mobilePremiumHandler(req,res) {
       if (!chunk.includes('fast-lane-v23.js')) scripts.push('<script src="/fast-lane-v23.js?v=34" defer></script>');
       if (!chunk.includes('mobile-v26.js')) scripts.push('<script src="/mobile-v26.js?v=34" defer></script>');
       if (!chunk.includes('mobile-runtime-v34.js')) scripts.push('<script src="/mobile-runtime-v34.js?v=44" defer></script>');
+      if (!chunk.includes('mobile-bootstrap-v45.js')) scripts.push('<script src="/mobile-bootstrap-v45.js?v=45" defer></script>');
       if (!chunk.includes('mobile-voice-v27.js')) scripts.push('<script src="/mobile-voice-v27.js?v=34" defer></script>');
       if (!chunk.includes('semantic-ux-v32.js')) scripts.push('<script src="/semantic-ux-v32.js?v=34" defer></script>');
       if (!chunk.includes('learning-client-v29.js')) scripts.push('<script src="/learning-client-v29.js?v=34" defer></script>');
@@ -40,7 +41,7 @@ function mobilePremiumHandler(req,res) {
       res.setHeader('Pragma','no-cache');
       res.setHeader('Expires','0');
       res.setHeader('X-WAE-Mobile-Release','universal-core-mobile-v34-adaptive-mesh');
-      res.setHeader('X-WAE-Mobile-Fix','auto-fastpath-v44');
+      res.setHeader('X-WAE-Mobile-Fix','render-first-bootstrap-v45');
       res.setHeader('X-WAE-Premium-Release','universal-core-rich-v43');
     }
     return nativeEnd(chunk, encoding, callback);
