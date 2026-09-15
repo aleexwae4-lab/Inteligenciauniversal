@@ -18,7 +18,7 @@
     .replace(/[#*_`~>|]/g,' ')
     .replace(/[•▪◦●◆◇■□►▶✓✔✦✣⌕⌘▦↻◈▤▧⚙＋➜☰◉]/g,' ')
     .replace(/[\p{Extended_Pictographic}\uFE0F\u200D]/gu,' ')
-    .replace(/\bΩ\b/g,' ohmios ')
+    .replace(/Ω/g,' ohmios ')
     .replace(/×/g,' por ')
     .replace(/÷/g,' dividido entre ')
     .replace(/\s+/g,' ').trim();
@@ -83,9 +83,19 @@
     window.speechSynthesis.__waeSemanticPatched=true;
   }
 
+  function patchVoiceRuntime(){
+    const voice=window.__waeVoice;
+    if(!voice||voice.__semanticV32)return;
+    const speak=voice.speak?.bind(voice),enqueue=voice.enqueue?.bind(voice);
+    if(speak)voice.speak=(text,options)=>speak(cleanSpeech(text),options);
+    if(enqueue)voice.enqueue=text=>enqueue(cleanSpeech(text));
+    try{Object.defineProperty(voice,'__semanticV32',{value:true,configurable:false})}catch{voice.__semanticV32=true}
+  }
+
   let queued=false;
-  const run=()=>{queued=false;normalizeRenderedMath(document);enhanceTables(document);document.documentElement.dataset.semanticUx='v32'};
+  const run=()=>{queued=false;patchVoiceRuntime();normalizeRenderedMath(document);enhanceTables(document);document.documentElement.dataset.semanticUx='v32'};
   const schedule=()=>{if(queued)return;queued=true;queueMicrotask(run)};
   const observer=new MutationObserver(schedule);observer.observe(document.documentElement,{subtree:true,childList:true});
+  window.addEventListener('wae:voice-state',patchVoiceRuntime);
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',schedule,{once:true});else schedule();
 })();
