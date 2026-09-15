@@ -4,7 +4,7 @@ import { readFile } from 'node:fs/promises';
 
 const read = name => readFile(new URL(`../${name}`, import.meta.url), 'utf8');
 
-test('server exposes the premium Universal Core mobile route and v34 adaptive runtime', async () => {
+test('server exposes the premium Universal Core mobile route with v34 transport and v46 voice', async () => {
   const server = await read('server.js');
   assert.match(server, /\/api\/mobile/);
   assert.match(server, /\/api\/ui-diagnostics/);
@@ -19,11 +19,12 @@ test('server exposes the premium Universal Core mobile route and v34 adaptive ru
   assert.match(server, /mobile-v26\.js\?v=34/);
   assert.match(server, /mobile-runtime-v34\.js\?v=44/);
   assert.match(server, /mobile-bootstrap-v45\.js\?v=45/);
-  assert.match(server, /mobile-voice-v27\.js\?v=34/);
-  assert.match(server, /semantic-ux-v32\.js\?v=34/);
+  assert.match(server, /semantic-ux-v32\.js\?v=46/);
+  assert.match(server, /speech-lifecycle-v46\.js\?v=46/);
+  assert.match(server, /mobile-voice-v46\.js\?v=46/);
   assert.match(server, /learning-client-v29\.js\?v=34/);
-  assert.match(server, /universal-core-mobile-v34-adaptive-mesh/);
-  assert.match(server, /render-first-bootstrap-v45/);
+  assert.match(server, /universal-core-mobile-v46-responsive-voice/);
+  assert.match(server, /voice-chat-deadline-v46/);
   assert.match(server, /desktop.*=== '1'/s);
 });
 
