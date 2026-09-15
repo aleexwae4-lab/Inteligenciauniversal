@@ -4,22 +4,24 @@ import { readFile } from 'node:fs/promises';
 
 const read = name => readFile(new URL(`../${name}`, import.meta.url), 'utf8');
 
-test('server exposes the premium Universal Core mobile route and mobile root delegation', async () => {
+test('server exposes the premium Universal Core mobile route and v34 adaptive runtime', async () => {
   const server = await read('server.js');
   assert.match(server, /\/api\/mobile/);
   assert.match(server, /\/api\/ui-diagnostics/);
+  assert.match(server, /\/api\/tools/);
   assert.match(server, /isMobileRequest/);
   assert.match(server, /sec-ch-ua-mobile/);
   assert.match(server, /url\.pathname === '\/'/);
   assert.match(server, /mobilePremiumHandler\(req, res\)/);
   assert.match(server, /return mobileHandler\(req,res\)/);
-  assert.match(server, /mobile-v26\.css/);
-  assert.match(server, /fast-lane-v23\.js/);
-  assert.match(server, /mobile-v26\.js/);
-  assert.match(server, /mobile-voice-v27\.js/);
-  assert.match(server, /semantic-ux-v32\.js\?v=33/);
-  assert.match(server, /learning-client-v29\.js/);
-  assert.match(server, /universal-core-mobile-v33-edge-context/);
+  assert.match(server, /mobile-v26\.css\?v=34/);
+  assert.match(server, /fast-lane-v23\.js\?v=34/);
+  assert.match(server, /mobile-v26\.js\?v=34/);
+  assert.match(server, /mobile-runtime-v34\.js\?v=34/);
+  assert.match(server, /mobile-voice-v27\.js\?v=34/);
+  assert.match(server, /semantic-ux-v32\.js\?v=34/);
+  assert.match(server, /learning-client-v29\.js\?v=34/);
+  assert.match(server, /universal-core-mobile-v34-adaptive-mesh/);
   assert.match(server, /desktop.*=== '1'/s);
 });
 
@@ -83,8 +85,9 @@ test('mobile keeps diagnostics privacy-safe and never logs prompt content', asyn
   assert.doesNotMatch(diagnostics, /body\.content/);
 });
 
-test('mobile preserves fail-safe generation paths', async () => {
+test('legacy mobile surface remains compatible while v34 bridge strips forced control routing', async () => {
   const mobile = await read('api/mobile.js');
+  const bridge = await read('mobile-runtime-v34.js');
   assert.match(mobile, /streamAvailable/);
   assert.match(mobile, /streamEdge/);
   assert.match(mobile, /edge\(payload,70000\)/);
@@ -92,4 +95,7 @@ test('mobile preserves fail-safe generation paths', async () => {
   assert.match(mobile, /currentController\.abort\('user_cancelled'\)/);
   assert.match(mobile, /routing_variant:'candidate'/);
   assert.match(mobile, /routing_variant:'control'/);
+  assert.match(bridge, /delete body\.routing_variant/);
+  assert.match(bridge, /\/api\/chat/);
+  assert.doesNotMatch(bridge, /routing_variant:'control'/);
 });
