@@ -19,10 +19,10 @@ const library={
   ]
 };
 
-test('v57 routes shared bibliographic retrieval to the most relevant executive role',()=>{
+test('v57 routes shared bibliographic retrieval to the most relevant executive role across Spanish and English terminology',()=>{
   const plan=planEvidenceRoutes({message:'Diseña una arquitectura de software escalable y calcula inversión, ROI y costo operativo',specialists,library,maxPerRole:2});
   assert.equal(plan.version,EVIDENCE_ROUTER_VERSION);
-  assert.equal(plan.strategy,'single-retrieval+role-scoped-ranking+typed-context');
+  assert.equal(plan.strategy,'single-retrieval+cross-lingual-role-ranking+typed-context');
   const cto=plan.routes.find(x=>x.role==='CTO');
   const cfo=plan.routes.find(x=>x.role==='CFO');
   assert.equal(cto.evidence[0].item.title,'Designing Data-Intensive Applications');
