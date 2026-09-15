@@ -1,0 +1,77 @@
+name: Universal Core v37 Production Certification
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  production-certification:
+    runs-on: ubuntu-latest
+    timeout-minutes: 18
+    env:
+      APP_URL: https://wae-inteligencia-universal.onrender.com
+      KERNEL_VERSION: universal-capability-kernel/v36
+      EXECUTION_VERSION: universal-execution-plane/v37
+      RECEIPT_SCHEMA: universal-execution-receipt/v1
+      EVAL_VERSION: supremacy-evaluation/v35
+    steps:
+      - name: Wait for Render v37 execution invariants
+        shell: bash
+        run: |
+          set -euo pipefail
+          for attempt in $(seq 1 54); do
+            HEALTH=$(curl -fsS --max-time 20 "$APP_URL/api/health?release=${GITHUB_SHA}" || true)
+            CAPS=$(curl -fsS --max-time 20 "$APP_URL/api/capabilities?release=${GITHUB_SHA}" || true)
+            EXEC=$(curl -fsS --max-time 45 "$APP_URL/api/execute?release=${GITHUB_SHA}" || true)
+            BOOT=$(curl -fsS --max-time 20 "$APP_URL/progressive-boot-v23.js?release=${GITHUB_SHA}" || true)
+            CLIENT=$(curl -fsS --max-time 20 "$APP_URL/capability-client-v36.js?release=${GITHUB_SHA}" || true)
+
+            if jq -e '.ok == true and .ready == true and .service == "wae-universal-runtime" and .responseSchema == "assistant-response/v1"' <<<"$HEALTH" >/dev/null 2>&1 \
+              && jq -e --arg kernel "$KERNEL_VERSION" --arg exec "$EXECUTION_VERSION" --arg receipt "$RECEIPT_SCHEMA" --arg eval "$EVAL_VERSION" '.ready == true and .interface == "experience-v8-living-core" and .capabilityKernel.version == $kernel and .capabilityKernel.domainCount == 38 and .capabilityKernel.abilityCount == 302 and .executionPlane.version == $exec and .executionPlane.receiptSchema == $receipt and .executionPlane.endpoint == "/api/execute" and .executionPlane.policy.failClosed == true and .executionPlane.policy.mutationsEnabled == false and .executionPlane.policy.clientApprovalTrusted == false and .evaluationPlane.version == $eval' <<<"$CAPS" >/dev/null 2>&1 \
+              && jq -e --arg exec "$EXECUTION_VERSION" --arg receipt "$RECEIPT_SCHEMA" '.success == true and .executionPlane.version == $exec and .executionPlane.receiptSchema == $receipt and .executionPlane.policy.failClosed == true and .executionPlane.policy.mutationsEnabled == false and (.executionPlane.adapters | length) >= 4' <<<"$EXEC" >/dev/null 2>&1 \
+              && grep -Fq 'capability-client-v36.js?v=37' <<<"$BOOT" \
+              && grep -Fq 'v37-execution-plane' <<<"$BOOT" \
+              && grep -Fq 'configuredAdapterCount' <<<"$CLIENT" \
+              && grep -Fq 'WAE_EXECUTION_PLANE' <<<"$CLIENT"; then
+              echo "Universal Core v37 execution invariants detected in Render"
+              jq '{version,ready,generativeReady,continuity}' <<<"$HEALTH"
+              jq '{capabilityKernel:{version:.capabilityKernel.version,domainCount:.capabilityKernel.domainCount,abilityCount:.capabilityKernel.abilityCount},executionPlane:{version:.executionPlane.version,configuredAdapterCount:.executionPlane.configuredAdapterCount,policy:.executionPlane.policy}}' <<<"$CAPS"
+              jq '{reachableAdapterCount:.executionPlane.reachableAdapterCount,adapters:[.executionPlane.adapters[]|{id,configured,reachable,reason}]}' <<<"$EXEC"
+              exit 0
+            fi
+            sleep 10
+          done
+          echo "Render did not expose Universal Core v37 execution invariants" >&2
+          exit 1
+
+      - name: Prove unsupported actions fail closed and persist receipt
+        shell: bash
+        run: |
+          set -euo pipefail
+          BODY=$(mktemp)
+          HTTP=$(curl -sS --max-time 30 -o "$BODY" -w '%{http_code}' "$APP_URL/api/execute" \
+            -H 'content-type: application/json' \
+            -H "origin: $APP_URL" \
+            --data '{"capability":"computer_use","action":"click","task":"Production certification: unsupported action must remain blocked.","sessionId":"v37-production-certification"}')
+          test "$HTTP" = "422"
+          jq -e --arg exec "$EXECUTION_VERSION" --arg receipt "$RECEIPT_SCHEMA" '.success == false and .status == "blocked" and .error == "capability_not_executable" and .executionPlane == $exec and .receipt.schema == $receipt and .receipt.status == "blocked" and .receipt.error_code == "capability_not_executable" and .receipt.side_effect == "none" and .audit.persisted == true' "$BODY" >/dev/null
+          jq '{status,error,audit,receipt:{schema:.receipt.schema,id:.receipt.id,status:.receipt.status,error_code:.receipt.error_code,request_hash:.receipt.request_hash}}' "$BODY"
+
+      - name: Verify mission capability planning contract
+        shell: bash
+        run: |
+          set -euo pipefail
+          PLAN=$(curl -fsS --max-time 30 --get "$APP_URL/api/capabilities" --data-urlencode 'plan=Investiga información reciente en la web y revisa un repositorio de GitHub.')
+          jq -e --arg kernel "$KERNEL_VERSION" --arg exec "$EXECUTION_VERSION" '.success == true and .plan.kernel == $kernel and .executionPlane.version == $exec and ([.plan.matched[].id] | index("web_search")) != null and ([.plan.matched[].id] | index("software_engineering")) != null and .plan.failClosedOnUnavailableTools == true' <<<"$PLAN" >/dev/null
+
+      - name: Certify v37 production release
+        run: |
+          echo 'Universal Core v37 Production Certification: PASS' >> "$GITHUB_STEP_SUMMARY"
+          echo '- Capability Kernel v36: 38 domains / 302 mapped abilities' >> "$GITHUB_STEP_SUMMARY"
+          echo '- Execution Plane v37: fail-closed / mutations disabled' >> "$GITHUB_STEP_SUMMARY"
+          echo '- Unsupported Computer Use: blocked with persisted cryptographic receipt' >> "$GITHUB_STEP_SUMMARY"
+          echo '- UI runtime status: execution-aware' >> "$GITHUB_STEP_SUMMARY"
