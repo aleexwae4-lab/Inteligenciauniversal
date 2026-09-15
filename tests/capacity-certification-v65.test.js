@@ -8,7 +8,7 @@ import {
   certifyCapacityEvidence,
   capacityAutopilotDecision,
   capacityEvidenceFingerprint
-} from '../lib/capacity-certification-v65.js';
+} from '../lib/capacity-certification-v66.js';
 
 function balancedArchitecture(){
   const counts=Array.from({length:64},()=>312);
@@ -34,10 +34,10 @@ function stage(id,overrides={}){
   };
 }
 
-test('v65 requires architecture evidence and all four sequential load stages before certification',()=>{
+test('v66 requires architecture evidence and all four sequential load stages before certification',()=>{
   const evidence={architecture:balancedArchitecture(),stages:CAPACITY_STAGES.map(item=>stage(item.id)),environment:'production',commit:'abc123'};
   const diagnostic=certifyCapacityEvidence(evidence,{trusted:false});
-  assert.equal(CAPACITY_CERTIFICATION_VERSION,'capacity-certification/v65');
+  assert.equal(CAPACITY_CERTIFICATION_VERSION,'capacity-certification/v66');
   assert.equal(diagnostic.allRequiredStagesPass,true);
   assert.equal(diagnostic.technicalVerdict,'PEAK_THRESHOLDS_PASS');
   assert.equal(diagnostic.certificationVerdict,'NOT_CERTIFIED');
@@ -45,6 +45,7 @@ test('v65 requires architecture evidence and all four sequential load stages bef
   const trusted=certifyCapacityEvidence(evidence,{trusted:true});
   assert.equal(trusted.certificationVerdict,'PRODUCTION_PEAK_CERTIFIED');
   assert.equal(trusted.claimEligible,true);
+  assert.equal(trusted.version,'capacity-certification/v66');
 });
 
 test('a missing intermediate stage prevents peak certification even when peak itself passes',()=>{
@@ -78,9 +79,10 @@ test('capacity autopilot escalates from normal to throttle, degrade and shed',()
   const shed=capacityAutopilotDecision({active:500,target:512,p95Ms:4000,errorRate:0});
   assert.equal(shed.mode,'SHED');
   assert.equal(shed.allowNewExpensiveWork,false);
+  assert.equal(shed.version,'capacity-certification/v66');
 });
 
-test('v65 migration stores only sanitized load evidence behind the runtime bridge token',async()=>{
+test('capacity ledger stores only sanitized load evidence behind the runtime bridge token',async()=>{
   const sql=await readFile(new URL('../supabase/migrations/20260915202000_universal_core_v65_capacity_certification.sql',import.meta.url),'utf8');
   assert.match(sql,/wae_capacity_certifications_v65/);
   assert.match(sql,/wae_capacity_control_bridge_v65/);
@@ -92,18 +94,21 @@ test('v65 migration stores only sanitized load evidence behind the runtime bridg
   assert.match(sql,/requests.*>=.*5000/is);
 });
 
-test('v65 is wired into chat admission, capabilities and the explicit API route',async()=>{
+test('v66 is wired into chat admission, capabilities and the explicit API route',async()=>{
   const [chat,capabilities,server,api]=await Promise.all([
     readFile(new URL('../api/capacity-chat-v63.js',import.meta.url),'utf8'),
     readFile(new URL('../api/capabilities.js',import.meta.url),'utf8'),
     readFile(new URL('../server.js',import.meta.url),'utf8'),
     readFile(new URL('../api/capacity-certification.js',import.meta.url),'utf8')
   ]);
+  assert.match(chat,/capacity-certification-v66/);
   assert.match(chat,/capacityAutopilotDecision/);
   assert.match(chat,/X-WAE-Capacity-Mode/);
   assert.match(chat,/CAPACITY_BUSY/);
+  assert.match(capabilities,/capacity-certification-v66/);
   assert.match(capabilities,/capacityCertificationCapabilities/);
   assert.match(server,/\/api\/capacity-certification/);
+  assert.match(api,/capacity-certification-v66/);
   assert.match(api,/x-wae-worker-token/);
   assert.match(api,/trusted_worker_required/);
 });
