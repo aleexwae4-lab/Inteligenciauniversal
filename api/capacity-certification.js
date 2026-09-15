@@ -5,7 +5,7 @@ import {
   certifyCapacityEvidence,
   latestTrustedCapacityCertification,
   recordTrustedCapacityCertification
-} from '../lib/capacity-certification-v65.js';
+} from '../lib/capacity-certification-v66.js';
 
 function safeEqual(a,b){
   const left=Buffer.from(String(a||''));
