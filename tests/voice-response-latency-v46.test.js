@@ -1,6 +1,8 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
+import {spawnSync} from 'node:child_process';
+import {fileURLToPath} from 'node:url';
 import chatHandler from '../api/chat.js';
 
 const read=path=>readFileSync(new URL(`../${path}`,import.meta.url),'utf8');
@@ -13,11 +15,11 @@ function fakeResponse(){
 test('v46 automatic voice has a sub-two-second cloud deadline and immediate browser fallback',()=>{
   const source=read('mobile-voice-v46.js');
   assert.match(source,/CLOUD_BUDGET_MS=1100/);
-  assert.match(source,/AbortController/);
+  assert.match(source,/setTimeout\(\(\)=>controller\.abort[\s\S]*CLOUD_BUDGET_MS/);
   assert.match(source,/voice_fallback/);
   assert.match(source,/browserSpeak/);
-  assert.match(source,/cloudBackoffUntil/);
-  assert.doesNotMatch(source,/20000|60000|70000/);
+  assert.match(source,/CLOUD_BACKOFF_MS=60000/);
+  assert.doesNotMatch(source,/CLOUD_BUDGET_MS=(?:20000|60000|70000)/);
 });
 
 test('v46 preserves speech lifecycle after semantic normalization',()=>{
@@ -25,6 +27,14 @@ test('v46 preserves speech lifecycle after semantic normalization',()=>{
   assert.match(source,/utterance\.text=next/);
   assert.match(source,/return downstream\(utterance\)/);
   assert.match(source,/callbacksPreserved:true/);
+});
+
+test('new v46 runtime files are syntactically valid JavaScript',()=>{
+  for(const path of ['mobile-voice-v46.js','speech-lifecycle-v46.js','lib/network-deadlines-v46.js']){
+    const file=fileURLToPath(new URL(`../${path}`,import.meta.url));
+    const result=spawnSync(process.execPath,['--check',file],{encoding:'utf8'});
+    assert.equal(result.status,0,`${path}: ${result.stderr||result.stdout}`);
+  }
 });
 
 test('server loads semantic cleanup, lifecycle guard and v46 voice in deterministic order',()=>{
