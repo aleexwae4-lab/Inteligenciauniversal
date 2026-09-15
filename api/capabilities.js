@@ -8,6 +8,7 @@ import { ORCHESTRATOR_VERSION } from '../lib/orchestrator.js';
 import { EXECUTIVE_ORCHESTRATION_VERSION } from '../lib/executive-orchestration-v52.js';
 import { LIBRARY_INTELLIGENCE_VERSION } from '../lib/library-intelligence-v52.js';
 import { UNIVERSAL_CONTEXT_VERSION, getUniversalSelfDescription } from '../lib/universal-context-v52.js';
+import { benchmarkSuiteManifest } from '../lib/supremacy-benchmark-v53.js';
 import { applyHeaders } from '../lib/security.js';
 
 export default async function handler(req,res){
@@ -68,6 +69,7 @@ export default async function handler(req,res){
       }
     },
     evaluationPlane:{...evaluationPlaneCapabilities(),endpoint:'/api/evals'},
+    supremacyBenchmark:{...benchmarkSuiteManifest(),endpoint:'/api/evals',actions:['suite','certify']},
     executionPlane:{...executionPlane,endpoint:'/api/execute'},
     toolFabric,
     capabilityKernel:kernel,
