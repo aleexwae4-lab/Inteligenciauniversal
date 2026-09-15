@@ -1,5 +1,6 @@
 import { capabilityPlan } from '../lib/capability-kernel.js';
 import { executeCapability, executionPlaneSnapshot, probeExecutionPlane } from '../lib/execution-plane.js';
+import { auditLedgerSnapshot, persistExecutionReceipt } from '../lib/audit-ledger.js';
 import { allowRequest, originAllowed, applyHeaders, getClientIp } from '../lib/security.js';
 
 function supportedCapabilities(){
@@ -17,7 +18,7 @@ export default async function handler(req,res){
   applyHeaders(res);
   if(req.method==='GET'){
     const probe=await probeExecutionPlane();
-    return res.status(200).json({success:true,executionPlane:probe});
+    return res.status(200).json({success:true,executionPlane:{...probe,auditLedger:auditLedgerSnapshot()}});
   }
   if(req.method!=='POST')return res.status(405).json({error:'method_not_allowed'});
   if(!originAllowed(req))return res.status(403).json({error:'origin_not_allowed'});
@@ -39,12 +40,14 @@ export default async function handler(req,res){
     userKey,
     sessionId,
     approved:false,
+    persistReceipt:persistExecutionReceipt,
   });
 
   const statusCode=execution.success?200:execution.status==='blocked'?422:502;
   return res.status(statusCode).json({
     ...execution,
     executionPlane:executionPlaneSnapshot().version,
+    auditLedger:auditLedgerSnapshot(),
     capabilityPlan:{
       schema:plan.schema,
       kernel:plan.kernel,
