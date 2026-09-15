@@ -4,7 +4,7 @@ import { createReadStream } from 'node:fs';
 import { stat } from 'node:fs/promises';
 import { extname, join, normalize, basename } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import chatHandler from './api/capacity-chat.js';
+import chatHandler from './api/capacity-chat-v58.js';
 import continuityHandler from './api/continuity.js';
 import performanceHandler from './api/performance.js';
 import healthHandler from './api/health.js';
@@ -16,6 +16,7 @@ import tasksHandler from './api/tasks.js';
 import orchestrateHandler from './api/orchestrate.js';
 import mobileHandler from './api/mobile.js';
 import uiDiagnosticsHandler from './api/ui-diagnostics.js';
+import liveDataHandler from './api/live-data.js';
 
 const ROOT = fileURLToPath(new URL('.', import.meta.url));
 const PORT = Number(process.env.PORT || 10000);
@@ -47,6 +48,7 @@ function mobilePremiumHandler(req,res) {
       res.setHeader('X-WAE-Mobile-Fix','long-session-backpressure-v47');
       res.setHeader('X-WAE-Capacity-Release','capacity-governor-v48');
       res.setHeader('X-WAE-Premium-Release','universal-core-rich-v43');
+      res.setHeader('X-WAE-Live-Data','live-data-mesh/v58');
     }
     return nativeEnd(chunk, encoding, callback);
   };
@@ -65,6 +67,7 @@ const apiRoutes = new Map([
   ['/api/evals', evalsHandler],
   ['/api/tasks', tasksHandler],
   ['/api/orchestrate', orchestrateHandler],
+  ['/api/live-data', liveDataHandler],
   ['/api/mobile', mobilePremiumHandler],
   ['/api/ui-diagnostics', uiDiagnosticsHandler],
 ]);
