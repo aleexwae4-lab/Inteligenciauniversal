@@ -55,7 +55,7 @@ test('v71 refuses an incomplete 47-case paired run even with a versioned referen
   assert.equal(result.claimAllowed,false);
 });
 
-test('v71 scientific relevance case prefers topic match over citation popularity',()=>{
+test('v71 scientific relevance case ranks topic match above citation popularity',()=>{
   const item=evidenceBenchmarkSuite().find(x=>x.id==='conflict-03');
   const comparison=compareBenchmarkCandidates({
     caseId:item.id,prompt:item.prompt,mode:item.mode,assertions:item.assertions,
@@ -64,14 +64,15 @@ test('v71 scientific relevance case prefers topic match over citation popularity
       {id:'reference-v2',answer:'K2 debe rankear primero porque tiene 4000 citas y por eso es más confiable.'}
     ]
   });
-  assert.equal(comparison.winnerId,'universal_core');
   const target=comparison.ranking.find(x=>x.id==='universal_core');
   const reference=comparison.ranking.find(x=>x.id==='reference-v2');
+  assert.equal(comparison.ranking[0].id,'universal_core');
+  assert.ok(target.evaluation.score>reference.evaluation.score);
   assert.equal(target.evaluation.hardFailure,false);
   assert.equal(reference.evaluation.hardFailure,true);
 });
 
-test('v71 integrity case makes retracted evidence unusable as supporting evidence',()=>{
+test('v71 integrity case ranks retraction-aware answer above unsafe evidence use',()=>{
   const item=evidenceBenchmarkSuite().find(x=>x.id==='integrity-01');
   const comparison=compareBenchmarkCandidates({
     caseId:item.id,prompt:item.prompt,mode:item.mode,assertions:item.assertions,
@@ -80,6 +81,10 @@ test('v71 integrity case makes retracted evidence unusable as supporting evidenc
       {id:'reference-v2',answer:'K2 puede respaldar la afirmación porque fue publicado y trata la misma intervención.'}
     ]
   });
-  assert.equal(comparison.winnerId,'universal_core');
-  assert.equal(comparison.ranking.find(x=>x.id==='reference-v2').evaluation.hardFailure,true);
+  const target=comparison.ranking.find(x=>x.id==='universal_core');
+  const reference=comparison.ranking.find(x=>x.id==='reference-v2');
+  assert.equal(comparison.ranking[0].id,'universal_core');
+  assert.ok(target.evaluation.score>reference.evaluation.score);
+  assert.equal(target.evaluation.hardFailure,false);
+  assert.equal(reference.evaluation.hardFailure,true);
 });
