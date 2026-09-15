@@ -1,0 +1,51 @@
+name: Evidence Benchmark v71
+
+on:
+  pull_request:
+    paths:
+      - 'lib/evidence-benchmark-v71.js'
+      - 'lib/supremacy-benchmark-v62.js'
+      - 'lib/evaluation-plane.js'
+      - 'api/evals.js'
+      - 'api/evals-v62.js'
+      - 'tests/evidence-benchmark-v71.test.js'
+      - 'package.json'
+      - '.github/workflows/evidence-benchmark-v71.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  evidence-arena:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - name: Install dependencies
+        run: npm install --no-audit --no-fund
+      - name: Validate arena syntax and API
+        run: node --check lib/evidence-benchmark-v71.js && node --check api/evals.js && node --check api/evals-v62.js
+      - name: Run v71 evidence regressions
+        run: node --test tests/evidence-benchmark-v71.test.js
+      - name: Prove fail-closed 48-case contract
+        run: |
+          node --input-type=module <<'NODE'
+          import assert from 'node:assert/strict';
+          import { evidenceBenchmarkSuite, evidenceBenchmarkManifest, certifyEvidenceBenchmarkRun } from './lib/evidence-benchmark-v71.js';
+          const suite=evidenceBenchmarkSuite();
+          const manifest=evidenceBenchmarkManifest();
+          assert.equal(suite.length,48);
+          assert.equal(manifest.holdoutCases,48);
+          assert.equal(manifest.fullSuiteRequired,true);
+          assert.equal(manifest.versionedReferenceRequired,true);
+          const selfOnly=suite.map(x=>({caseId:x.id,promptHash:x.promptHash,candidates:[{id:'universal_core',answer:'self-test'}]}));
+          const result=certifyEvidenceBenchmarkRun({entries:selfOnly,targetId:'universal_core',referenceId:'gpt-5.6-sol'});
+          assert.equal(result.claimAllowed,false);
+          assert.equal(result.verdict,'NOT_PROVEN');
+          assert.equal(result.gates.pairedSuiteGate,false);
+          console.log(JSON.stringify({version:manifest.version,cases:suite.length,categories:manifest.categories.length,self_test_verdict:result.verdict},null,2));
+          NODE
