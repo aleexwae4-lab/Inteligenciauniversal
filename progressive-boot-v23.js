@@ -11,13 +11,14 @@
   const start=async()=>{
     if(started)return;started=true;
     document.documentElement.dataset.enhancement='loading';
-    const [polish,premium]=await Promise.all([
+    const [polish,premium,learning]=await Promise.all([
       loadScript('./polish-v2.js'),
-      loadScript('./gpt-experience-v1.js?v=1')
+      loadScript('./gpt-experience-v1.js?v=1'),
+      loadScript('./learning-client-v28.js?v=1')
     ]);
-    const ok=polish&&premium;
+    const ok=polish&&premium&&learning;
     document.documentElement.dataset.enhancement=ok?'ready':'degraded';
-    window.dispatchEvent(new CustomEvent('wae:enhancement-ready',{detail:{ok,polish,premium}}));
+    window.dispatchEvent(new CustomEvent('wae:enhancement-ready',{detail:{ok,polish,premium,learning}}));
   };
 
   const schedule=()=>{
@@ -30,5 +31,5 @@
 
   document.addEventListener('pointerdown',()=>start(),{once:true,passive:true});
   document.addEventListener('keydown',()=>start(),{once:true});
-  window.__waeProgressiveBoot={version:'v23-premium-chat',start};
+  window.__waeProgressiveBoot={version:'v28-premium-learning',start};
 })();
