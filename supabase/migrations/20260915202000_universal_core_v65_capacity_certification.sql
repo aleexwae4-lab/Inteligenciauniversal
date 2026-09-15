@@ -1,5 +1,6 @@
--- Universal Core v65 — Capacity Certification & Autopilot
--- Stores only aggregate load evidence. stores_prompt_content=false; stores_response_content=false.
+-- Universal Core v66 — Capacity Certification & Autopilot
+-- Internal ledger identifiers retain v65 compatibility. Stores only aggregate load evidence.
+-- stores_prompt_content=false; stores_response_content=false.
 
 create table if not exists public.wae_capacity_certifications_v65 (
   id uuid primary key default gen_random_uuid(),
@@ -66,7 +67,7 @@ begin
   if v_action in ('health','status') then
     return jsonb_build_object(
       'ok',true,
-      'version','capacity-certification/v65',
+      'version','capacity-certification/v66',
       'policyVersion','capacity-slo/v1',
       'records',(select count(*) from public.wae_capacity_certifications_v65),
       'stores_prompt_content',false,
@@ -93,7 +94,7 @@ begin
     from public.wae_capacity_certifications_v65 c
     order by c.created_at desc
     limit 1;
-    return jsonb_build_object('ok',true,'version','capacity-certification/v65','certification',v_latest);
+    return jsonb_build_object('ok',true,'version','capacity-certification/v66','certification',v_latest);
   end if;
 
   if v_action='record' then
@@ -101,7 +102,7 @@ begin
       return jsonb_build_object('ok',false,'error','invalid_evidence_hash');
     end if;
 
-    if v_version<>'capacity-certification/v65'
+    if v_version not in ('capacity-certification/v65','capacity-certification/v66')
       or v_policy<>'capacity-slo/v1'
       or v_verdict<>'PRODUCTION_PEAK_CERTIFIED'
       or v_concurrency<512
@@ -124,6 +125,7 @@ begin
       v_success,v_error,v_p95,v_p99,v_false_failure,v_replay,v_all
     )
     on conflict(evidence_hash,policy_version) do update set
+      certification_version=excluded.certification_version,
       verdict=excluded.verdict,
       concurrency=excluded.concurrency,
       requests=excluded.requests,
@@ -137,7 +139,7 @@ begin
       created_at=now()
     returning id into v_id;
 
-    return jsonb_build_object('ok',true,'id',v_id,'version','capacity-certification/v65','recorded',true,'evidenceHash',v_evidence_hash);
+    return jsonb_build_object('ok',true,'id',v_id,'version','capacity-certification/v66','recorded',true,'evidenceHash',v_evidence_hash);
   end if;
 
   return jsonb_build_object('ok',false,'error','unsupported_capacity_action');
