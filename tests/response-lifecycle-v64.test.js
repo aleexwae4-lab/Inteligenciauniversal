@@ -22,13 +22,13 @@ test('v64 retries one recoverable terminal failure but never amplifies overload'
   assert.match(fast,/await wait\(180\)/);
 });
 
-test('mobile lifecycle budgets exceed server budgets for complex modes',()=>{
-  assert.match(mobile,/general:24000/);
-  assert.match(mobile,/analysis:30000/);
-  assert.match(mobile,/code:30000/);
-  assert.match(mobile,/design:30000/);
-  assert.match(mobile,/executive:30000/);
-  assert.match(mobile,/research:36000/);
+test('v67 mobile lifecycle budgets stay beyond the 45s production server request timeout',()=>{
+  const match=mobile.match(/CLIENT_BUDGETS=Object\.freeze\(\{general:(\d+),analysis:(\d+),code:(\d+),design:(\d+),executive:(\d+),research:(\d+)\}\)/);
+  assert.ok(match,'client budgets must remain explicit and auditable');
+  const budgets=match.slice(1).map(Number);
+  for(const budget of budgets)assert.ok(budget>45000,`client budget ${budget} must exceed server request timeout`);
+  assert.deepEqual(budgets,[52000,58000,58000,58000,62000,65000]);
+  assert.match(mobile,/v67-provider-independent-recovery/);
 });
 
 test('recoverable mobile failures are not cached as definitive answers',()=>{
