@@ -52,10 +52,17 @@ test('capacity wrapper rejects overload fast with retry metadata and always rele
   assert.match(source,/slot\.release\(\)/);
 });
 
-test('server routes both chat endpoints through v48 governor without replacing v47 mobile resilience',()=>{
-  const source=read('server.js');
-  assert.match(source,/api\/capacity-chat\.js/);
-  assert.match(source,/X-WAE-Capacity-Release','capacity-governor-v48'/);
-  assert.match(source,/universal-core-mobile-v47-long-session/);
-  assert.match(source,/long-session-backpressure-v47/);
+test('server routes both chat endpoints through v58 live gateway while preserving v48 governor and v47 mobile resilience',()=>{
+  const server=read('server.js');
+  const liveGateway=read('api/capacity-chat-v58.js');
+  assert.match(server,/api\/capacity-chat-v58\.js/);
+  assert.match(server,/\['\/api\/chat', chatHandler\]/);
+  assert.match(server,/\['\/api\/fast-chat', chatHandler\]/);
+  assert.match(liveGateway,/api\/capacity-chat\.js/);
+  assert.match(liveGateway,/tryAcquireChatSlot/);
+  assert.match(liveGateway,/slot\.release\(\)/);
+  assert.match(liveGateway,/CAPACITY_BUSY/);
+  assert.match(server,/X-WAE-Capacity-Release','capacity-governor-v48'/);
+  assert.match(server,/universal-core-mobile-v47-long-session/);
+  assert.match(server,/long-session-backpressure-v47/);
 });
