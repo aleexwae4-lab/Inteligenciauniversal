@@ -27,13 +27,13 @@ function mobilePremiumHandler(req,res) {
       if (!chunk.includes('mobile-v26.css')) chunk = chunk.replace('</head>', '<link rel="stylesheet" href="/mobile-v26.css?v=30"></head>');
       const scripts = [];
       if (!chunk.includes('fast-lane-v23.js')) scripts.push('<script src="/fast-lane-v23.js?v=30" defer></script>');
-      if (!chunk.includes('mobile-v26.js')) scripts.push('<script src="/mobile-v26.js?v=30" defer></script>');
+      if (!chunk.includes('mobile-v26.js')) scripts.push('<script src="/mobile-v26.js?v=31" defer></script>');
       if (!chunk.includes('mobile-voice-v27.js')) scripts.push('<script src="/mobile-voice-v27.js?v=30" defer></script>');
       if (!chunk.includes('semantic-ux-v32.js')) scripts.push('<script src="/semantic-ux-v32.js?v=33" defer></script>');
       if (!chunk.includes('learning-client-v29.js')) scripts.push('<script src="/learning-client-v29.js?v=30" defer></script>');
       if (scripts.length) chunk = chunk.replace('</body>', `${scripts.join('')}</body>`);
       res.setHeader('Cache-Control','no-store, max-age=0');
-      res.setHeader('X-WAE-Mobile-Release','universal-core-mobile-v33-edge-context');
+      res.setHeader('X-WAE-Mobile-Release','universal-core-mobile-v34-relevance-guard');
     }
     return nativeEnd(chunk, encoding, callback);
   };
