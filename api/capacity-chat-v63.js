@@ -1,5 +1,5 @@
 import capacityChatV62 from './capacity-chat-v62.js';
-import { getClientIp } from '../lib/security.js';
+import { getClientIp, applyHeaders, originAllowed, allowRequest } from '../lib/security.js';
 import {
   distributedAdmission,
   releaseDistributedAdmission,
@@ -16,6 +16,8 @@ import {
   drainPersistentObservations,
   PERFORMANCE_ROUTER_VERSION
 } from '../lib/provider-mesh-v63.js';
+import { shouldUseKnowledgeAnswer, runKnowledgeAnswer, KNOWLEDGE_ANSWER_VERSION } from '../lib/knowledge/knowledge-answer-v1.js';
+import { understandKnowledgeQuery, UNIVERSAL_KNOWLEDGE_FABRIC_VERSION } from '../lib/knowledge/fabric-v1.js';
 
 function bufferedResponse(real){
   let code=200,payload,hasJson=false;
@@ -66,6 +68,20 @@ async function flushPersistentObservations(payload){
   await Promise.allSettled(batch.map(item=>persistProviderObservation(item)));
 }
 
+function stableKnowledgeIntent(body={}){
+  if(!shouldUseKnowledgeAnswer(body))return false;
+  const message=String(body.message||body.task||'');
+  return understandKnowledgeQuery(message,{mode:body.mode,language:body.language}).temporal!==true;
+}
+
+function authorizeKnowledge(req,res){
+  applyHeaders(res);
+  if(req.method!=='POST'){res.status(405).json({error:'method_not_allowed'});return false}
+  if(!originAllowed(req)){res.status(403).json({error:'origin_not_allowed'});return false}
+  if(!allowRequest(req,Number(process.env.WAE_KNOWLEDGE_RATE_LIMIT_PER_MINUTE||18))){res.status(429).json({error:'knowledge_rate_limited'});return false}
+  return true;
+}
+
 export default async function capacityChatV63(req,res){
   const body=req.body&&typeof req.body==='object'?req.body:{};
   const principal=body.userKey||body.user_id||body.userId||body.sessionId||body.session_id||getClientIp(req);
@@ -114,6 +130,23 @@ export default async function capacityChatV63(req,res){
           scale_control:SCALE_CONTROL_VERSION,
           capacity_certification:CAPACITY_CERTIFICATION_VERSION
         });
+      }
+    }
+
+    if(stableKnowledgeIntent(body)){
+      if(!authorizeKnowledge(req,res)){responded=true;return}
+      try{
+        const knowledge=await runKnowledgeAnswer({body,userKey:String(principal)});
+        if(knowledge){
+          responsePayload=knowledge;
+          responded=true;
+          res.setHeader('X-WAE-Cognitive-Path',KNOWLEDGE_ANSWER_VERSION);
+          res.setHeader('X-WAE-Knowledge-Fabric',UNIVERSAL_KNOWLEDGE_FABRIC_VERSION);
+          res.setHeader('X-WAE-Knowledge-Sources',String(knowledge?.knowledge?.sources_selected?.length||0));
+          return res.status(200).json(knowledge);
+        }
+      }catch(error){
+        console.warn('[Knowledge Fabric v1]',String(error?.message||error).slice(0,220));
       }
     }
 
