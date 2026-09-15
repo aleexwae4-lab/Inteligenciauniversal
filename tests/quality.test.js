@@ -30,6 +30,7 @@ test('premia una respuesta estructurada solicitada',()=>{
   });
   assert.equal(q.pass,true);
   assert.ok(q.signals.structure>=1);
+  assert.equal(q.requirementCoverage.pass,true);
 });
 
 test('la estructura no rescata una respuesta irrelevante',()=>{
@@ -51,4 +52,29 @@ test('investigación sin evidencia queda por debajo del estándar premium',()=>{
   });
   assert.ok(q.signals.evidence<0.65);
   assert.ok(q.reasons.includes('insufficient_evidence'));
+  assert.ok(q.reasons.includes('missing_requirement:sources'));
+  assert.equal(q.pass,false);
+});
+
+test('respuesta elegante pero sin tabla solicitada no puede aprobar',()=>{
+  const q=evaluateAnswer({
+    question:'Compara PostgreSQL y SQLite en una tabla para una app SaaS.',
+    answer:'PostgreSQL ofrece concurrencia robusta, extensiones y mejor escalabilidad para SaaS. SQLite es simple, embebido y excelente para desarrollo local o cargas pequeñas. PostgreSQL suele ser la mejor opción cuando crece la concurrencia.',
+    mode:'analysis'
+  });
+  assert.equal(q.requirementCoverage.hardFailure,true);
+  assert.ok(q.reasons.includes('missing_requirement:table'));
+  assert.equal(q.pass,false);
+  assert.ok(q.score<0.68);
+});
+
+test('misma comparación puede aprobar cuando cumple la tabla verificable',()=>{
+  const q=evaluateAnswer({
+    question:'Compara PostgreSQL y SQLite en una tabla para una app SaaS.',
+    answer:'| Motor | Concurrencia | Escala SaaS | Uso recomendado |\n|---|---|---|---|\n| PostgreSQL | Alta | Alta | Producción multiusuario |\n| SQLite | Baja a media | Limitada | Desarrollo local y cargas pequeñas |\n\nPostgreSQL prioriza concurrencia y escalabilidad; SQLite prioriza simplicidad y portabilidad.',
+    mode:'analysis'
+  });
+  assert.equal(q.requirementCoverage.pass,true);
+  assert.ok(q.signals.requirements>=1);
+  assert.equal(q.pass,true);
 });
