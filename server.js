@@ -23,9 +23,13 @@ function mobilePremiumHandler(req,res) {
   res.end = (chunk, encoding, callback) => {
     if (typeof chunk === 'string' && chunk.includes('</head>') && chunk.includes('</body>')) {
       if (!chunk.includes('mobile-v26.css')) chunk = chunk.replace('</head>', '<link rel="stylesheet" href="/mobile-v26.css"></head>');
-      if (!chunk.includes('mobile-v26.js')) chunk = chunk.replace('</body>', '<script src="/mobile-v26.js" defer></script></body>');
+      const scripts = [];
+      if (!chunk.includes('mobile-v26.js')) scripts.push('<script src="/mobile-v26.js" defer></script>');
+      if (!chunk.includes('fast-lane-v23.js')) scripts.push('<script src="/fast-lane-v23.js" defer></script>');
+      if (!chunk.includes('mobile-voice-v27.js')) scripts.push('<script src="/mobile-voice-v27.js" defer></script>');
+      if (scripts.length) chunk = chunk.replace('</body>', `${scripts.join('')}</body>`);
       res.setHeader('Cache-Control','no-store, max-age=0');
-      res.setHeader('X-WAE-Mobile-Release','universal-core-mobile-v26');
+      res.setHeader('X-WAE-Mobile-Release','universal-core-mobile-v27-voice-fast');
     }
     return nativeEnd(chunk, encoding, callback);
   };
@@ -34,6 +38,7 @@ function mobilePremiumHandler(req,res) {
 
 const apiRoutes = new Map([
   ['/api/chat', chatHandler],
+  ['/api/fast-chat', chatHandler],
   ['/api/continuity/chat/completions', continuityHandler],
   ['/api/performance', performanceHandler],
   ['/api/health', healthHandler],
