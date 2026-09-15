@@ -37,13 +37,13 @@ export function blindAnswerScore(answer:string,question:string){
   if(hardFailure)return{score:0,hardFailure:true,signals:{nonempty:!!text,length:wc,internalLeak:INTERNAL_RX.test(text),rescueLanguage:RESCUE_RX.test(text)}};
   const qTerms=[...new Set(q.split(/[^\p{L}\p{N}]+/u).filter(x=>x.length>=5))].slice(0,18);
   const covered=qTerms.length?qTerms.filter(t=>a.includes(t)).length/qTerms.length:1;
-  const target=wc>=80&&wc<=1600?1:wc>=50&&wc<=2200?.82:.62;
-  const headings=/^#{1,4}\s+/m.test(text)?1:.72;
-  const list=/^\s*[-*+]\s+/m.test(text)||/^\s*\d+[.)]\s+/m.test(text)?1:.78;
-  const calibrated=/\b(riesgo|supuesto|trade.?off|mitig|recomend|conclusion|conclusi[oó]n)\b/i.test(text)?1:.76;
+  const target=(wc>=80&&wc<=1600)?1:((wc>=50&&wc<=2200)?0.82:0.62);
+  const headings=/^#{1,4}\s+/m.test(text)?1:0.72;
+  const list=/^\s*[-*+]\s+/m.test(text)||/^\s*\d+[.)]\s+/m.test(text)?1:0.78;
+  const calibrated=/\b(riesgo|supuesto|trade.?off|mitig|recomend|conclusion|conclusi[oó]n)\b/i.test(text)?1:0.76;
   const repeated=(text.match(/\b(.{20,80})\b[\s\S]*\b\1\b/gi)||[]).length;
-  const repetition=Math.max(.55,1-Math.min(.45,repeated*.08));
-  const score=clamp(.36*covered+.22*target+.12*headings+.10*list+.14*calibrated+.06*repetition);
+  const repetition=Math.max(0.55,1-Math.min(0.45,repeated*0.08));
+  const score=clamp(0.36*covered+0.22*target+0.12*headings+0.10*list+0.14*calibrated+0.06*repetition);
   return{score:Number(score.toFixed(4)),hardFailure:false,signals:{coverage:Number(covered.toFixed(3)),length:wc,structure:Number(((headings+list)/2).toFixed(3)),calibrated,repetition:Number(repetition.toFixed(3))}};
 }
 
@@ -82,7 +82,7 @@ export async function runEdgeCouncil(db:any,ctx:any,body:any={}){
     const g=await invoke(synthModel,synthesisMessages(ctx,valid.slice(0,3)),{stream:false});
     await markSuccess(db,synthModel,g.latency_ms,g.ttft_ms,false);
     synthesisUsed=true;synthesisScore=blindAnswerScore(g.text,ctx.q);
-    if(!synthesisScore.hardFailure&&synthesisScore.score>=winner.score.score-.02){final={...g,provider:synthModel.provider,model:actualModel(synthModel),modelRow:synthModel,score:synthesisScore};synthesisAccepted=true}
+    if(!synthesisScore.hardFailure&&synthesisScore.score>=winner.score.score-0.02){final={...g,provider:synthModel.provider,model:actualModel(synthModel),modelRow:synthModel,score:synthesisScore};synthesisAccepted=true}
   }catch(e:any){const cls=await markFailure(db,synthModel,e);failures.push({provider:synthModel.provider,model:synthModel.model_name,class:cls,error:s(e?.message||e,160),stage:'synthesis'})}
   return{
     generated:final,
