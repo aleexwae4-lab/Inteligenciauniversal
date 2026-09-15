@@ -9,14 +9,17 @@
       const payload=await response.json();
       const kernel=payload.capabilityKernel;
       const execution=payload.executionPlane;
+      const fabric=payload.toolFabric;
       if(!kernel)return;
       const ready=kernel.byStatus?.ready||0;
       const partial=kernel.byStatus?.partial||0;
       const configured=execution?.configuredAdapterCount||0;
-      status.textContent=execution?`${kernel.domainCount} dominios · ${configured} ejecutores configurados`:`${kernel.domainCount} dominios · ${ready} listos · ${partial} parciales`;
-      status.title=`${kernel.abilityCount} capacidades mapeadas · ${kernel.version}${execution?` · ${execution.version}`:''}`;
+      const enabledTools=fabric?.enabledToolCount||0;
+      status.textContent=fabric?`${kernel.domainCount} dominios · ${enabledTools} herramientas habilitadas`:(execution?`${kernel.domainCount} dominios · ${configured} ejecutores configurados`:`${kernel.domainCount} dominios · ${ready} listos · ${partial} parciales`);
+      status.title=`${kernel.abilityCount} capacidades mapeadas · ${kernel.version}${execution?` · ${execution.version}`:''}${fabric?` · ${fabric.version}`:''}`;
       window.WAE_CAPABILITY_KERNEL=kernel;
       if(execution)window.WAE_EXECUTION_PLANE=execution;
+      if(fabric)window.WAE_TOOL_FABRIC=fabric;
     }catch(error){
       status.textContent='capacidades · diagnóstico pendiente';
       console.warn('[Universal Core] capability contract unavailable',error);
