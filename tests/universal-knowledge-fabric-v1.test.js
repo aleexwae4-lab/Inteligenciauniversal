@@ -4,7 +4,7 @@ import { classifyLicense, metadataOnlyLicense, canPersistFullText, canUseForTrai
 import { listKnowledgeSources, getKnowledgeSource } from '../lib/knowledge/source-registry-v1.js';
 import { sanitizeRetrievedText, validateConnectorUrl } from '../lib/knowledge/retrieval-security-v1.js';
 import { CrossrefConnector, PubMedConnector } from '../lib/knowledge/connectors-v1.js';
-import { understandKnowledgeQuery, selectKnowledgeSources, deduplicateKnowledgeRecords, evidenceAuthority, searchKnowledge, existingKnowledgeArchitecture } from '../lib/knowledge/fabric-v1.js';
+import { understandKnowledgeQuery, buildSourceQuery, selectKnowledgeSources, deduplicateKnowledgeRecords, evidenceAuthority, searchKnowledge, existingKnowledgeArchitecture } from '../lib/knowledge/fabric-v1.js';
 
 const json=body=>new Response(JSON.stringify(body),{status:200,headers:{'content-type':'application/json'}});
 
@@ -58,6 +58,18 @@ test('medicine query routes PubMed then Europe PMC while simple literature route
   const lit=understandKnowledgeQuery('Háblame del libro Don Quijote y su autor');
   assert.equal(lit.domains.includes('literature'),true);
   assert.equal(selectKnowledgeSources(lit)[0],'open_library');
+});
+
+test('v70.1 reproduces the production Spanish hypertension query and normalizes scientific source terms',()=>{
+  const q=understandKnowledgeQuery('¿Qué tipo de evidencia científica existe sobre hipertensión y cómo debo interpretar preprints frente a ensayos aleatorizados?',{mode:'research'});
+  assert.equal(q.domains.includes('medicine'),true);
+  assert.deepEqual(selectKnowledgeSources(q).slice(0,2),['pubmed','europe_pmc']);
+  const pubmed=buildSourceQuery(q,'pubmed');
+  assert.match(pubmed,/hypertension/);
+  assert.match(pubmed,/preprint/);
+  assert.match(pubmed,/randomized controlled trial/);
+  assert.doesNotMatch(pubmed,/\bque\b|\bcomo\b|\bevidencia\b/);
+  assert.equal(buildSourceQuery(q,'wikipedia'),q.query);
 });
 
 test('deduplication uses DOI rather than treating two indexes as separate papers',()=>{
