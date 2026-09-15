@@ -6,7 +6,7 @@
   const EDGE_MARK='/functions/v1/wae-local-voice-demo-v61';
   const SATURATION_RX=/rutas generativas|temporalmente saturadas|respuesta con evidencia recuperada|all_models_unavailable|todos los proveedores configurados fallaron/i;
   const RECENT_TTL_MS=45000;
-  const CLIENT_BUDGETS=Object.freeze({general:24000,analysis:30000,code:30000,design:30000,executive:30000,research:36000});
+  const CLIENT_BUDGETS=Object.freeze({general:52000,analysis:58000,code:58000,design:58000,executive:62000,research:65000});
   const LEGACY_RUNTIME_MARKER='v47-long-session-backpressure direct-replay';
   void LEGACY_RUNTIME_MARKER;
   const recent=new Map();
@@ -100,7 +100,7 @@
         method:'POST',
         headers:{
           'content-type':'application/json',
-          'x-wae-mobile-runtime':'v64-response-lifecycle',
+          'x-wae-mobile-runtime':'v67-provider-independent-recovery',
           'x-wae-mobile-attempt':'1',
           'x-wae-client-turn':String(payload.clientTurnId||'').slice(0,80)
         },
@@ -129,7 +129,7 @@
       headers:{
         'content-type':'application/json; charset=utf-8',
         'cache-control':'no-store',
-        'x-wae-runtime':'mobile-lifecycle-v64',
+        'x-wae-runtime':'mobile-lifecycle-v67',
         ...extra
       }
     });
@@ -151,7 +151,7 @@
       headers:{
         'content-type':'text/event-stream; charset=utf-8',
         'cache-control':'no-store',
-        'x-wae-runtime':'mobile-lifecycle-v64',
+        'x-wae-runtime':'mobile-lifecycle-v67',
         ...extra
       }
     });
@@ -232,6 +232,6 @@
     return previousFetch(input,init);
   };
 
-  window.__WAE_MOBILE_RUNTIME_V47__={version:'64.0.0',singleAttempt:true,dedupeMs:RECENT_TTL_MS,backpressure:true,history:true,successOnlyCache:true,recoverableFailuresRetryable:true,clientBudgets:CLIENT_BUDGETS,compatibility:'v47-long-session-backpressure'};
-  document.documentElement.dataset.mobileRuntime='v64-response-lifecycle';
+  window.__WAE_MOBILE_RUNTIME_V47__={version:'67.0.0',singleAttempt:true,dedupeMs:RECENT_TTL_MS,backpressure:true,history:true,successOnlyCache:true,recoverableFailuresRetryable:true,clientBudgets:CLIENT_BUDGETS,compatibility:'v47-long-session-backpressure'};
+  document.documentElement.dataset.mobileRuntime='v67-provider-independent-recovery';
 })();
