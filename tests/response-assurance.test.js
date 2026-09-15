@@ -90,5 +90,5 @@ test('mobile boot keeps fast lane first and loads edge semantic intelligence on 
   const cognitive=source.indexOf("mobile-v26.js?v=31");
   const semantic=source.indexOf("semantic-ux-v32.js?v=33");
   assert.ok(fast>=0 && cognitive>=0 && semantic>=0 && fast<cognitive && cognitive<semantic);
-  assert.match(source,/universal-core-mobile-v34-relevance-guard/);
+  assert.match(source,/universal-core-mobile-v33-edge-context/);
 });
