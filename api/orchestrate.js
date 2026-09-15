@@ -1,14 +1,10 @@
-import { executeMission } from '../lib/runtime.js';
-import { planMission, specialistPrompt, synthesisPrompt, ORCHESTRATOR_VERSION } from '../lib/orchestrator.js';
 import { allowRequest, originAllowed, applyHeaders, getClientIp } from '../lib/security.js';
 import { normalizeUserIntent } from '../lib/input-intelligence.js';
+import { tryAcquireChatSlot } from '../lib/concurrency-governor.js';
+import { runExecutiveOrchestration, EXECUTIVE_ORCHESTRATION_VERSION } from '../lib/executive-orchestration-v52.js';
+import { runWithRequestSignal } from '../lib/network-deadlines-v46.js';
 
-const cleanHistory=(value)=>Array.isArray(value)?value.slice(-16).filter(x=>x&&['user','assistant'].includes(x.role)).map(x=>({role:x.role,text:String(x.text??x.content??'').slice(0,12000)})):[];
-const cleanAttachments=(value)=>Array.isArray(value)?value.slice(0,5):[];
-const publicResponse=(response={})=>({
-  ...response,
-  metadata:{...(response.metadata||{}),provider:undefined,model:undefined}
-});
+const publicResponse=(response={})=>({...response,metadata:{...(response.metadata||{}),provider:undefined,model:undefined}});
 
 export default async function handler(req,res){
   applyHeaders(res);
@@ -22,59 +18,32 @@ export default async function handler(req,res){
   if(rawMessage.length>30000)return res.status(413).json({error:'message_too_large'});
   const intent=normalizeUserIntent(rawMessage);
   const message=intent.changed?intent.text:rawMessage;
-
-  const started=Date.now();
   const sessionId=String(body.sessionId||body.session_id||'').slice(0,160);
   const rootKey=String(body.userKey||sessionId||getClientIp(req)).slice(0,160);
-  const history=cleanHistory(body.history);
-  const attachments=cleanAttachments(body.attachments);
-  const plan=planMission(message,body.specialists);
-
-  const specialistRuns=await Promise.allSettled(plan.specialists.map(async agent=>{
-    const result=await executeMission({
-      message:specialistPrompt(agent,message),
-      mode:agent,
-      userKey:`${rootKey}:deep:${agent}`.slice(0,160),
-      sessionId:`${sessionId}:deep:${agent}`.slice(0,160),
-      history,
-      attachments,
-    });
-    return{agent,reply:result.reply,latencyMs:result.latencyMs,tools:(result.tools||[]).map(x=>({tool:x.tool,ok:x.ok}))};
-  }));
-
-  const specialists=specialistRuns.map((run,index)=>run.status==='fulfilled'?run.value:{agent:plan.specialists[index],error:String(run.reason?.message||run.reason||'specialist_failed').slice(0,300)});
-  const usable=specialists.filter(x=>x.reply);
+  const slot=tryAcquireChatSlot(`${rootKey}:orchestrate`.slice(0,160));
+  if(!slot.ok){
+    res.setHeader('Retry-After',String(Math.max(1,Math.ceil(slot.retryAfterMs/1000))));
+    return res.status(503).json({error:'CAPACITY_BUSY',message:'El comité ejecutivo está absorbiendo una ráfaga de concurrencia. La misión fue rechazada de forma controlada antes de quedar bloqueada.',recoverable:true,retry_after_ms:slot.retryAfterMs});
+  }
 
   try{
-    const final=await executeMission({
-      message:synthesisPrompt(message,plan,usable),
-      mode:'executive',
-      userKey:rootKey,
-      sessionId,
-      history,
-      attachments,
-      disableTools:true,
-    });
-    const elapsedMs=Date.now()-started;
+    const signal=AbortSignal.timeout(Number(process.env.WAE_ORCHESTRATION_DEADLINE_MS||24_000));
+    const result=await runWithRequestSignal(signal,()=>runExecutiveOrchestration({body:{...body,message,multiagent:true,deep:true},userKey:rootKey,sessionId}));
+    if(!result)return res.status(503).json({error:'orchestration_unavailable',message:'El registro ejecutivo no estuvo disponible para este turno.',recoverable:true});
+    res.setHeader('X-WAE-Multi-Agent','database-backed-v52');
+    res.setHeader('X-WAE-Orchestrator',EXECUTIVE_ORCHESTRATION_VERSION);
     return res.status(200).json({
-      ...final,
-      response:publicResponse(final.response),
+      ...result,
+      response:publicResponse(result.response),
       provider:undefined,
       model:undefined,
       fallbackFailures:undefined,
-      deep:true,
       input_interpretation:intent.changed?{normalized:true,domain:intent.domain,confidence:intent.confidence,corrections:intent.corrections}:undefined,
-      orchestration:{
-        schema:ORCHESTRATOR_VERSION,
-        strategy:plan.strategy,
-        specialists:specialists.map(x=>({agent:x.agent,ok:!!x.reply,latencyMs:x.latencyMs||null,tools:x.tools||[],error:x.error||null})),
-        synthesis:'executive',
-        elapsedMs,
-        evidencePolicy:plan.evidencePolicy,
-      },
-      agent:{id:'universal-deep',name:'Universal Core Deep'},
+      agent:{id:'universal-executive-committee',name:'Universal Core Executive Committee'}
     });
   }catch(error){
-    return res.status(error.statusCode||502).json({error:error.code||'deep_orchestration_failed',message:String(error.message||error)});
+    return res.status(503).json({error:'deep_orchestration_failed',message:'El comité liberó el turno antes de quedar bloqueado. Puedes reintentarlo.',recoverable:true,detail:String(error?.message||error).slice(0,180)});
+  }finally{
+    slot.release();
   }
 }
