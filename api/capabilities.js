@@ -11,6 +11,7 @@ import { UNIVERSAL_CONTEXT_VERSION, getUniversalSelfDescription } from '../lib/u
 import { benchmarkSuiteManifest } from '../lib/supremacy-benchmark-v53.js';
 import { continuousImprovementCapabilities, getContinuousImprovementStatus } from '../lib/continuous-improvement-v54.js';
 import { answerIntelligenceCapabilities } from '../lib/answer-intelligence-v60.js';
+import { qualityReliabilityCapabilities } from '../lib/quality-reliability-v61.js';
 import { applyHeaders } from '../lib/security.js';
 
 export default async function handler(req,res){
@@ -46,6 +47,7 @@ export default async function handler(req,res){
     interface:'experience-v8-living-core',
     reasoningProfiles:['auto','deep'],
     answerIntelligence:answerIntelligenceCapabilities(),
+    qualityReliability:qualityReliabilityCapabilities(),
     orchestration:{
       schema:EXECUTIVE_ORCHESTRATION_VERSION,
       legacySchema:ORCHESTRATOR_VERSION,
