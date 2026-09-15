@@ -36,7 +36,7 @@ export default async function handler(req,res){
     task,
     userKey,
     sessionId,
-    approved:body.approved===true,
+    approved:false,
   });
 
   const statusCode=execution.success?200:execution.status==='blocked'?422:502;
