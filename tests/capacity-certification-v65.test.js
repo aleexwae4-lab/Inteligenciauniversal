@@ -91,3 +91,19 @@ test('v65 migration stores only sanitized load evidence behind the runtime bridg
   assert.match(sql,/concurrency.*>=.*512/is);
   assert.match(sql,/requests.*>=.*5000/is);
 });
+
+test('v65 is wired into chat admission, capabilities and the explicit API route',async()=>{
+  const [chat,capabilities,server,api]=await Promise.all([
+    readFile(new URL('../api/capacity-chat-v63.js',import.meta.url),'utf8'),
+    readFile(new URL('../api/capabilities.js',import.meta.url),'utf8'),
+    readFile(new URL('../server.js',import.meta.url),'utf8'),
+    readFile(new URL('../api/capacity-certification.js',import.meta.url),'utf8')
+  ]);
+  assert.match(chat,/capacityAutopilotDecision/);
+  assert.match(chat,/X-WAE-Capacity-Mode/);
+  assert.match(chat,/CAPACITY_BUSY/);
+  assert.match(capabilities,/capacityCertificationCapabilities/);
+  assert.match(server,/\/api\/capacity-certification/);
+  assert.match(api,/x-wae-worker-token/);
+  assert.match(api,/trusted_worker_required/);
+});
