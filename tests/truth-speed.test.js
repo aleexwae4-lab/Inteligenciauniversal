@@ -1,13 +1,24 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { deriveTruthSpeedPolicy, planRuntimeTools, auditGrounding, truthSpeedCapabilities } from '../lib/truth-speed.js';
-import { evaluateAnswer } from '../lib/quality.js';
+import { evaluateAnswer, inferCognitivePolicy } from '../lib/quality.js';
 
 test('stable factual questions stay on the fast policy without mandatory web evidence',()=>{
   const policy=deriveTruthSpeedPolicy({message:'¿Qué es un diodo?',mode:'general'});
   assert.equal(policy.complexity,'fast');
   assert.equal(policy.evidenceRequired,false);
   assert.equal(policy.timeoutMs,22000);
+});
+
+test('local document evidence is not mistaken for a web research request',()=>{
+  const policy=deriveTruthSpeedPolicy({message:'Conserva la evidencia del archivo.',mode:'general'});
+  const cognitive=inferCognitivePolicy('Conserva la evidencia del archivo.','general');
+  assert.equal(policy.evidenceRequired,false);
+  assert.equal(policy.research,false);
+  assert.equal(cognitive.mode,'general');
+  assert.equal(cognitive.autoResearch,false);
+  const quality=evaluateAnswer({question:'Conserva la evidencia del archivo.',answer:'Conservé la evidencia: 4200 MXN.',mode:'general',sources:[]});
+  assert.equal(quality.critical,false);
 });
 
 test('current and high-risk questions require evidence and fail closed',()=>{
