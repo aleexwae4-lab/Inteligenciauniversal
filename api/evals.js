@@ -1,6 +1,7 @@
 import { applyHeaders } from '../lib/security.js';
 import { aggregateHeadToHead, benchmarkManifest, compareBenchmarkCandidates, createTrainingCase, evaluateBenchmarkCandidate, evaluationPlaneCapabilities } from '../lib/evaluation-plane.js';
 import { benchmarkSuite, benchmarkSuiteManifest, certifyBenchmarkRun, SUPREMACY_BENCHMARK_VERSION } from '../lib/supremacy-benchmark-v62.js';
+import { evidenceBenchmarkSuite, evidenceBenchmarkManifest, certifyEvidenceBenchmarkRun, EVIDENCE_BENCHMARK_VERSION } from '../lib/evidence-benchmark-v71.js';
 
 const MAX_PROMPT=30000;
 const MAX_ANSWER=80000;
@@ -51,12 +52,21 @@ async function persistTrustedCertification({req,certification,entries,targetId,r
 
 export default async function handler(req,res){
   applyHeaders(res);
-  if(req.method==='GET')return res.status(200).json({success:true,capabilities:evaluationPlaneCapabilities(),manifest:benchmarkManifest(),benchmarkArena:benchmarkSuiteManifest()});
+  if(req.method==='GET')return res.status(200).json({success:true,capabilities:evaluationPlaneCapabilities(),manifest:benchmarkManifest(),benchmarkArena:benchmarkSuiteManifest(),evidenceArena:evidenceBenchmarkManifest()});
   if(req.method!=='POST')return res.status(405).json({success:false,error:'method_not_allowed'});
   const body=bodyOf(req),action=text(body.action||'evaluate',40).toLowerCase(),prompt=text(body.prompt||body.message||'',MAX_PROMPT),mode=text(body.mode||'general',40),assertions=body.assertions&&typeof body.assertions==='object'?body.assertions:{};
-  if(!prompt&&!['aggregate','suite','certify','certify_and_record'].includes(action))return res.status(422).json({success:false,error:'prompt_required'});
+  if(!prompt&&!['aggregate','suite','certify','certify_and_record','evidence_suite','evidence_certify'].includes(action))return res.status(422).json({success:false,error:'prompt_required'});
 
   if(action==='suite')return res.status(200).json({success:true,version:SUPREMACY_BENCHMARK_VERSION,manifest:benchmarkSuiteManifest(),cases:benchmarkSuite()});
+  if(action==='evidence_suite')return res.status(200).json({success:true,version:EVIDENCE_BENCHMARK_VERSION,manifest:evidenceBenchmarkManifest(),cases:evidenceBenchmarkSuite(),referenceContract:{pairedResponsesRequired:true,versionedReferenceRequired:true,simulatedReferenceForbidden:true}});
+
+  if(action==='evidence_certify'){
+    const referenceId=text(body.referenceId,120),targetId=text(body.targetId||'universal_core',120);
+    if(!referenceId)return res.status(422).json({success:false,error:'reference_id_required'});
+    const entries=benchmarkEntries(body.entries);
+    const certification=certifyEvidenceBenchmarkRun({entries,targetId,referenceId,minimumCases:body.minimumCases});
+    return res.status(200).json({success:true,certification,persistence:{supported:false,reason:'trusted_v54_recorder_is_32_case_bound; v71 requires a dedicated 48-case recorder before trusted persistence'}});
+  }
 
   if(action==='certify'||action==='certify_and_record'){
     const referenceId=text(body.referenceId,120),targetId=text(body.targetId||'universal_core',120);
@@ -85,7 +95,7 @@ export default async function handler(req,res){
   if(action==='aggregate'){
     const comparisons=Array.isArray(body.comparisons)?body.comparisons.slice(0,500):[];
     const targetId=text(body.targetId||'universal_core',120);
-    return res.status(200).json({success:true,aggregate:aggregateHeadToHead({comparisons,targetId,minimumCases:body.minimumCases,minimumWinRate:body.minimumWinRate,maxCriticalFailureRate:body.maxCriticalFailureRate}),note:'Aggregate is diagnostic only. Competitor superiority claims require action=certify under Benchmark Arena v62.'});
+    return res.status(200).json({success:true,aggregate:aggregateHeadToHead({comparisons,targetId,minimumCases:body.minimumCases,minimumWinRate:body.minimumWinRate,maxCriticalFailureRate:body.maxCriticalFailureRate}),note:'Aggregate is diagnostic only. Competitor advantage claims require a complete versioned-reference certification under the appropriate benchmark arena.'});
   }
 
   if(action==='training_case'){
