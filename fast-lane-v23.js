@@ -9,7 +9,7 @@
     if(!safeMode(body)||!noHeavyContext(body))return false;
     const raw=String(message||'').trim(),q=normalize(raw);
     if(!q&&/[?¿]+/.test(raw))return true;
-    if(/^(hola|hey|buenas|buenos dias|buenas tardes|buenas noches|hola buenas|como estas|como andas|que tal|quien eres|que eres|que es universal core|que puedes hacer|como puedes ayudarme|ayuda|ayudame|gracias|muchas gracias|ok|okay|vale|perfecto|listo)$/.test(q))return true;
+    if(/^(hola|hey|buenas|buenos dias|buenas tardes|buenas noches|hola buenas|como estas|como andas|que tal|quien eres|que eres|que tan inteligente eres|que es universal core|que puedes hacer|como puedes ayudarme|ayuda|ayudame|gracias|muchas gracias|ok|okay|vale|perfecto|listo)$/.test(q))return true;
     return /^(sabes(?: todo)? sobre|sabes de|conoces(?: de| sobre)?|puedes hablar de|tienes conocimiento(?: de| sobre)?)\s+\S+/.test(q);
   }
   function parseBody(init={}){try{return typeof init.body==='string'?JSON.parse(init.body):{}}catch{return{}}}
@@ -29,7 +29,7 @@
       if(!response.ok)return null;
       const data=await response.clone().json().catch(()=>null);
       if(!data||typeof data.reply!=='string'||!data.reply.trim())return null;
-      const out={...data,success:true,conversation_id:body?.conversation_id||data.conversation_id||null,fast_lane:true,fast_lane_version:'universal-fast-lane/v23'};
+      const out={...data,success:true,conversation_id:body?.conversation_id||data.conversation_id||null,fast_lane:true,fast_lane_version:data.fast_lane_version||'universal-fast-lane/v23'};
       window.__iuLastRuntime=out;
       window.dispatchEvent(new CustomEvent('wae:fast-lane',{detail:{message,model:out.model||null,latencyMs:out.latencyMs??out.latency_ms??null}}));
       return new Response(JSON.stringify(out),{status:200,headers:{'content-type':'application/json; charset=utf-8','cache-control':'no-store','x-wae-fast-lane':'v23'}});
