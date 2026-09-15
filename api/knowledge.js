@@ -40,7 +40,8 @@ export default async function knowledgeHandler(req,res){
     if(!query)return res.status(400).json({error:'query_required'});if(query.length>1500)return res.status(413).json({error:'query_too_large'});
     const research=path.endsWith('/research');
     try{
-      const result=await searchKnowledge(query,{mode:research?'research':'search',language:body.language,sources:parseSources(body.sources),maxSources:int(body.max_sources,research?6:4,1,8),perSource:int(body.per_source,5,1,8),limit:int(body.limit,research?20:12,1,30),organizationId:body.organization_id||null,requestId:body.request_id||undefined});
+      // Public knowledge routes are deliberately tenant-neutral. A tenant id is bound only by a trusted authenticated layer, never accepted from the request body.
+      const result=await searchKnowledge(query,{mode:research?'research':'search',language:body.language,sources:parseSources(body.sources),maxSources:int(body.max_sources,research?6:4,1,8),perSource:int(body.per_source,5,1,8),limit:int(body.limit,research?20:12,1,30),organizationId:null,requestId:undefined});
       return res.status(200).json({success:true,...result});
     }catch(error){
       return res.status(Number(error?.status)||503).json({success:false,error:'knowledge_retrieval_failed',message:String(error?.message||error).slice(0,180),version:UNIVERSAL_KNOWLEDGE_FABRIC_VERSION});
