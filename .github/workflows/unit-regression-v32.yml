@@ -1,0 +1,42 @@
+name: Unit Regression Matrix v32
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  regression:
+    name: regression · ${{ matrix.test }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    strategy:
+      fail-fast: false
+      matrix:
+        test:
+          - test/adaptive-router.test.js
+          - test/continuity.test.js
+          - test/mobile-recovery-v24.test.js
+          - test/mobile-safe-composer.test.js
+          - test/orchestrator.test.js
+          - test/performance-api.test.js
+          - test/performance.test.js
+          - test/response.test.js
+          - test/sse-events.test.js
+          - test/universal-core-ui.test.js
+          - tests/input-intelligence.test.js
+          - tests/quality.test.js
+          - tests/response-assurance.test.js
+          - tests/self-improvement.test.js
+          - tests/supremacy-runtime.test.js
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - run: npm install --no-audit --no-fund
+      - name: Run isolated regression
+        run: node --test "${{ matrix.test }}"
