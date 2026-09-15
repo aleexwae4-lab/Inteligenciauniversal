@@ -1,5 +1,6 @@
 import { AGENTS } from '../lib/agents.js';
 import { evaluationPlaneCapabilities } from '../lib/evaluation-plane.js';
+import { truthSpeedCapabilities } from '../lib/truth-speed.js';
 import { runtimeHealth } from '../lib/runtime.js';
 import { ORCHESTRATOR_VERSION } from '../lib/orchestrator.js';
 import { applyHeaders } from '../lib/security.js';
@@ -14,6 +15,7 @@ export default function handler(req,res){
     reasoningProfiles:['auto','deep'],
     orchestration:{schema:ORCHESTRATOR_VERSION,parallel:true,maxSpecialists:3,synthesis:'executive',endpoint:'/api/orchestrate'},
     evaluationPlane:{...evaluationPlaneCapabilities(),endpoint:'/api/evals'},
+    truthSpeed:truthSpeedCapabilities(),
     agents:Object.values(AGENTS).map(({id,name,description,tools})=>({id,name,description,tools}))
   });
 }
