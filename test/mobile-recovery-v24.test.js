@@ -36,7 +36,8 @@ test('semantic v33 repairs the exact mobile answer and Edge request surface', as
   assert.match(semantic, /wae-local-voice-demo-v61/);
   assert.match(semantic, /client-context-v33/);
   assert.match(semantic, /iodo\|yodo/);
-  assert.match(semantic, /what\|wat\|guat/);
+  assert.match(semantic, /\(un\|una\|el\|los\|unos\|unas\).*what/);
+  assert.match(semantic, /wat\|guat/);
   assert.match(semantic, /payload\.message=intent\.text/);
   assert.match(semantic, /electricalScore<2/);
   assert.match(semantic, /chemistryScore===0/);
