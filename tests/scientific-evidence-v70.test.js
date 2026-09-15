@@ -38,6 +38,17 @@ test('v70 preprints remain preliminary and are penalized versus controlled evide
   assert.equal(ranked[0].id,'rct');
 });
 
+test('v70.2 multilingual reranker prefers hypertension RCT over unrelated highly cited RCT',()=>{
+  const understanding={...understandKnowledgeQuery('¿Qué evidencia existe sobre hipertensión y ensayos aleatorizados?'),rerank_normalized:'hypertension preprint randomized controlled trial'};
+  const unrelated=record({id:'covid',title:'Remdesivir in adults with severe COVID-19: a randomised, double-blind, placebo-controlled, multicentre trial',topics:['COVID-19','clinical trial'],source:{id:'openalex',canonical_url:'https://doi.org/10.1016/example',retrieved_at:new Date().toISOString()},identifiers:{doi:'10.1016/example'},quality:{source_authority:.92,peer_review_status:'unknown',publication_type:'article',citation_count:3664,retraction_status:'unknown',author_identity:'partial',primary_vs_secondary_source:'index_metadata',cross_source_confirmation:0},raw_metadata:{type:'article'}});
+  const relevant=record({id:'hypertension-rct',title:'Heart Rate Variability and Blood Pressure Response to Exercise in Individuals with Mild Hypertension: A Randomized Controlled Clinical Trial',topics:['hypertension','blood pressure'],identifiers:{doi:'10.30476/relevant'},quality:{source_authority:.98,peer_review_status:'unknown',publication_type:'Journal Article',citation_count:0,retraction_status:'unknown',author_identity:'partial',primary_vs_secondary_source:'bibliographic_index',cross_source_confirmation:0},raw_metadata:{pubtype:['Randomized Controlled Trial']}});
+  const profiled=applyScientificEvidenceProfiles([unrelated,relevant],understanding);
+  const ranked=rerankKnowledgeRecords(profiled,understanding);
+  assert.equal(ranked[0].id,'hypertension-rct');
+  assert.ok(ranked[0].quality.relevance>ranked[1].quality.relevance);
+  assert.equal(ranked[0].quality.rerank_query_version,'multilingual-scientific/v70.2');
+});
+
 test('v70 detects identifier-level integrity conflicts without merging by name alone',()=>{
   const a=applyScientificEvidenceProfiles([record({id:'a',title:'Study title',publicationDate:'2024-01-01'})],{} )[0];
   const b=applyScientificEvidenceProfiles([record({id:'b',title:'Corrected study title',publicationDate:'2025-01-01',quality:{retraction_status:'Retracted Publication'}})],{} )[0];
