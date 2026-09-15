@@ -20,7 +20,8 @@ test('mobile injects premium response assets without replacing the stable runtim
   assert.match(server,/universal-core-mobile-v34-adaptive-mesh/);
   assert.match(server,/universal-core-rich-v43/);
   assert.match(server,/mobile-runtime-v34\.js\?v=44/);
-  assert.match(server,/auto-fastpath-v44/);
+  assert.match(server,/mobile-bootstrap-v45\.js\?v=45/);
+  assert.match(server,/render-first-bootstrap-v45/);
 });
 
 test('premium CSS supports semantic hierarchy, tables, metrics, charts and reduced motion',()=>{
