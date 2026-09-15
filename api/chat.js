@@ -25,7 +25,7 @@ function canonicalProtocolPrompt(value='') {
 
 function protocolFastPathEligible(body={}) {
   const mode=String(body?.mode || 'general').toLowerCase();
-  if (mode !== 'general') return false;
+  if (!['general','auto'].includes(mode)) return false;
   if (body?.web_enabled === true || (Array.isArray(body?.attachments) && body.attachments.length)) return false;
   const q=normalizeFastPath(body?.message || body?.task || '');
   if (!q) return false;
@@ -66,8 +66,8 @@ export default async function handler(req,res) {
     const protocolBody={...runtimeBody,message:canonicalProtocolPrompt(runtimeBody.message || runtimeBody.task || '')};
     const fast = await rescueMission({ payload:protocolBody, userKey, error:{code:'PROTOCOL_FAST_PATH'} });
     if (fast?.resilience?.path === 'deterministic_protocol') {
-      res.setHeader('X-WAE-Fast-Path','deterministic-protocol-v3');
-      return res.status(200).json({ ...fast, fast_lane:true, fast_lane_version:'server-protocol/v3', input_interpretation:publicIntent(intent) });
+      res.setHeader('X-WAE-Fast-Path','deterministic-protocol-v4');
+      return res.status(200).json({ ...fast, fast_lane:true, fast_lane_version:'server-protocol/v4', input_interpretation:publicIntent(intent) });
     }
   }
 
