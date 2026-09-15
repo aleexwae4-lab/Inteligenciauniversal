@@ -14,7 +14,7 @@ import { answerIntelligenceCapabilities } from '../lib/answer-intelligence-v60.j
 import { qualityReliabilityCapabilities } from '../lib/quality-reliability-v61.js';
 import { performanceRouterCapabilities, providerMeshSnapshot } from '../lib/provider-mesh-v63.js';
 import { scaleControlCapabilities, scaleControlSnapshot } from '../lib/scale-control-v63.js';
-import { capacityCertificationCapabilities } from '../lib/capacity-certification-v65.js';
+import { capacityCertificationCapabilities } from '../lib/capacity-certification-v66.js';
 import { applyHeaders } from '../lib/security.js';
 
 export default async function handler(req,res){
