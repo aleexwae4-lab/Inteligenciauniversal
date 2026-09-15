@@ -39,7 +39,8 @@ function mobilePremiumHandler(req,res) {
       res.setHeader('Cache-Control','no-store, max-age=0, must-revalidate');
       res.setHeader('Pragma','no-cache');
       res.setHeader('Expires','0');
-      res.setHeader('X-WAE-Mobile-Release','universal-core-mobile-v35-premium-rich');
+      res.setHeader('X-WAE-Mobile-Release','universal-core-mobile-v34-adaptive-mesh');
+      res.setHeader('X-WAE-Premium-Release','universal-core-rich-v43');
     }
     return nativeEnd(chunk, encoding, callback);
   };
