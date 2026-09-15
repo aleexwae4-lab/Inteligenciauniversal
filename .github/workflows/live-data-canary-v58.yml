@@ -1,0 +1,43 @@
+name: Universal Core v58 Live Data Canary
+
+on:
+  schedule:
+    - cron: '*/30 * * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  live-data-freshness:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    env:
+      APP_URL: https://wae-inteligencia-universal.onrender.com
+      LIVE_VERSION: live-data-mesh/v58
+    steps:
+      - name: Probe live evidence mesh
+        shell: bash
+        run: |
+          set -euo pipefail
+          BODY=$(mktemp)
+          HTTP=$(curl -sS --max-time 25 -o "$BODY" -w '%{http_code}' \
+            "$APP_URL/api/live-data?q=latest%20artificial%20intelligence%20technology%20news%20today")
+          test "$HTTP" = "200"
+          jq -e --arg version "$LIVE_VERSION" '
+            .success == true and
+            .live_data.version == $version and
+            .live_data.used == true and
+            .live_data.evidence_ready == true and
+            .live_data.fail_closed == false and
+            .live_data.source_count >= 1 and
+            (.sources | length) >= 1 and
+            ([.sources[] | select((.url | type) == "string" and (.url | startswith("http")) and (.retrieved_at | type) == "string")] | length) >= 1
+          ' "$BODY" >/dev/null
+          jq '{live_data,sources:[.sources[0:3][]|{key,title,host,published_at,retrieved_at,freshness_tier}]}' "$BODY"
+
+      - name: Record freshness gate
+        run: |
+          echo 'Universal Core v58 Live Data Canary: PASS' >> "$GITHUB_STEP_SUMMARY"
+          echo '- Public live-data endpoint returned timestamped evidence' >> "$GITHUB_STEP_SUMMARY"
+          echo '- Freshness gate: evidence-ready / fail-closed disabled' >> "$GITHUB_STEP_SUMMARY"
