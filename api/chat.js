@@ -3,6 +3,7 @@ import { allowRequest, originAllowed, applyHeaders, getClientIp } from '../lib/s
 import { rescueMission, recoverableRuntimeError } from '../lib/intelligence-rescue.js';
 import { normalizeUserIntent } from '../lib/input-intelligence.js';
 import { selectProviderRoute, observeProviderOutcome } from '../lib/provider-mesh.js';
+import { councilEligible, deliberateMission } from '../lib/deliberation-plane.js';
 
 function normalizeFastPath(value='') {
   return String(value || '')
@@ -76,12 +77,25 @@ export default async function handler(req,res) {
     attachments:Array.isArray(runtimeBody.attachments)?runtimeBody.attachments:[],
     requestedProvider:runtimeBody.provider || 'auto'
   });
-  const routedBody=route.applied?{...runtimeBody,provider:route.selectedProvider}:runtimeBody;
+  const routing=publicRoute(route);
 
+  if(councilEligible({route,body:runtimeBody})){
+    try{
+      const council=await deliberateMission({body:runtimeBody,userKey,route});
+      if(council){
+        res.setHeader('X-WAE-Cognitive-Path','universal-council-v40');
+        if(council?.response?.metadata)council.response.metadata={...council.response.metadata,providerMesh:routing};
+        return res.status(200).json({...council,input_interpretation:publicIntent(intent),provider_mesh:routing});
+      }
+    }catch(councilError){
+      console.warn('[Universal Council v40]',String(councilError?.message||councilError));
+    }
+  }
+
+  const routedBody=route.applied?{...runtimeBody,provider:route.selectedProvider}:runtimeBody;
   try {
     const result = await executeMission({ ...routedBody, userKey });
     observeProviderOutcome({route,result});
-    const routing=publicRoute(route);
     if(result?.response?.metadata)result.response.metadata={...result.response.metadata,providerMesh:routing};
     return res.status(200).json({ ...result, input_interpretation:publicIntent(intent), provider_mesh:routing });
   } catch (error) {
@@ -91,13 +105,13 @@ export default async function handler(req,res) {
         const rescued = await rescueMission({ payload:runtimeBody, userKey, error });
         if (rescued) {
           res.setHeader('X-WAE-Resilience','recovered');
-          return res.status(200).json({ ...rescued, input_interpretation:publicIntent(intent), provider_mesh:publicRoute(route) });
+          return res.status(200).json({ ...rescued, input_interpretation:publicIntent(intent), provider_mesh:routing });
         }
       } catch (rescueError) {
         console.warn('[Universal Core Rescue]', String(rescueError?.message || rescueError));
       }
     }
     const status = error.statusCode || (error.code === 'NO_PROVIDER' ? 503 : 502);
-    return res.status(status).json({ error:error.code || 'runtime_error', message:String(error.message || error), failures:error.failures || undefined, recoverable:recoverableRuntimeError(error), provider_mesh:publicRoute(route) });
+    return res.status(status).json({ error:error.code || 'runtime_error', message:String(error.message || error), failures:error.failures || undefined, recoverable:recoverableRuntimeError(error), provider_mesh:routing });
   }
 }
