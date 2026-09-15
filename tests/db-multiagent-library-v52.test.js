@@ -3,10 +3,10 @@ import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import { buildIdentityReply, formatCoverage, UNIVERSAL_CONTEXT_VERSION } from '../lib/universal-context-v52.js';
 import { libraryRelevant, publicLibraryMetadata, LIBRARY_INTELLIGENCE_VERSION, compactLibraryQuery } from '../lib/library-intelligence-v52.js';
-import { shouldUseLibraryAnswer, directBibliographicIntent, buildLibraryMetadataFallback } from '../lib/library-answer-v52.js';
+import { shouldUseLibraryAnswer, directBibliographicIntent, buildLibraryMetadataFallback, resolveLibraryConversation, bookFollowUpIntent, buildGroundedSummaryFallback } from '../lib/library-answer-v52.js';
 import { shouldUseExecutiveOrchestrator, planDatabaseExecutiveRoles, EXECUTIVE_ORCHESTRATION_VERSION } from '../lib/executive-orchestration-v52.js';
 
-const manifest={activeAgentInstances:88,executiveRoles:22,collaborationEdges:448,agents:[{role:'CEO',name:'CEO Estratégico',mission:'Dirección estratégica y prioridades',responsibilities:['Definir rumbo'],frameworks:['OKR'],guardrails:['No inventar datos']},{role:'CTO',name:'CTO Tecnología',mission:'Arquitectura, ingeniería, resiliencia y costo técnico',responsibilities:['Evaluar arquitectura'],frameworks:['SRE','DORA'],guardrails:['Pruebas y rollback']},{role:'CFO',name:'CFO Financiero',mission:'Rentabilidad, presupuesto, ROI y escenarios',responsibilities:['Cuantificar impacto financiero'],frameworks:['FP&A','DCF'],guardrails:['Mostrar fórmulas']},{role:'CISO',name:'CISO',mission:'Reducir riesgo cibernético',responsibilities:['Evaluar amenazas'],frameworks:['NIST CSF'],guardrails:['No exponer secretos']},{role:'Consultor General',name:'Consultor General',mission:'Síntesis multidisciplinaria',responsibilities:['Enmarcar problemas'],frameworks:['MECE'],guardrails:['No ocultar incertidumbre']}],collaborations:[{sourceRole:'CTO',targetRole:'CFO',type:'primary_advisory',weight:4},{sourceRole:'CFO',targetRole:'CTO',type:'primary_advisory',weight:4}]};
+const manifest={activeAgentInstances:88,executiveRoles:22,collaborationEdges:448,agents:[{role:'CEO',name:'CEO Estratégico',mission:'Dirección estratégica y prioridades',responsibilities:['Definir rumbo'],frameworks:['OKR'],guardrails:['No inventar datos']},{role:'CTO',name:'CTO Tecnología',mission:'Arquitectura, ingeniería, resiliencia y costo técnico',responsibilities:['Evaluar arquitectura'],frameworks:['SRE','DORA'],guardrails:['Pruebas y rollback']},{role:'CFO',name:'CFO Financiero',mission:'Rentabilidad, presupuesto,ROI y escenarios',responsibilities:['Cuantificar impacto financiero'],frameworks:['FP&A','DCF'],guardrails:['Mostrar fórmulas']},{role:'CISO',name:'CISO',mission:'Reducir riesgo cibernético',responsibilities:['Evaluar amenazas'],frameworks:['NIST CSF'],guardrails:['No exponer secretos']},{role:'Consultor General',name:'Consultor General',mission:'Síntesis multidisciplinaria',responsibilities:['Enmarcar problemas'],frameworks:['MECE'],guardrails:['No ocultar incertidumbre']}],collaborations:[{sourceRole:'CTO',targetRole:'CFO',type:'primary_advisory',weight:4},{sourceRole:'CFO',targetRole:'CTO',type:'primary_advisory',weight:4}]};
 
 test('identity claim says Universal Core and millions of bibliographic records without claiming copyrighted fulltext',()=>{const reply=buildIdentityReply({executiveOrchestration:{executiveRoles:22,activeAgentInstances:88,collaborationEdges:448},library:{federatedMetadataCoverageEstimate:41743320,fulltextCoverageEstimate:79285}});assert.match(reply,/Universal Core/);assert.match(reply,/22 roles especializados/);assert.match(reply,/41\.7 millones de registros de libros/);assert.match(reply,/79,285 obras/);assert.doesNotMatch(reply,/41\.7 millones de libros completos|millones de libros completos|millones de textos completos/i);assert.equal(UNIVERSAL_CONTEXT_VERSION,'universal-context/v52')});
 
@@ -27,7 +27,7 @@ test('v67 normalizes the exact mobile book-recognition prompt into a title query
 
 test('v67 direct bibliographic answer stays useful when generative providers are unavailable',()=>{
   const prompt='¿Conoces el libro de Piense y hágase rico?';
-  const reply=buildLibraryMetadataFallback(prompt,[{title:'Piense y hágase rico',authors:['Napoleon Hill'],year:1937,source:'open_library',evidenceClass:'bibliographic_metadata'}]);
+  const reply=buildLibraryMetadataFallback(prompt,[{title:'Piense y hágase rico',authors:['Napoleon Hill'],year:1937,yearKind:'first_publish_year',source:'open_library',evidenceClass:'bibliographic_metadata'}]);
   assert.match(reply,/Piense y hágase rico/i);
   assert.match(reply,/Napoleon Hill/);
   assert.match(reply,/1937/);
@@ -35,12 +35,58 @@ test('v67 direct bibliographic answer stays useful when generative providers are
   assert.doesNotMatch(reply,/proveedores|fallaron|reintenta|no llegó completa/i);
 });
 
-test('v67 library runtime contains deterministic direct and fallback lanes before surfacing provider failure',async()=>{
+test('v68 recognizes the exact elliptical follow-up from the clip and restores the book referent from history',()=>{
+  const body={
+    message:'De que trata ?',
+    mode:'auto',
+    history:[
+      {role:'user',text:'Conoces el libro piense y hágase rico?'},
+      {role:'assistant',text:'Sí. Encontré un registro bibliográfico de Piense y Hágase Rico.'}
+    ]
+  };
+  assert.equal(bookFollowUpIntent(body.message),true);
+  const resolved=resolveLibraryConversation(body);
+  assert.equal(resolved.followUp,true);
+  assert.match(resolved.message,/De qué trata el libro Piense y hágase rico/i);
+  assert.equal(resolved.title.toLowerCase(),'piense y hágase rico');
+  assert.equal(shouldUseLibraryAnswer(body),true);
+});
+
+test('v68 does not confuse a recent translation/catalog year with the original publication and suppresses polluted contributor lists',()=>{
+  const prompt='¿Conoces el libro de Piense y hágase rico?';
+  const library=[
+    {title:'Piense y Hágase Rico',authors:['Napoleon Hill','Salvador vares','Damian Duarte','Editorial Editorial Americana'],year:2015,yearKind:'edition_or_catalog_year',source:'local_library',evidenceClass:'bibliographic_metadata'},
+    {title:'Piense y Hágase Rico',authors:['Napoleon Hill','Otro colaborador'],year:2015,yearKind:'first_publish_year',source:'open_library',evidenceClass:'bibliographic_metadata'}
+  ];
+  const grounding=[
+    {source:'wikipedia_es',title:'Piense y hágase rico',excerpt:'Piense y hágase rico es un libro de Napoleon Hill. Publicado en 1937, se asocia con la literatura de superación personal.'},
+    {source:'google_books',title:'Piense y Hágase Rico',authors:['Napoleon Hill'],excerpt:'Libro de desarrollo personal sobre éxito, riqueza, deseo, planificación y persistencia.'}
+  ];
+  const reply=buildLibraryMetadataFallback(prompt,library,grounding);
+  assert.match(reply,/Napoleon Hill/);
+  assert.match(reply,/1937/);
+  assert.doesNotMatch(reply,/2015|Salvador|Damian|Editorial Editorial|Otro colaborador/i);
+});
+
+test('v68 grounded follow-up summary remains useful without any generative provider',()=>{
+  const message='¿De qué trata el libro Piense y hágase rico?';
+  const library=[{title:'Piense y hágase rico',authors:['Napoleon Hill'],year:1937,yearKind:'first_publish_year',source:'open_library',subjects:['Self-help','Success in business']}];
+  const grounding=[{source:'google_books',title:'Piense y hágase rico',authors:['Napoleon Hill'],excerpt:'A personal development and success book about wealth, desire, goals, faith, autosuggestion, organized planning, persistence, mastermind collaboration and fear.'}];
+  const reply=buildGroundedSummaryFallback(message,grounding,library);
+  assert.match(reply,/Piense y hágase rico/i);
+  assert.match(reply,/Napoleon Hill/);
+  assert.match(reply,/desarrollo personal|éxito|riqueza/i);
+  assert.match(reply,/planificación|persistencia|metas/i);
+  assert.doesNotMatch(reply,/proveedores|fallaron|reintenta|no llegó completa/i);
+});
+
+test('v68 library runtime contains context resolution and grounded direct follow-up lanes before provider generation',async()=>{
   const source=await readFile(new URL('../lib/library-answer-v52.js',import.meta.url),'utf8');
-  assert.match(source,/library-metadata-direct-v67/);
-  assert.match(source,/library-metadata-fallback-v67/);
-  assert.match(source,/generationFallback:true/);
-  assert.match(source,/directBibliographicIntent\(message\)&&deterministic/);
+  assert.match(source,/library-grounded-followup-v68/);
+  assert.match(source,/resolveLibraryConversation\(body\)/);
+  assert.match(source,/resolved\.followUp&&groundedSummary/);
+  assert.match(source,/edition_or_catalog_year/);
+  assert.match(source,/corroboratedYears/);
 });
 
 test('automatic multi-agent execution is bounded to two specialists and explicit deep mode to three',async()=>{const source=await readFile(new URL('../lib/executive-orchestration-v52.js',import.meta.url),'utf8');assert.match(source,/maxSpecialists=explicit\?3:2/);assert.match(source,/plan\.specialists=plan\.specialists\.slice\(0,maxSpecialists\)/)});
