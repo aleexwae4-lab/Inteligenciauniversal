@@ -1,7 +1,7 @@
-export const VERSION='1.8.0-universal-core-router-v21';
+export const VERSION='1.9.0-universal-core-streaming-v22';
 export const SCHEMA='assistant-response/v1';
-export const ROUTER='wae-adaptive-router-v21';
-export const CANARY_PCT=0;
+export const ROUTER='wae-adaptive-router-v22';
+export const CANARY_PCT=25;
 export const s=(v:any,n=50000)=>typeof v==='string'?v.trim().slice(0,n):'';
 export const o=(v:any)=>v&&typeof v==='object'&&!Array.isArray(v)?v:{};
 export const a=(v:any)=>Array.isArray(v)?v:[];
