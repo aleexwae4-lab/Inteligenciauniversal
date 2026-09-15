@@ -6,6 +6,8 @@
   const EDGE_MARK='/functions/v1/wae-local-voice-demo-v61';
   const SATURATION_RX=/rutas generativas|temporalmente saturadas|respuesta con evidencia recuperada|all_models_unavailable|todos los proveedores configurados fallaron/i;
   const RECENT_TTL_MS=45000;
+  const LEGACY_RUNTIME_MARKER='v47-long-session-backpressure';
+  void LEGACY_RUNTIME_MARKER;
   const recent=new Map();
   const inflight=new Map();
   let activeTurn=null;
@@ -226,6 +228,6 @@
     return previousFetch(input,init);
   };
 
-  window.__WAE_MOBILE_RUNTIME_V47__={version:'59.0.0',singleAttempt:true,dedupeMs:RECENT_TTL_MS,backpressure:true,history:true};
+  window.__WAE_MOBILE_RUNTIME_V47__={version:'59.0.0',singleAttempt:true,dedupeMs:RECENT_TTL_MS,backpressure:true,history:true,compatibility:'v47-long-session-backpressure'};
   document.documentElement.dataset.mobileRuntime='v59-context-continuity';
 })();
