@@ -1,4 +1,4 @@
-import { createKnowledgeConnectors } from '../lib/knowledge/connectors-v1.js';
+import { createKnowledgeConnectors } from '../lib/knowledge/connectors-live-v1.js';
 import { searchKnowledge } from '../lib/knowledge/fabric-v1.js';
 
 const connectors=createKnowledgeConnectors();
@@ -32,7 +32,6 @@ for(const [id,query] of probes){
     failed=true;
     results.push({source:id,status:'FAIL',latency_ms:Date.now()-started,error:String(error?.message||error).slice(0,180)});
   }
-  // Avoid behaving like a bulk harvester and keep spacing polite for public APIs.
   await sleep(id==='open_library'||id==='arxiv'?1100:350);
 }
 
@@ -41,6 +40,7 @@ try{
   if(!fused.records?.length)throw new Error('fused_retrieval_empty');
   if(fused.citations.length!==fused.records.length)throw new Error('citation_count_mismatch');
   if(!fused.citations.every(c=>c.url&&c.title&&c.source))throw new Error('citation_provenance_incomplete');
+  if(!fused.source_status.every(s=>s.status==='healthy'))throw new Error(`fused_source_degraded:${JSON.stringify(fused.source_status)}`);
   results.push({source:'fabric_fusion',status:'PASS',documents_retrieved:fused.documents_retrieved,documents_after_dedup:fused.documents_after_dedup,citations:fused.citations.length,source_status:fused.source_status});
 }catch(error){
   failed=true;
