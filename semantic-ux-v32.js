@@ -19,7 +19,8 @@
     let text=original;const corrections=[];
     const replace=(rx,to)=>{text=text.replace(rx,match=>{if(fold(match)===fold(to))return match;corrections.push({from:match,to});return to})};
     if(chemistryScore===0)replace(/\b(?:iodo|yodo)\b/gi,'diodo');
-    replace(/\b(?:what|wat|guat)\b/gi,'watt');
+    text=text.replace(/\b(un|una|el|los|unos|unas)\s+what\b/gi,(match,article)=>{corrections.push({from:'what',to:'watt'});return `${article} watt`});
+    replace(/\b(?:wat|guat)\b/gi,'watt');
     replace(/\bomios\b/gi,'ohmios');replace(/\bomio\b/gi,'ohmio');
     const unique=[];const seen=new Set();for(const item of corrections){const key=`${fold(item.from)}>${fold(item.to)}`;if(!seen.has(key)){seen.add(key);unique.push(item)}}
     return{original,text,changed:text!==original,domain:'electricity',confidence:Number(Math.min(.99,.78+(electricalScore-2)*.045).toFixed(2)),corrections:unique};
