@@ -3,7 +3,7 @@
   const nativeFetch=window.fetch.bind(window);
   const EDGE_MARK='/functions/v1/wae-local-voice-demo-v61';
   const html=document.documentElement;
-  html.dataset.mobileRelease='v26.2-cognitive-gated';
+  html.dataset.mobileRelease='v30-zero-failure-client';
 
   const CURRENT_RX=/\b(hoy|ahora|actual(?:es|idad|izado|izada)?|reciente|últim[oa]s?|latest|today|current|news|noticias|precio|cotización|jurisprudencia|reforma|ley vigente|verifica|fuentes?|evidencia|web)\b/i;
   const RESEARCH_RX=/\b(investiga|investigación|mercado|competidor|benchmark|tendencia|estadística)\b/i;
@@ -11,6 +11,9 @@
   const DESIGN_RX=/\b(diseñ|ux|ui|interfaz|experiencia|flujo|pantalla|responsive|móvil|branding)\b/i;
   const ANALYSIS_RX=/\b(analiza|análisis|audita|diagnóstico|estrategia|riesgo|finanzas|roi|prioridad|decisión|compara|arquitectura)\b/i;
   const WEAK_RX=/no pude completar|vuelve a intentarlo|no puedo responder|all_models_unavailable|continuity_pass_through|runtime unavailable|generation failed|respuesta no llegó completa/i;
+  const RECOVERY_RX=/respuesta con evidencia recuperada|rutas generativas est[aá]n temporalmente saturadas/i;
+  const META_RX=/\b(que tan inteligente eres|eres inteligente|que puedes hacer|quien eres|que eres|que es universal core|como funcionas|cuales son tus capacidades)\b/i;
+  const EXACT_RX=/\b(responde|devuelve)\s+(exactamente|solamente|solo|s[oó]lo)\b|\bsolo json\b|\bs[oó]lo json\b|\bsin explicaciones\b/i;
 
   function normalize(value=''){
     return String(value||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[¿?¡!.,;:]+/g,' ').replace(/\s+/g,' ').trim();
@@ -18,7 +21,12 @@
   function casual(value=''){
     const raw=String(value||'').trim(),q=normalize(raw);
     if(!q&&/[?¿]+/.test(raw))return true;
-    return /^(hola|hey|buenas|buenos dias|buenas tardes|buenas noches|hola buenas|como estas|como andas|que tal|quien eres|que eres|que es universal core|que puedes hacer|como puedes ayudarme|ayuda|ayudame|gracias|muchas gracias|ok|okay|vale|perfecto|listo)$/.test(q);
+    if(META_RX.test(q))return true;
+    return /^(hola|hey|buenas|buenos dias|buenas tardes|buenas noches|hola buenas|como estas|como andas|que tal|quien eres|que eres|que tan inteligente eres|que es universal core|que puedes hacer|como puedes ayudarme|ayuda|ayudame|gracias|muchas gracias|ok|okay|vale|perfecto|listo)$/.test(q);
+  }
+  function protocolPrompt(value=''){
+    const raw=String(value||'').trim();
+    return casual(raw)||EXACT_RX.test(raw);
   }
   function parseBody(init={}){try{return typeof init.body==='string'?JSON.parse(init.body):{}}catch{return{}}}
   function edgeRequest(input,init={}){
@@ -44,13 +52,25 @@
     delete next.routing_variant;
     return next;
   }
-  function jsonResponse(data,status=200){return new Response(JSON.stringify(data),{status,headers:{'content-type':'application/json; charset=utf-8','cache-control':'no-store','x-wae-runtime':'universal-core-mobile-cognitive-v26.2'}})}
+  function jsonResponse(data,status=200){return new Response(JSON.stringify(data),{status,headers:{'content-type':'application/json; charset=utf-8','cache-control':'no-store','x-wae-runtime':'universal-core-mobile-zero-failure-v30'}})}
   async function renderFallback(body,signal){
     const route=infer(body);
-    const r=await nativeFetch('/api/chat',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({message:String(body.message||''),mode:route.mode,sessionId:String(body.session_id||''),attachments:Array.isArray(body.attachments)?body.attachments:[],preferences:{responseStyle:'premium-rich',voiceNatural:true}}),cache:'no-store',signal});
+    const r=await nativeFetch('/api/chat',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({message:String(body.message||''),mode:route.mode,sessionId:String(body.session_id||body.sessionId||''),attachments:Array.isArray(body.attachments)?body.attachments:[],disableTools:protocolPrompt(body.message),preferences:{responseStyle:'premium-rich',voiceNatural:true}}),cache:'no-store',signal});
     const data=await r.json().catch(()=>({}));
     if(r.ok&&typeof data.reply==='string'&&data.reply.trim())return jsonResponse({...data,success:true,conversation_id:body.conversation_id||data.conversation_id||null});
     return null;
+  }
+  function shouldRejectEdgeReply(data,body){
+    const route=infer(body),reply=String(data?.reply||data?.response?.content||'');
+    const provider=String(data?.provider||data?.response?.metadata?.provider||'');
+    const quality=data?.quality||data?.response?.metadata?.quality||{};
+    const reasons=Array.isArray(quality?.reasons)?quality.reasons:[];
+    if(!reply.trim()||WEAK_RX.test(reply))return true;
+    if(protocolPrompt(body?.message)&&provider==='web_recovery')return true;
+    if(!route.webEnabled&&provider==='web_recovery')return true;
+    if(!route.webEnabled&&RECOVERY_RX.test(reply))return true;
+    if(quality?.critical===true||reasons.includes('low_relevance'))return true;
+    return false;
   }
 
   window.fetch=async(input,init={})=>{
@@ -59,7 +79,7 @@
     const body=edge.body;
     if(body?.action!=='chat')return nativeFetch(input,init);
 
-    if(casual(body?.message)){
+    if(protocolPrompt(body?.message)){
       try{const fallback=await renderFallback(body,init.signal);if(fallback)return fallback}catch{}
     }
 
@@ -70,8 +90,7 @@
 
     try{
       const data=await response.clone().json();
-      const reply=String(data?.reply||data?.response?.content||'');
-      if(!reply.trim()||WEAK_RX.test(reply)){
+      if(shouldRejectEdgeReply(data,enhanced)){
         const fallback=await renderFallback(enhanced,init.signal);
         if(fallback)return fallback;
       }
