@@ -7,7 +7,7 @@
   const SATURATION_RX=/rutas generativas|temporalmente saturadas|respuesta con evidencia recuperada|all_models_unavailable|todos los proveedores configurados fallaron/i;
   const RECENT_TTL_MS=45000;
   const CLIENT_BUDGETS=Object.freeze({general:24000,analysis:30000,code:30000,design:30000,executive:30000,research:36000});
-  const LEGACY_RUNTIME_MARKER='v47-long-session-backpressure';
+  const LEGACY_RUNTIME_MARKER='v47-long-session-backpressure direct-replay';
   void LEGACY_RUNTIME_MARKER;
   const recent=new Map();
   const inflight=new Map();
