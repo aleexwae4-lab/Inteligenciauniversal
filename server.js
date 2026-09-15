@@ -33,7 +33,7 @@ function mobilePremiumHandler(req,res) {
       if (!chunk.includes('learning-client-v29.js')) scripts.push('<script src="/learning-client-v29.js?v=30" defer></script>');
       if (scripts.length) chunk = chunk.replace('</body>', `${scripts.join('')}</body>`);
       res.setHeader('Cache-Control','no-store, max-age=0');
-      res.setHeader('X-WAE-Mobile-Release','universal-core-mobile-v34-relevance-guard');
+      res.setHeader('X-WAE-Mobile-Release','universal-core-mobile-v33-edge-context');
     }
     return nativeEnd(chunk, encoding, callback);
   };
