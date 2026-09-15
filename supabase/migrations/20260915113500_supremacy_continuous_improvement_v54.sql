@@ -28,10 +28,13 @@ create index if not exists wae_supremacy_runs_v54_created_idx
   on public.wae_supremacy_runs_v54(created_at desc);
 create index if not exists wae_supremacy_runs_v54_trusted_idx
   on public.wae_supremacy_runs_v54(trusted_for_promotion, created_at desc);
+create index if not exists wae_supremacy_runs_v54_actor_idx
+  on public.wae_supremacy_runs_v54(actor_user_id, created_at desc);
 
 create table if not exists public.wae_supremacy_regression_backlog_v54 (
   id uuid primary key default gen_random_uuid(),
   regression_key text not null unique,
+  actor_user_id uuid null,
   case_id text not null,
   prompt_hash text not null,
   category text not null default 'unknown',
@@ -58,6 +61,8 @@ create index if not exists wae_supremacy_regression_v54_open_idx
   on public.wae_supremacy_regression_backlog_v54(trusted, status, severity, last_seen_at desc);
 create index if not exists wae_supremacy_regression_v54_case_idx
   on public.wae_supremacy_regression_backlog_v54(case_id, trusted, status);
+create index if not exists wae_supremacy_regression_v54_actor_idx
+  on public.wae_supremacy_regression_backlog_v54(actor_user_id, status, last_seen_at desc);
 
 create table if not exists public.wae_supremacy_public_status_v54 (
   context_key text primary key default 'global' check (context_key = 'global'),
