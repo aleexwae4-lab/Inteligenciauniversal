@@ -38,10 +38,13 @@ test('free candidates must be recent and pass an isolated probe before promotion
   assert.match(probe,/free_mesh_promoted:true/);
 });
 
-test('high-risk tasks cannot route to free providers lacking sensitive-data certification', () => {
+test('privacy routing blocks uncertified free providers only when actual sensitive data is present', () => {
   const router = read('supabase/functions/wae-local-voice-demo-v61/router.ts');
   const privacy = read('supabase/migrations/20260915060924_free_mesh_sensitive_routing_v1.sql');
-  assert.match(router,/req\.risk==='high'&&m\.supports_sensitive_data!==true/);
+  assert.match(router,/const sensitiveRx=/);
+  assert.match(router,/sensitiveData=files\|\|sensitiveRx\.test\(q\)/);
+  assert.match(router,/sensitive_data:task\.sensitiveData===true/);
+  assert.match(router,/req\.sensitive_data===true&&m\.supports_sensitive_data!==true/);
   assert.match(router,/iu_adaptive_model_registry_v2/);
   assert.match(privacy,/supports_sensitive_data/);
   assert.match(privacy,/privacy_class/);
