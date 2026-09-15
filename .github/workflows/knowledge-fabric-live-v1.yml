@@ -1,0 +1,29 @@
+name: Knowledge Fabric Live v1
+
+on:
+  pull_request:
+    paths:
+      - 'lib/knowledge/**'
+      - 'api/knowledge.js'
+      - 'scripts/knowledge-live-smoke-v1.mjs'
+      - '.github/workflows/knowledge-fabric-live-v1.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  live-connectors:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Syntax check
+        run: node --check scripts/knowledge-live-smoke-v1.mjs
+      - name: Probe real knowledge APIs
+        env:
+          WAE_CONTACT_EMAIL: wae-universal-core@users.noreply.github.com
+        run: node scripts/knowledge-live-smoke-v1.mjs
