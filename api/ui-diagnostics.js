@@ -14,7 +14,7 @@ export default async function uiDiagnosticsHandler(req, res) {
     return res.json({ error: 'method_not_allowed' });
   }
 
-  const body = req.body && typeof body === 'object' ? req.body : {};
+  const body = req.body && typeof req.body === 'object' ? req.body : {};
   const event = safeString(body.event, 48);
   if (!ALLOWED_EVENTS.has(event)) {
     res.statusCode = 400;
