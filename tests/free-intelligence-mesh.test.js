@@ -46,3 +46,12 @@ test('high-risk tasks cannot route to free providers lacking sensitive-data cert
   assert.match(privacy,/supports_sensitive_data/);
   assert.match(privacy,/privacy_class/);
 });
+
+test('deterministic rescue is reserved for the sixth and final attempt', () => {
+  const router = read('supabase/functions/wae-local-voice-demo-v61/router.ts');
+  assert.match(router,/RESCUE_PROVIDER='wae_deterministic_rescue'/);
+  assert.match(router,/capabilityMatch\(m,req\)>0/);
+  assert.match(router,/primary\.slice\(0,5\)/);
+  assert.match(router,/fallback/);
+  assert.match(router,/rescue_only:true/);
+});
