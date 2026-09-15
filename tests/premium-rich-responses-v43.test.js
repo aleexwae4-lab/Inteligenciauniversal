@@ -17,7 +17,8 @@ test('mobile injects premium response assets without replacing the stable runtim
   const server=read('server.js');
   assert.match(server,/premium-v5\.css\?v=43/);
   assert.match(server,/premium-v5\.js\?v=43/);
-  assert.match(server,/universal-core-mobile-v35-premium-rich/);
+  assert.match(server,/universal-core-mobile-v34-adaptive-mesh/);
+  assert.match(server,/universal-core-rich-v43/);
   assert.match(server,/mobile-runtime-v34\.js\?v=34/);
 });
 
