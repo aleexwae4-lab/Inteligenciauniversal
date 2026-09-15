@@ -135,10 +135,11 @@ test('mobile boot loads adaptive bridge after relevance guard', () => {
   const source=readFileSync(new URL('../server.js',import.meta.url),'utf8');
   const fast=source.indexOf("fast-lane-v23.js?v=34");
   const cognitive=source.indexOf("mobile-v26.js?v=34");
-  const bridge=source.indexOf("mobile-runtime-v34.js?v=34");
+  const bridge=source.indexOf("mobile-runtime-v34.js?v=44");
   const semantic=source.indexOf("semantic-ux-v32.js?v=34");
   assert.ok(fast>=0 && cognitive>=0 && bridge>=0 && semantic>=0 && fast<cognitive && cognitive<bridge && bridge<semantic);
   assert.match(source,/universal-core-mobile-v34-adaptive-mesh/);
+  assert.match(source,/auto-fastpath-v44/);
 });
 
 test('service worker v34 evicts stale cache and makes navigations network-first', () => {
