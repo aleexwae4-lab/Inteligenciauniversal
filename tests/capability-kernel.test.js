@@ -7,7 +7,7 @@ test('capability kernel exposes the complete 38-domain map',()=>{
   assert.equal(snapshot.version,CAPABILITY_KERNEL_VERSION);
   assert.equal(snapshot.domainCount,38);
   assert.equal(CAPABILITY_DOMAINS.length,38);
-  assert.ok(snapshot.abilityCount>200);
+  assert.equal(snapshot.abilityCount,300);
   assert.equal(snapshot.domains[0].index,1);
   assert.equal(snapshot.domains.at(-1).index,38);
 });
@@ -23,7 +23,7 @@ test('capability map keeps unavailable infrastructure fail-closed',()=>{
 });
 
 test('intent classification maps mixed missions to relevant capability domains',()=>{
-  const matched=classifyCapabilityIntent('Investiga información reciente en la web, analiza un CSV con Python y crea un reporte.');
+  const matched=classifyCapabilityIntent('Haz investigación profunda con información reciente en la web, analiza un CSV con Python y crea un reporte.');
   const ids=matched.map((item)=>item.id);
   assert.ok(ids.includes('web_search'));
   assert.ok(ids.includes('deep_research'));
