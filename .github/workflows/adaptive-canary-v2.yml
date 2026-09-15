@@ -1,8 +1,8 @@
-name: Universal Core Router v21 Canary
+name: Universal Core Router v22 Canary
 
 on:
   push:
-    branches: [universal-core-router-v21-release]
+    branches: [universal-core-router-v22-release]
   pull_request:
     branches: [main]
   workflow_dispatch:
@@ -30,16 +30,18 @@ jobs:
     env:
       EDGE_URL: https://pbswcbryxawsmltyromd.supabase.co/functions/v1/wae-local-voice-demo-v61
       ORIGIN: https://wae-inteligencia-universal.onrender.com
+      EDGE_VERSION: 1.9.0-universal-core-streaming-v22
+      EDGE_ROUTER: wae-adaptive-router-v22
     steps:
-      - name: Verify v21 fail-closed control plane
+      - name: Verify v22 adaptive control plane
         shell: bash
         run: |
           set -euo pipefail
           CAP=$(curl -fsS --max-time 30 "$EDGE_URL" -H 'content-type: application/json' -H "origin: $ORIGIN" --data '{"action":"capabilities"}')
-          jq -e '.success == true and .version == "1.8.0-universal-core-router-v21" and .router == "wae-adaptive-router-v21" and .canary_pct == 0 and .response_schema == "assistant-response/v1" and .adaptive_routing == true and .streaming_mode == "verified_only" and .ttft == "real_first_delta_only"' <<<"$CAP" >/dev/null
+          jq -e --arg version "$EDGE_VERSION" --arg router "$EDGE_ROUTER" '.success == true and .version == $version and .router == $router and .canary_pct == 25 and .response_schema == "assistant-response/v1" and .adaptive_routing == true and .streaming_mode == "verified_only" and .ttft == "real_first_delta_only"' <<<"$CAP" >/dev/null
           echo "$CAP" | jq '{version,router,canary_pct,model_count,verified_streaming_models,streaming_mode,ttft}'
 
-      - name: Bootstrap isolated v21 session
+      - name: Bootstrap isolated v22 session
         id: boot
         shell: bash
         run: |
@@ -52,15 +54,15 @@ jobs:
           echo "sid=$SID" >> "$GITHUB_OUTPUT"
           echo "secret=$SECRET" >> "$GITHUB_OUTPUT"
 
-      - name: Prove default traffic remains control
+      - name: Prove forced control route remains healthy
         shell: bash
         env:
           SID: ${{ steps.boot.outputs.sid }}
           SECRET: ${{ steps.boot.outputs.secret }}
         run: |
           set -euo pipefail
-          PREVIEW=$(jq -n --arg sid "$SID" --arg secret "$SECRET" '{action:"route_preview",session_id:$sid,session_secret:$secret,message:"Hola",mode:"general",stream:false}' | curl -fsS --max-time 30 "$EDGE_URL" -H 'content-type: application/json' -H "origin: $ORIGIN" --data-binary @-)
-          jq -e '.success == true and .router == "wae-adaptive-router-v21" and .router_variant == "control" and .task.path == "FAST" and (.candidates|length) > 0 and ([.candidates[]|select(.health == "offline" or .circuit == "OPEN")]|length) == 0' <<<"$PREVIEW" >/dev/null
+          PREVIEW=$(jq -n --arg sid "$SID" --arg secret "$SECRET" '{action:"route_preview",session_id:$sid,session_secret:$secret,message:"Hola",mode:"general",stream:false,routing_variant:"control"}' | curl -fsS --max-time 30 "$EDGE_URL" -H 'content-type: application/json' -H "origin: $ORIGIN" --data-binary @-)
+          jq -e --arg router "$EDGE_ROUTER" '.success == true and .router == $router and .router_variant == "control" and .task.path == "FAST" and (.candidates|length) > 0 and ([.candidates[]|select(.health == "offline" or .circuit == "OPEN")]|length) == 0' <<<"$PREVIEW" >/dev/null
           echo "$PREVIEW" | jq '{router_variant,task,candidates}'
 
       - name: Inspect forced candidate route safety
@@ -81,19 +83,19 @@ jobs:
           SECRET: ${{ steps.boot.outputs.secret }}
         run: |
           set -euo pipefail
-          : > /tmp/router-v21.ndjson
+          : > /tmp/router-v22.ndjson
           for variant in control candidate; do
             for i in 1 2 3 4 5; do
-              CHAT=$(jq -n --arg sid "$SID" --arg secret "$SECRET" --arg variant "$variant" --arg msg "Router v21 $variant sample $i: responde solamente OK." '{action:"chat",session_id:$sid,session_secret:$secret,message:$msg,mode:"general",web_enabled:false,stream:false,routing_variant:$variant}' | curl -fsS --max-time 55 "$EDGE_URL" -H 'content-type: application/json' -H "origin: $ORIGIN" --data-binary @-)
-              jq -e --arg variant "$variant" '.success == true and .runtime == "1.8.0-universal-core-router-v21" and .response_schema == "assistant-response/v1" and .router_variant == $variant and .ttft_ms == null and (.reply|type=="string") and (.reply|length)>0' <<<"$CHAT" >/dev/null
-              jq -c '{request_id,provider,model,latency_ms,routing_path,router_variant,cost_microunits,degraded}' <<<"$CHAT" | tee -a /tmp/router-v21.ndjson
+              CHAT=$(jq -n --arg sid "$SID" --arg secret "$SECRET" --arg variant "$variant" --arg msg "Router v22 $variant sample $i: responde solamente OK." '{action:"chat",session_id:$sid,session_secret:$secret,message:$msg,mode:"general",web_enabled:false,stream:false,routing_variant:$variant}' | curl -fsS --max-time 55 "$EDGE_URL" -H 'content-type: application/json' -H "origin: $ORIGIN" --data-binary @-)
+              jq -e --arg variant "$variant" --arg version "$EDGE_VERSION" '.success == true and .runtime == $version and .response_schema == "assistant-response/v1" and .router_variant == $variant and .ttft_ms == null and (.reply|type=="string") and (.reply|length)>0' <<<"$CHAT" >/dev/null
+              jq -c '{request_id,provider,model,latency_ms,routing_path,router_variant,cost_microunits,degraded}' <<<"$CHAT" | tee -a /tmp/router-v22.ndjson
             done
           done
-          echo '### Router v21 paired smoke' >> "$GITHUB_STEP_SUMMARY"
+          echo '### Router v22 paired smoke' >> "$GITHUB_STEP_SUMMARY"
           echo '```json' >> "$GITHUB_STEP_SUMMARY"
-          cat /tmp/router-v21.ndjson >> "$GITHUB_STEP_SUMMARY"
+          cat /tmp/router-v22.ndjson >> "$GITHUB_STEP_SUMMARY"
           echo '```' >> "$GITHUB_STEP_SUMMARY"
-          echo 'Promotion remains HOLD: smoke samples are not the 30+30 evidence gate.' >> "$GITHUB_STEP_SUMMARY"
+          echo 'Canary remains bounded at 25%; smoke samples do not bypass the promotion gate.' >> "$GITHUB_STEP_SUMMARY"
 
       - name: Verify traces preserve control candidate separation
         shell: bash
@@ -115,7 +117,7 @@ jobs:
         run: |
           set -euo pipefail
           PROBE=$(jq -n --arg sid "$SID" --arg secret "$SECRET" '{action:"stream_probe",session_id:$sid,session_secret:$secret}' | curl -fsS --max-time 240 "$EDGE_URL" -H 'content-type: application/json' -H "origin: $ORIGIN" --data-binary @-)
-          jq -e '.success == true and .runtime == "1.8.0-universal-core-router-v21" and .router == "wae-adaptive-router-v21" and (.candidates_considered|type=="number")' <<<"$PROBE" >/dev/null
+          jq -e --arg version "$EDGE_VERSION" --arg router "$EDGE_ROUTER" '.success == true and .runtime == $version and .router == $router and (.candidates_considered|type=="number")' <<<"$PROBE" >/dev/null
           VERIFIED=$(jq -r '.verified' <<<"$PROBE")
           echo "verified=$VERIFIED" >> "$GITHUB_OUTPUT"
           echo "$PROBE" | jq .
@@ -135,14 +137,14 @@ jobs:
           grep -q '^event: response.complete' /tmp/stream.txt
           ! grep -q '^event: response.error' /tmp/stream.txt
           COMPLETE=$(awk '/^event: response.complete/{getline; sub(/^data: /,""); print; exit}' /tmp/stream.txt)
-          jq -e '.stream_verified == true and .runtime == "1.8.0-universal-core-router-v21" and .router_variant == "candidate" and (.ttft_ms|type=="number") and .ttft_ms > 0 and .ttft_ms < .latency_ms' <<<"$COMPLETE" >/dev/null
+          jq -e --arg version "$EDGE_VERSION" '.stream_verified == true and .runtime == $version and .router_variant == "candidate" and (.ttft_ms|type=="number") and .ttft_ms > 0 and .ttft_ms < .latency_ms' <<<"$COMPLETE" >/dev/null
           echo "Verified progressive deltas: $DELTAS"
 
       - name: Keep progressive promotion on hold when no stream is verified
         if: steps.probe.outputs.verified != 'true'
-        run: echo 'No provider produced verified upstream token deltas. Progressive streaming remains HOLD by design.'
+        run: echo 'No provider produced verified upstream token deltas. Progressive streaming remains fail-closed by design.'
 
-      - name: Verify history contract after v21 probes
+      - name: Verify history contract after v22 probes
         shell: bash
         env:
           SID: ${{ steps.boot.outputs.sid }}

@@ -28,6 +28,8 @@ jobs:
     env:
       APP_URL: https://wae-inteligencia-universal.onrender.com
       EDGE_URL: https://pbswcbryxawsmltyromd.supabase.co/functions/v1/wae-local-voice-demo-v61
+      EDGE_VERSION: 1.9.0-universal-core-streaming-v22
+      EDGE_ROUTER: wae-adaptive-router-v22
     steps:
       - name: Wait for Render progressive boot invariants
         shell: bash
@@ -109,13 +111,13 @@ jobs:
           echo "Deep orchestration contract did not stabilize" >&2
           exit 1
 
-      - name: Verify v21 runtime and fail-closed control contract
+      - name: Verify v22 adaptive runtime contract
         id: runtime
         shell: bash
         run: |
           set -euo pipefail
           CAP=$(curl -fsS --max-time 30 "$EDGE_URL" -H "content-type: application/json" -H "origin: $APP_URL" --data '{"action":"capabilities"}')
-          jq -e '.success == true and .version == "1.8.0-universal-core-router-v21" and .router == "wae-adaptive-router-v21" and .canary_pct == 0 and .response_schema == "assistant-response/v1" and .adaptive_routing == true and .streaming_mode == "verified_only" and .structured_responses == true and .natural_voice == true and .observability == true' <<<"$CAP" >/dev/null
+          jq -e --arg version "$EDGE_VERSION" --arg router "$EDGE_ROUTER" '.success == true and .version == $version and .router == $router and .canary_pct == 25 and .response_schema == "assistant-response/v1" and .adaptive_routing == true and .streaming_mode == "verified_only" and .structured_responses == true and .natural_voice == true and .observability == true' <<<"$CAP" >/dev/null
 
           BOOT=$(curl -fsS --max-time 30 "$EDGE_URL" -H "content-type: application/json" -H "origin: $APP_URL" --data '{"action":"bootstrap"}')
           SID=$(jq -r '.session_id' <<<"$BOOT")
@@ -125,14 +127,14 @@ jobs:
           echo "sid=$SID" >> "$GITHUB_OUTPUT"
           echo "secret=$SECRET" >> "$GITHUB_OUTPUT"
 
-          DEFAULT_PREVIEW=$(jq -n --arg sid "$SID" --arg secret "$SECRET" '{action:"route_preview",session_id:$sid,session_secret:$secret,message:"Hola",mode:"general",stream:false}' | curl -fsS --max-time 30 "$EDGE_URL" -H "content-type: application/json" -H "origin: $APP_URL" --data-binary @-)
-          jq -e '.success == true and .router_variant == "control" and .task.path == "FAST" and (.candidates|length) >= 1 and ([.candidates[] | select(.health == "offline" or .circuit == "OPEN")] | length) == 0' <<<"$DEFAULT_PREVIEW" >/dev/null
+          CONTROL_PREVIEW=$(jq -n --arg sid "$SID" --arg secret "$SECRET" '{action:"route_preview",session_id:$sid,session_secret:$secret,message:"Hola",mode:"general",stream:false,routing_variant:"control"}' | curl -fsS --max-time 30 "$EDGE_URL" -H "content-type: application/json" -H "origin: $APP_URL" --data-binary @-)
+          jq -e '.success == true and .router_variant == "control" and .task.path == "FAST" and (.candidates|length) >= 1 and ([.candidates[] | select(.health == "offline" or .circuit == "OPEN")] | length) == 0' <<<"$CONTROL_PREVIEW" >/dev/null
 
           CANDIDATE_PREVIEW=$(jq -n --arg sid "$SID" --arg secret "$SECRET" '{action:"route_preview",session_id:$sid,session_secret:$secret,message:"Hola",mode:"general",stream:false,routing_variant:"candidate"}' | curl -fsS --max-time 30 "$EDGE_URL" -H "content-type: application/json" -H "origin: $APP_URL" --data-binary @-)
           jq -e '.success == true and .router_variant == "candidate" and (.candidates|length) >= 1 and ([.candidates[] | select(.health == "offline" or .circuit == "OPEN")] | length) == 0 and ([.candidates[] | select((.failure_debt|type)!="number")] | length) == 0' <<<"$CANDIDATE_PREVIEW" >/dev/null
 
-          CHAT=$(jq -n --arg sid "$SID" --arg secret "$SECRET" '{action:"chat",session_id:$sid,session_secret:$secret,message:"Responde solamente con la palabra OK.",mode:"general",web_enabled:false,stream:false}' | curl -fsS --max-time 55 "$EDGE_URL" -H "content-type: application/json" -H "origin: $APP_URL" --data-binary @-)
-          jq -e '.success == true and .runtime == "1.8.0-universal-core-router-v21" and .router_variant == "control" and .response.schema == "assistant-response/v1" and .ttft_ms == null and (.speech_text | type == "string") and (.speech_text | length > 0) and (.components | length > 0) and (.message_id | type == "string")' <<<"$CHAT" >/dev/null
+          CHAT=$(jq -n --arg sid "$SID" --arg secret "$SECRET" '{action:"chat",session_id:$sid,session_secret:$secret,message:"Responde solamente con la palabra OK.",mode:"general",web_enabled:false,stream:false,routing_variant:"control"}' | curl -fsS --max-time 55 "$EDGE_URL" -H "content-type: application/json" -H "origin: $APP_URL" --data-binary @-)
+          jq -e --arg version "$EDGE_VERSION" '.success == true and .runtime == $version and .router_variant == "control" and .response.schema == "assistant-response/v1" and .ttft_ms == null and (.speech_text | type == "string") and (.speech_text | length > 0) and (.components | length > 0) and (.message_id | type == "string")' <<<"$CHAT" >/dev/null
           CID=$(jq -r '.conversation_id' <<<"$CHAT")
 
           LIST=$(jq -n --arg sid "$SID" --arg secret "$SECRET" '{action:"list_conversations",session_id:$sid,session_secret:$secret}' | curl -fsS --max-time 30 "$EDGE_URL" -H "content-type: application/json" -H "origin: $APP_URL" --data-binary @-)
@@ -152,7 +154,7 @@ jobs:
         run: |
           set -euo pipefail
           PROBE=$(jq -n --arg sid "$SID" --arg secret "$SECRET" '{action:"stream_probe",session_id:$sid,session_secret:$secret}' | curl -fsS --max-time 240 "$EDGE_URL" -H 'content-type: application/json' -H "origin: $APP_URL" --data-binary @-)
-          jq -e '.success == true and .runtime == "1.8.0-universal-core-router-v21" and .router == "wae-adaptive-router-v21" and (.verified|type=="boolean")' <<<"$PROBE" >/dev/null
+          jq -e --arg version "$EDGE_VERSION" --arg router "$EDGE_ROUTER" '.success == true and .runtime == $version and .router == $router and (.verified|type=="boolean")' <<<"$PROBE" >/dev/null
           VERIFIED=$(jq -r '.verified' <<<"$PROBE")
           if [ "$VERIFIED" != "true" ]; then
             echo "No SSE transport verified in this run; progressive client remains fail-closed by design."
@@ -167,4 +169,4 @@ jobs:
           grep -q '^event: response.complete' /tmp/stream.txt
           ! grep -q '^event: response.error' /tmp/stream.txt
           COMPLETE=$(awk '/^event: response.complete/{getline; sub(/^data: /,""); print; exit}' /tmp/stream.txt)
-          jq -e '.success == true and .stream_verified == true and .runtime == "1.8.0-universal-core-router-v21" and .router_variant == "candidate" and .response_schema == "assistant-response/v1" and (.ttft_ms|type=="number") and .ttft_ms > 0 and .ttft_ms < .latency_ms' <<<"$COMPLETE" >/dev/null
+          jq -e --arg version "$EDGE_VERSION" '.success == true and .stream_verified == true and .runtime == $version and .router_variant == "candidate" and .response_schema == "assistant-response/v1" and (.ttft_ms|type=="number") and .ttft_ms > 0 and .ttft_ms < .latency_ms' <<<"$COMPLETE" >/dev/null

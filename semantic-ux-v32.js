@@ -1,6 +1,32 @@
 (()=>{
   if(window.__waeSemanticUxV32)return;
-  window.__waeSemanticUxV32={version:'semantic-ux/v32'};
+
+  const fold=value=>String(value||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase();
+  const electricalCues=[
+    /\belectric(?:idad|o|a|os|as)?\b/,/\bcircuit(?:o|os)?\b/,/\bvolt(?:aje|ajes|io|ios|s)?\b/,
+    /\bresist(?:encia|encias|or|ores)\b/,/\bcorriente\b/,/\bamper(?:io|ios|aje|ajes|e|es)?\b/,
+    /\bgenerador(?:es)?\b/,/\baislante(?:s)?\b/,/\bfrecuencia(?:s)?\b/,/\bhertz\b/,/\bpotencia\b/,
+    /\bohm(?:io|ios|s)?\b/,/\bwatt(?:s|io|ios)?\b/,/\bdiodo(?:s)?\b/,/\bcapacit(?:or|ores|ancia)\b/,
+    /\binduct(?:or|ores|ancia)\b/,/\btransistor(?:es)?\b/
+  ];
+  const chemistryCues=[/\bquimic(?:a|o|as|os)\b/,/\belemento(?:s)?\b/,/\bnumero atomico\b/,/\btabla periodica\b/,/\bhalogeno(?:s)?\b/,/\bmolecula(?:s)?\b/];
+  const countMatches=(text,rules)=>rules.reduce((sum,rx)=>sum+(rx.test(text)?1:0),0);
+  const normalizeOutgoingIntent=value=>{
+    const original=String(value||'').trim();
+    if(!original)return{original,text:'',changed:false,domain:null,confidence:0,corrections:[]};
+    const lexical=fold(original),electricalScore=countMatches(lexical,electricalCues),chemistryScore=countMatches(lexical,chemistryCues);
+    if(electricalScore<2)return{original,text:original,changed:false,domain:null,confidence:0,corrections:[]};
+    let text=original;const corrections=[];
+    const replace=(rx,to)=>{text=text.replace(rx,match=>{if(fold(match)===fold(to))return match;corrections.push({from:match,to});return to})};
+    if(chemistryScore===0)replace(/\b(?:iodo|yodo)\b/gi,'diodo');
+    text=text.replace(/\b(un|una|el|los|unos|unas)\s+what\b/gi,(match,article)=>{corrections.push({from:'what',to:'watt'});return `${article} watt`});
+    replace(/\b(?:wat|guat)\b/gi,'watt');
+    replace(/\bomios\b/gi,'ohmios');replace(/\bomio\b/gi,'ohmio');
+    const unique=[];const seen=new Set();for(const item of corrections){const key=`${fold(item.from)}>${fold(item.to)}`;if(!seen.has(key)){seen.add(key);unique.push(item)}}
+    return{original,text,changed:text!==original,domain:'electricity',confidence:Number(Math.min(.99,.78+(electricalScore-2)*.045).toFixed(2)),corrections:unique};
+  };
+
+  window.__waeSemanticUxV32={version:'semantic-ux/v33-edge-context',normalizeOutgoingIntent};
 
   const normalizeMath=value=>String(value??'')
     .replace(/\\times\b/g,' × ').replace(/\\cdot\b/g,' · ')
@@ -22,6 +48,32 @@
     .replace(/×/g,' por ')
     .replace(/÷/g,' dividido entre ')
     .replace(/\s+/g,' ').trim();
+
+  function patchFetchIntent(){
+    if(window.fetch?.__waeIntentV33)return;
+    const nativeFetch=window.fetch.bind(window);
+    const patched=async(input,init)=>{
+      try{
+        const url=typeof input==='string'?input:String(input?.url||'');
+        const method=String(init?.method||input?.method||'GET').toUpperCase();
+        const relevant=/wae-local-voice-demo-v61|\/api\/(?:chat|fast-chat|orchestrate)(?:\?|$)/.test(url);
+        if(method==='POST'&&relevant&&typeof init?.body==='string'){
+          const payload=JSON.parse(init.body);
+          if(typeof payload?.message==='string'){
+            const intent=normalizeOutgoingIntent(payload.message);
+            if(intent.changed){
+              payload.message=intent.text;
+              payload.input_interpretation={normalized:true,domain:intent.domain,confidence:intent.confidence,corrections:intent.corrections,source:'client-context-v33'};
+              init={...init,body:JSON.stringify(payload)};
+            }
+          }
+        }
+      }catch{}
+      return nativeFetch(input,init);
+    };
+    Object.defineProperty(patched,'__waeIntentV33',{value:true});
+    window.fetch=patched;
+  }
 
   function wrapTable(table){
     table.classList.add('rich-table');
@@ -107,7 +159,7 @@
   }
 
   let queued=false;
-  const run=()=>{queued=false;patchVoiceRuntime();normalizeRenderedMath(document);enhanceTables(document);document.documentElement.dataset.semanticUx='v32'};
+  const run=()=>{queued=false;patchFetchIntent();patchVoiceRuntime();normalizeRenderedMath(document);enhanceTables(document);document.documentElement.dataset.semanticUx='v33'};
   const schedule=()=>{if(queued)return;queued=true;queueMicrotask(run)};
   const observer=new MutationObserver(schedule);observer.observe(document.documentElement,{subtree:true,childList:true});
   window.addEventListener('wae:voice-state',patchVoiceRuntime);

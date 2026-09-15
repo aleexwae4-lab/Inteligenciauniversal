@@ -62,11 +62,11 @@ test('mobile interceptor routes intelligence meta prompts away from irrelevant w
   assert.match(source,/universal-core-mobile-zero-failure-v30/);
 });
 
-test('mobile boot keeps fast lane first and loads semantic intelligence on the clip surface', () => {
+test('mobile boot keeps fast lane first and loads edge semantic intelligence on the clip surface', () => {
   const source=readFileSync(new URL('../server.js',import.meta.url),'utf8');
   const fast=source.indexOf("fast-lane-v23.js?v=30");
   const cognitive=source.indexOf("mobile-v26.js?v=30");
-  const semantic=source.indexOf("semantic-ux-v32.js?v=32");
+  const semantic=source.indexOf("semantic-ux-v32.js?v=33");
   assert.ok(fast>=0 && cognitive>=0 && semantic>=0 && fast<cognitive && cognitive<semantic);
-  assert.match(source,/universal-core-mobile-v32-context-intelligence/);
+  assert.match(source,/universal-core-mobile-v33-edge-context/);
 });

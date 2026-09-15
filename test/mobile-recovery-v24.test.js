@@ -17,14 +17,15 @@ test('server exposes the premium Universal Core mobile route and mobile root del
   assert.match(server, /fast-lane-v23\.js/);
   assert.match(server, /mobile-v26\.js/);
   assert.match(server, /mobile-voice-v27\.js/);
-  assert.match(server, /semantic-ux-v32\.js/);
+  assert.match(server, /semantic-ux-v32\.js\?v=33/);
   assert.match(server, /learning-client-v29\.js/);
-  assert.match(server, /universal-core-mobile-v32-context-intelligence/);
+  assert.match(server, /universal-core-mobile-v33-edge-context/);
   assert.match(server, /desktop.*=== '1'/s);
 });
 
-test('semantic v32 repairs the exact answer surface used by mobile', async () => {
+test('semantic v33 repairs the exact mobile answer and Edge request surface', async () => {
   const semantic = await read('semantic-ux-v32.js');
+  assert.match(semantic, /semantic-ux\/v33-edge-context/);
   assert.match(semantic, /\.assistant-body table/);
   assert.match(semantic, /\.rich-answer,\.assistant-body/);
   assert.match(semantic, /data-mobile-table/);
@@ -32,6 +33,14 @@ test('semantic v32 repairs the exact answer surface used by mobile', async () =>
   assert.match(semantic, /ohmios/);
   assert.match(semantic, /speechSynthesis/);
   assert.match(semantic, /__waeVoice/);
+  assert.match(semantic, /wae-local-voice-demo-v61/);
+  assert.match(semantic, /client-context-v33/);
+  assert.match(semantic, /iodo\|yodo/);
+  assert.match(semantic, /\(un\|una\|el\|los\|unos\|unas\).*what/);
+  assert.match(semantic, /wat\|guat/);
+  assert.match(semantic, /payload\.message=intent\.text/);
+  assert.match(semantic, /electricalScore<2/);
+  assert.match(semantic, /chemistryScore===0/);
 });
 
 test('mobile base remains a self-contained premium conversational surface', async () => {

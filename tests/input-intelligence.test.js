@@ -24,6 +24,19 @@ test('does not rewrite ordinary English what with weak electrical evidence',()=>
   assert.equal(intent.text,'What is voltage?');
 });
 
+test('does not rewrite ordinary English what even with multiple electrical terms',()=>{
+  const intent=normalizeUserIntent('What is voltage and resistance in an electric circuit?');
+  assert.equal(intent.changed,false);
+  assert.equal(intent.text,intent.original);
+});
+
+test('repairs Spanish article plus what as watt inside strong electrical context',()=>{
+  const intent=normalizeUserIntent('Dime qué es un what, voltaje, resistencia y corriente en un circuito');
+  assert.equal(intent.changed,true);
+  assert.match(intent.text,/un watt/i);
+  assert.doesNotMatch(intent.text,/un what/i);
+});
+
 test('repairs ohm transcription only inside strong electrical context',()=>{
   const intent=normalizeUserIntent('Explícame voltaje, resistencia y omios en un circuito');
   assert.equal(intent.changed,true);
@@ -31,7 +44,7 @@ test('repairs ohm transcription only inside strong electrical context',()=>{
 });
 
 test('produces a compact non-secret interpretation hint',()=>{
-  const intent=normalizeUserIntent('iodo what resistencia voltaje generador');
+  const intent=normalizeUserIntent('un iodo, un what, resistencia, voltaje y generador');
   const hint=formatIntentInterpretation(intent);
   assert.match(hint,/iodo.*diodo/i);
   assert.match(hint,/what.*watt/i);
