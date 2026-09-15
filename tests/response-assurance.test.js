@@ -131,18 +131,20 @@ test('mobile v34 bridges Edge chat to Render adaptive provider mesh', () => {
   assert.doesNotMatch(bridge,/routing_variant:'control'/);
 });
 
-test('mobile boot loads adaptive bridge and non-blocking bootstrap before auxiliary layers', () => {
+test('mobile boot keeps v34 and v45 while v46 owns semantic speech and automatic voice', () => {
   const source=readFileSync(new URL('../server.js',import.meta.url),'utf8');
   const fast=source.indexOf("fast-lane-v23.js?v=34");
   const cognitive=source.indexOf("mobile-v26.js?v=34");
   const bridge=source.indexOf("mobile-runtime-v34.js?v=44");
   const bootstrap=source.indexOf("mobile-bootstrap-v45.js?v=45");
-  const voice=source.indexOf("mobile-voice-v27.js?v=34");
-  const semantic=source.indexOf("semantic-ux-v32.js?v=34");
-  assert.ok(fast>=0 && cognitive>=0 && bridge>=0 && bootstrap>=0 && voice>=0 && semantic>=0);
-  assert.ok(fast<cognitive && cognitive<bridge && bridge<bootstrap && bootstrap<voice && voice<semantic);
-  assert.match(source,/universal-core-mobile-v34-adaptive-mesh/);
-  assert.match(source,/render-first-bootstrap-v45/);
+  const semantic=source.indexOf("semantic-ux-v32.js?v=46");
+  const lifecycle=source.indexOf("speech-lifecycle-v46.js?v=46");
+  const voice=source.indexOf("mobile-voice-v46.js?v=46");
+  assert.ok(fast>=0 && cognitive>=0 && bridge>=0 && bootstrap>=0 && semantic>=0 && lifecycle>=0 && voice>=0);
+  assert.ok(fast<cognitive && cognitive<bridge && bridge<bootstrap && bootstrap<semantic && semantic<lifecycle && lifecycle<voice);
+  assert.match(source,/universal-core-mobile-v46-responsive-voice/);
+  assert.match(source,/voice-chat-deadline-v46/);
+  assert.doesNotMatch(source,/mobile-voice-v27\.js/);
 });
 
 test('service worker v34 evicts stale cache and makes navigations network-first', () => {

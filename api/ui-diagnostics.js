@@ -1,5 +1,6 @@
 const ALLOWED_EVENTS = new Set([
-  'page_loaded','pointerdown','touchstart','focus','input','submit','request_start','request_end','response_rendered','error','unhandledrejection','sw_state'
+  'page_loaded','pointerdown','touchstart','focus','input','submit','request_start','request_end','response_rendered','error','unhandledrejection','sw_state',
+  'voice_request','voice_start','voice_fallback','voice_end'
 ]);
 
 function safeString(value, max = 220) {

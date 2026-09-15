@@ -1,3 +1,4 @@
+import './lib/network-deadlines-v46.js';
 import { createServer } from 'node:http';
 import { createReadStream } from 'node:fs';
 import { stat } from 'node:fs/promises';
@@ -32,16 +33,17 @@ function mobilePremiumHandler(req,res) {
       if (!chunk.includes('mobile-v26.js')) scripts.push('<script src="/mobile-v26.js?v=34" defer></script>');
       if (!chunk.includes('mobile-runtime-v34.js')) scripts.push('<script src="/mobile-runtime-v34.js?v=44" defer></script>');
       if (!chunk.includes('mobile-bootstrap-v45.js')) scripts.push('<script src="/mobile-bootstrap-v45.js?v=45" defer></script>');
-      if (!chunk.includes('mobile-voice-v27.js')) scripts.push('<script src="/mobile-voice-v27.js?v=34" defer></script>');
-      if (!chunk.includes('semantic-ux-v32.js')) scripts.push('<script src="/semantic-ux-v32.js?v=34" defer></script>');
+      if (!chunk.includes('semantic-ux-v32.js')) scripts.push('<script src="/semantic-ux-v32.js?v=46" defer></script>');
+      if (!chunk.includes('speech-lifecycle-v46.js')) scripts.push('<script src="/speech-lifecycle-v46.js?v=46" defer></script>');
+      if (!chunk.includes('mobile-voice-v46.js')) scripts.push('<script src="/mobile-voice-v46.js?v=46" defer></script>');
       if (!chunk.includes('learning-client-v29.js')) scripts.push('<script src="/learning-client-v29.js?v=34" defer></script>');
       if (!chunk.includes('premium-v5.js')) scripts.push('<script src="/premium-v5.js?v=43" defer></script>');
       if (scripts.length) chunk = chunk.replace('</body>', `${scripts.join('')}</body>`);
       res.setHeader('Cache-Control','no-store, max-age=0, must-revalidate');
       res.setHeader('Pragma','no-cache');
       res.setHeader('Expires','0');
-      res.setHeader('X-WAE-Mobile-Release','universal-core-mobile-v34-adaptive-mesh');
-      res.setHeader('X-WAE-Mobile-Fix','render-first-bootstrap-v45');
+      res.setHeader('X-WAE-Mobile-Release','universal-core-mobile-v46-responsive-voice');
+      res.setHeader('X-WAE-Mobile-Fix','voice-chat-deadline-v46');
       res.setHeader('X-WAE-Premium-Release','universal-core-rich-v43');
     }
     return nativeEnd(chunk, encoding, callback);
@@ -205,8 +207,8 @@ const server = createServer(async (req, res) => {
   return serveFile(req, res, url.pathname);
 });
 
-server.requestTimeout = Number(process.env.WAE_REQUEST_TIMEOUT_MS || 120_000);
-server.headersTimeout = 65_000;
+server.requestTimeout = Number(process.env.WAE_REQUEST_TIMEOUT_MS || 45_000);
+server.headersTimeout = 35_000;
 server.keepAliveTimeout = 5_000;
 
 server.listen(PORT, HOST, () => {

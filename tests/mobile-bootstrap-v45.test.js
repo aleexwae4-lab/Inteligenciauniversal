@@ -14,12 +14,13 @@ test('mobile v45 removes blocking Supabase bootstrap from the interactive path',
   assert.doesNotMatch(source,/setTimeout\([^)]*15000/);
 });
 
-test('mobile v45 keeps v34 adaptive chat routing and loads immediately after it',()=>{
+test('mobile v45 remains between v34 transport and v46 semantic voice layers',()=>{
   const server=read('server.js');
   const adaptive=server.indexOf('mobile-runtime-v34.js?v=44');
   const bootstrap=server.indexOf('mobile-bootstrap-v45.js?v=45');
-  const voice=server.indexOf('mobile-voice-v27.js?v=34');
-  assert.ok(adaptive>=0&&bootstrap>adaptive&&voice>bootstrap);
-  assert.match(server,/X-WAE-Mobile-Fix','render-first-bootstrap-v45/);
-  assert.match(server,/universal-core-mobile-v34-adaptive-mesh/);
+  const semantic=server.indexOf('semantic-ux-v32.js?v=46');
+  const voice=server.indexOf('mobile-voice-v46.js?v=46');
+  assert.ok(adaptive>=0&&bootstrap>adaptive&&semantic>bootstrap&&voice>semantic);
+  assert.match(server,/voice-chat-deadline-v46/);
+  assert.match(server,/universal-core-mobile-v46-responsive-voice/);
 });
