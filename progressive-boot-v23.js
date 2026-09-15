@@ -11,15 +11,16 @@
   const start=async()=>{
     if(started)return;started=true;
     document.documentElement.dataset.enhancement='loading';
-    const [polish,premium,learning,semanticUx]=await Promise.all([
+    const [polish,premium,learning,semanticUx,capabilities]=await Promise.all([
       loadScript('./polish-v2.js'),
       loadScript('./gpt-experience-v1.js?v=1'),
       loadScript('./learning-client-v29.js?v=1'),
-      loadScript('./semantic-ux-v32.js?v=33')
+      loadScript('./semantic-ux-v32.js?v=33'),
+      loadScript('./capability-client-v36.js?v=37')
     ]);
-    const ok=polish&&premium&&learning&&semanticUx;
+    const ok=polish&&premium&&learning&&semanticUx&&capabilities;
     document.documentElement.dataset.enhancement=ok?'ready':'degraded';
-    window.dispatchEvent(new CustomEvent('wae:enhancement-ready',{detail:{ok,polish,premium,learning,semanticUx}}));
+    window.dispatchEvent(new CustomEvent('wae:enhancement-ready',{detail:{ok,polish,premium,learning,semanticUx,capabilities}}));
   };
 
   const schedule=()=>{
@@ -32,5 +33,5 @@
 
   document.addEventListener('pointerdown',()=>start(),{once:true,passive:true});
   document.addEventListener('keydown',()=>start(),{once:true});
-  window.__waeProgressiveBoot={version:'v33-edge-context-intelligence',start};
+  window.__waeProgressiveBoot={version:'v37-execution-plane',start};
 })();

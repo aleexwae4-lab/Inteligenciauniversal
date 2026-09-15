@@ -8,6 +8,7 @@ import continuityHandler from './api/continuity.js';
 import performanceHandler from './api/performance.js';
 import healthHandler from './api/health.js';
 import capabilitiesHandler from './api/capabilities.js';
+import executeHandler from './api/execute.js';
 import evalsHandler from './api/evals.js';
 import tasksHandler from './api/tasks.js';
 import orchestrateHandler from './api/orchestrate.js';
@@ -46,6 +47,7 @@ const apiRoutes = new Map([
   ['/api/performance', performanceHandler],
   ['/api/health', healthHandler],
   ['/api/capabilities', capabilitiesHandler],
+  ['/api/execute', executeHandler],
   ['/api/evals', evalsHandler],
   ['/api/tasks', tasksHandler],
   ['/api/orchestrate', orchestrateHandler],
