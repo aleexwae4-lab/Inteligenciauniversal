@@ -1,4 +1,4 @@
-name: Unit Regression Matrix v37
+name: Unit Regression Matrix v38
 
 on:
   pull_request:
@@ -28,10 +28,13 @@ jobs:
           - test/sse-events.test.js
           - test/universal-core-ui.test.js
           - tests/capability-kernel.test.js
+          - tests/tool-fabric.test.js
+          - tests/deterministic-rescue-contract.test.js
           - tests/execution-contract.test.js
           - tests/execution-plane.test.js
           - tests/evaluation-plane.test.js
           - tests/input-intelligence.test.js
+          - tests/provider-mesh.test.js
           - tests/quality.test.js
           - tests/response-assurance.test.js
           - tests/self-improvement.test.js

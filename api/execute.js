@@ -25,7 +25,8 @@ export default async function handler(req,res){
 
   const body=req.body&&typeof req.body==='object'?req.body:{};
   const task=String(body.task||body.message||'').slice(0,30000);
-  const plan=capabilityPlan(task);
+  const input=body.input&&typeof body.input==='object'&&!Array.isArray(body.input)?body.input:{};
+  const plan=capabilityPlan(task||String(input.content||'').slice(0,4000));
   const capability=resolveCapability(body,plan);
   const userKey=String(body.userKey||body.sessionId||getClientIp(req)).slice(0,500);
   const sessionId=String(body.sessionId||'').slice(0,500)||null;
@@ -34,6 +35,7 @@ export default async function handler(req,res){
     capability,
     action:body.action,
     task,
+    input,
     userKey,
     sessionId,
     approved:false,
