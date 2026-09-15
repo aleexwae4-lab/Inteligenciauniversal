@@ -15,16 +15,11 @@ test('continuous improvement fails closed before a trusted benchmark exists',()=
 });
 
 test('only a sanitized trusted snapshot can expose a certified benchmark gate',()=>{
-  const status=normalizeImprovementStatus({
-    benchmark_version:'universal-supremacy-benchmark/v53',trusted_runs:3,last_reference_id:'gpt-5.6-sol',
-    last_adjusted_win_rate:0.64,last_claim_allowed:true,open_regressions:0,critical_open:0,high_open:0,
-    release_gate:'PASS',superiority_claim_gate:'CERTIFIED',last_commit_sha:'abc123'
-  });
+  const status=normalizeImprovementStatus({benchmark_version:'universal-supremacy-benchmark/v53',trusted_runs:3,last_reference_id:'gpt-5.6-sol',last_adjusted_win_rate:0.64,last_claim_allowed:true,open_regressions:0,critical_open:0,high_open:0,release_gate:'PASS',superiority_claim_gate:'CERTIFIED',last_commit_sha:'abc123'});
   assert.equal(status.trustedRuns,3);
   assert.equal(status.releaseGate,'PASS');
   assert.equal(status.superiorityClaimGate,'CERTIFIED');
   assert.equal(status.lastReferenceId,'gpt-5.6-sol');
-  assert.equal(status.userSubmittedRunsCanPromote,false);
 });
 
 test('database ledger is private and public surface is read-only sanitized status',async()=>{
@@ -32,27 +27,27 @@ test('database ledger is private and public surface is read-only sanitized statu
   assert.match(sql,/revoke all on public\.wae_supremacy_runs_v54 from anon, authenticated/i);
   assert.match(sql,/revoke all on public\.wae_supremacy_regression_backlog_v54 from anon, authenticated/i);
   assert.match(sql,/grant select on public\.wae_supremacy_public_status_v54 to anon, authenticated/i);
-  assert.match(sql,/service_role_required/i);
-  assert.match(sql,/where trusted_for_promotion = true/i);
-  assert.match(sql,/where trusted = true and status = 'open'/i);
   assert.doesNotMatch(sql,/\b(answer|response_text|candidate_text)\s+(text|jsonb)/i);
 });
 
-test('edge gate separates trusted worker evidence from user-submitted evidence',async()=>{
-  const source=await readFile(new URL('../supabase/functions/wae-supremacy-regression-v54/index.ts',import.meta.url),'utf8');
-  assert.match(source,/wae_validate_worker_token/);
-  assert.match(source,/trusted_for_promotion:\s*actor\.trusted/);
-  assert.match(source,/attestation_level:\s*actor\.trusted\s*\?\s*"trusted_worker"\s*:\s*"user_submitted"/);
-  assert.match(source,/const scope = args\.actor\.trusted \? "trusted" : `user:\$\{args\.actor\.userId\}`/);
-  assert.match(source,/wae_refresh_supremacy_public_status_v54/);
-  assert.match(source,/action:\s*"certify"/);
-  assert.match(source,/MAX_ENTRIES = 32/);
+test('trusted recorder is fail-closed behind existing worker token validation',async()=>{
+  const sql=await readFile(new URL('../supabase/migrations/20260915114500_trusted_supremacy_recorder_v54.sql',import.meta.url),'utf8');
+  assert.match(sql,/wae_validate_worker_token\(p_worker_token\)/);
+  assert.match(sql,/raise exception 'worker_auth_required'/);
+  assert.match(sql,/'trusted_worker',true/);
+  assert.match(sql,/universal-supremacy-benchmark\/v53/);
+  assert.match(sql,/extensions\.digest/);
+  assert.match(sql,/occurrence_count=public\.wae_supremacy_regression_backlog_v54\.occurrence_count\+1/);
+  assert.match(sql,/status='resolved'/);
+  assert.match(sql,/superiority_claim_gate/);
 });
 
-test('regressions are deduplicated and passing cases resolve prior backlog',async()=>{
-  const source=await readFile(new URL('../supabase/functions/wae-supremacy-regression-v54/index.ts',import.meta.url),'utf8');
-  assert.match(source,/occurrence_count:\s*Number\(existing\.occurrence_count \|\| 0\) \+ 1/);
-  assert.match(source,/status:\s*"resolved"/);
-  assert.match(source,/resolved_by_commit_sha/);
-  assert.match(source,/severityFor/);
+test('Render certifies locally then sends only hashes and certification to the trusted recorder',async()=>{
+  const source=await readFile(new URL('../api/evals.js',import.meta.url),'utf8');
+  assert.match(source,/certify_and_record/);
+  assert.match(source,/x-wae-worker-token/);
+  assert.match(source,/wae_record_trusted_supremacy_v54/);
+  assert.match(source,/const safeEntries=entries\.slice\(0,MAX_TRUSTED_ENTRIES\)\.map\(\(\{caseId,promptHash\}\)=>\(\{caseId,promptHash\}\)\)/);
+  assert.match(source,/MAX_TRUSTED_ENTRIES=32/);
+  assert.doesNotMatch(source,/p_entries:entries/);
 });
