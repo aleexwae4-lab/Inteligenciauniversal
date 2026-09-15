@@ -9,7 +9,6 @@ import {
 } from '../lib/scale-control-v63.js';
 import {
   hydratePersistentProviderReputation,
-  queueQualityPersistence,
   drainPersistentObservations,
   PERFORMANCE_ROUTER_VERSION
 } from '../lib/provider-mesh-v63.js';
@@ -41,15 +40,26 @@ function capabilityFor(body={}){
   return'general_reasoning';
 }
 
-async function flushPersistentObservations(){
-  const batch=drainPersistentObservations(12);
-  if(!batch.length)return;
-  await Promise.allSettled(batch.map(item=>persistProviderObservation(item)));
-}
-
 function routeFromPayload(payload={}){
   const mesh=payload?.provider_mesh||payload?.response?.metadata?.providerMesh||{};
   return{selectedProvider:mesh?.selected_provider||mesh?.selectedProvider||'',selectedModel:mesh?.selected_model||mesh?.selectedModel||''};
+}
+
+function qualityFromPayload(payload={}){
+  const q=payload?.quality_reliability||payload?.response?.metadata?.qualityReliability||{};
+  const d=q?.dimensions||{};
+  return{quality:q?.score,evidence:d?.evidence,instruction:d?.instruction,qualityGrade:q?.grade,costMicrounits:payload?.cost_microunits??payload?.response?.metadata?.costMicrounits};
+}
+
+async function flushPersistentObservations(payload){
+  const batch=drainPersistentObservations(12);
+  if(!batch.length)return;
+  if(payload&&typeof payload==='object'){
+    const route=routeFromPayload(payload),quality=qualityFromPayload(payload);
+    const target=batch.find(item=>item.success===true&&item.provider===route.selectedProvider);
+    if(target)Object.assign(target,quality);
+  }
+  await Promise.allSettled(batch.map(item=>persistProviderObservation(item)));
 }
 
 export default async function capacityChatV63(req,res){
@@ -59,6 +69,7 @@ export default async function capacityChatV63(req,res){
   const tenant=body.organizationId||body.organization_id||body.tenantId||body.tenant_id||'';
   let admission=null;
   let responded=false;
+  let responsePayload=null;
   try{
     await hydratePersistentProviderReputation({capability:capabilityFor(body)}).catch(()=>null);
     admission=await distributedAdmission({principal,session,tenant,body});
@@ -84,15 +95,12 @@ export default async function capacityChatV63(req,res){
     const buffered=bufferedResponse(res);
     await capacityChatV62(req,buffered.proxy);
     if(res.writableEnded||!buffered.hasJson)return;
-    const payload=buffered.payload;
-    if(buffered.code<400&&payload&&typeof payload==='object')queueQualityPersistence({route:routeFromPayload(payload),payload});
+    responsePayload=buffered.payload;
     responded=true;
-    return res.status(buffered.code).json(payload);
+    return res.status(buffered.code).json(responsePayload);
   }finally{
     if(admission?.leaseId)await releaseDistributedAdmission(admission).catch(()=>null);
-    await flushPersistentObservations().catch(()=>null);
-    if(!responded&&!res.writableEnded&&res.headersSent===false){
-      res.setHeader('X-WAE-Scale-Control',SCALE_CONTROL_VERSION);
-    }
+    await flushPersistentObservations(responsePayload).catch(()=>null);
+    if(!responded&&!res.writableEnded&&res.headersSent===false)res.setHeader('X-WAE-Scale-Control',SCALE_CONTROL_VERSION);
   }
 }
