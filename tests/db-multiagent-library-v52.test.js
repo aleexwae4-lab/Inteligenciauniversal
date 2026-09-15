@@ -2,8 +2,8 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import { buildIdentityReply, formatCoverage, UNIVERSAL_CONTEXT_VERSION } from '../lib/universal-context-v52.js';
-import { libraryRelevant, publicLibraryMetadata, LIBRARY_INTELLIGENCE_VERSION } from '../lib/library-intelligence-v52.js';
-import { shouldUseLibraryAnswer } from '../lib/library-answer-v52.js';
+import { libraryRelevant, publicLibraryMetadata, LIBRARY_INTELLIGENCE_VERSION, compactLibraryQuery } from '../lib/library-intelligence-v52.js';
+import { shouldUseLibraryAnswer, directBibliographicIntent, buildLibraryMetadataFallback } from '../lib/library-answer-v52.js';
 import { shouldUseExecutiveOrchestrator, planDatabaseExecutiveRoles, EXECUTIVE_ORCHESTRATION_VERSION } from '../lib/executive-orchestration-v52.js';
 
 const manifest={activeAgentInstances:88,executiveRoles:22,collaborationEdges:448,agents:[{role:'CEO',name:'CEO Estratégico',mission:'Dirección estratégica y prioridades',responsibilities:['Definir rumbo'],frameworks:['OKR'],guardrails:['No inventar datos']},{role:'CTO',name:'CTO Tecnología',mission:'Arquitectura, ingeniería, resiliencia y costo técnico',responsibilities:['Evaluar arquitectura'],frameworks:['SRE','DORA'],guardrails:['Pruebas y rollback']},{role:'CFO',name:'CFO Financiero',mission:'Rentabilidad, presupuesto, ROI y escenarios',responsibilities:['Cuantificar impacto financiero'],frameworks:['FP&A','DCF'],guardrails:['Mostrar fórmulas']},{role:'CISO',name:'CISO',mission:'Reducir riesgo cibernético',responsibilities:['Evaluar amenazas'],frameworks:['NIST CSF'],guardrails:['No exponer secretos']},{role:'Consultor General',name:'Consultor General',mission:'Síntesis multidisciplinaria',responsibilities:['Enmarcar problemas'],frameworks:['MECE'],guardrails:['No ocultar incertidumbre']}],collaborations:[{sourceRole:'CTO',targetRole:'CFO',type:'primary_advisory',weight:4},{sourceRole:'CFO',targetRole:'CTO',type:'primary_advisory',weight:4}]};
@@ -17,6 +17,31 @@ test('database orchestrator automatically activates for complex executive engine
 test('ordinary short conversation does not fan out to executive committee',()=>{assert.equal(shouldUseExecutiveOrchestrator({message:'Hola, ¿cómo estás?',mode:'auto'}),false);assert.equal(shouldUseExecutiveOrchestrator({message:'¿Cuánto es 2 + 2?',mode:'auto'}),false)});
 
 test('book questions are rights-aware, while complex book missions are delegated to the executive committee',()=>{assert.equal(libraryRelevant('Analiza el libro El arte de la guerra y compáralo con estrategia empresarial','general'),true);assert.equal(libraryRelevant('¿Cómo estás?','general'),false);assert.equal(shouldUseLibraryAnswer({message:'¿Quién escribió El arte de la guerra?',mode:'auto'}),true);const complex={message:'Analiza libros de estrategia y diseña un plan de crecimiento empresarial para Universal Core con riesgos, costos y arquitectura',mode:'auto'};assert.equal(shouldUseExecutiveOrchestrator(complex),true);assert.equal(shouldUseLibraryAnswer(complex),false);const meta=publicLibraryMetadata({used:true,version:LIBRARY_INTELLIGENCE_VERSION,coverageEstimate:41743320,evidence:[{source:'open_library'},{source:'project_gutenberg'}]});assert.equal(meta.rights_aware,true);assert.equal(meta.coverage_estimate,41743320);assert.deepEqual(meta.sources,['open_library','project_gutenberg'])});
+
+test('v67 normalizes the exact mobile book-recognition prompt into a title query',()=>{
+  const prompt='¿Conoces el libro de Piense y hágase rico?';
+  assert.equal(compactLibraryQuery(prompt),'Piense y hágase rico');
+  assert.equal(shouldUseLibraryAnswer({message:prompt,mode:'auto'}),true);
+  assert.equal(directBibliographicIntent(prompt),true);
+});
+
+test('v67 direct bibliographic answer stays useful when generative providers are unavailable',()=>{
+  const prompt='¿Conoces el libro de Piense y hágase rico?';
+  const reply=buildLibraryMetadataFallback(prompt,[{title:'Piense y hágase rico',authors:['Napoleon Hill'],year:1937,source:'open_library',evidenceClass:'bibliographic_metadata'}]);
+  assert.match(reply,/Piense y hágase rico/i);
+  assert.match(reply,/Napoleon Hill/);
+  assert.match(reply,/1937/);
+  assert.match(reply,/Puedo resumirlo|analizarlo/i);
+  assert.doesNotMatch(reply,/proveedores|fallaron|reintenta|no llegó completa/i);
+});
+
+test('v67 library runtime contains deterministic direct and fallback lanes before surfacing provider failure',async()=>{
+  const source=await readFile(new URL('../lib/library-answer-v52.js',import.meta.url),'utf8');
+  assert.match(source,/library-metadata-direct-v67/);
+  assert.match(source,/library-metadata-fallback-v67/);
+  assert.match(source,/generationFallback:true/);
+  assert.match(source,/directBibliographicIntent\(message\)&&deterministic/);
+});
 
 test('automatic multi-agent execution is bounded to two specialists and explicit deep mode to three',async()=>{const source=await readFile(new URL('../lib/executive-orchestration-v52.js',import.meta.url),'utf8');assert.match(source,/maxSpecialists=explicit\?3:2/);assert.match(source,/plan\.specialists=plan\.specialists\.slice\(0,maxSpecialists\)/)});
 
