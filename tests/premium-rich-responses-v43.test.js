@@ -13,15 +13,16 @@ test('desktop loads semantic rich renderer and premium visual layer',()=>{
   assert.match(html,/premium-v5\.js\?v=43/);
 });
 
-test('mobile injects premium response assets without replacing the stable runtime',()=>{
+test('mobile injects premium response assets without replacing the stable transport runtime',()=>{
   const server=read('server.js');
   assert.match(server,/premium-v5\.css\?v=43/);
   assert.match(server,/premium-v5\.js\?v=43/);
-  assert.match(server,/universal-core-mobile-v34-adaptive-mesh/);
+  assert.match(server,/universal-core-mobile-v46-responsive-voice/);
   assert.match(server,/universal-core-rich-v43/);
   assert.match(server,/mobile-runtime-v34\.js\?v=44/);
   assert.match(server,/mobile-bootstrap-v45\.js\?v=45/);
-  assert.match(server,/render-first-bootstrap-v45/);
+  assert.match(server,/mobile-voice-v46\.js\?v=46/);
+  assert.match(server,/voice-chat-deadline-v46/);
 });
 
 test('premium CSS supports semantic hierarchy, tables, metrics, charts and reduced motion',()=>{
