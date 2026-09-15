@@ -26,7 +26,7 @@
   const sseModule=()=>sseModulePromise||(sseModulePromise=import('./lib/sse-events.js'));
 
   const edge=async(payload,{signal}={})=>{
-    const res=await nativeFetch(EDGE,{method:'POST',headers:{'content-type':'application/json','apikey':SUPABASE_KEY,'x-client-info':'wae-inteligencia-universal/2.2'},body:JSON.stringify(payload),cache:'no-store',signal});
+    const res=await nativeFetch(EDGE,{method:'POST',headers:{'content-type':'application/json','apikey':SUPABASE_KEY,'x-client-info':'wae-inteligencia-universal/2.3'},body:JSON.stringify(payload),cache:'no-store',signal});
     const data=await res.json().catch(()=>({success:false,error:`HTTP ${res.status}`}));
     if(!res.ok)throw Object.assign(new Error(data.error||`HTTP ${res.status}`),{status:res.status,data});
     return data;
@@ -44,7 +44,7 @@
     gatePromise=nativeFetch(PERFORMANCE_ENDPOINT,{headers:{accept:'application/json'},cache:'no-store'}).then(async r=>{
       if(!r.ok)throw new Error(`performance_${r.status}`);
       const data=await r.json();const gate=data?.performance;
-      if(!gate||gate.schema!=='universal-performance-gate/v2')throw new Error('performance_contract_invalid');
+      if(!gate||!['universal-performance-gate/v2','universal-performance-gate/v3'].includes(String(gate.schema)))throw new Error('performance_contract_invalid');
       performanceGate={...SAFE_GATE,...gate,available:gate.available!==false};performanceLoadedAt=Date.now();return performanceGate;
     }).catch(()=>{performanceGate={...SAFE_GATE};performanceLoadedAt=Date.now();return performanceGate}).finally(()=>{gatePromise=null});
     return gatePromise;
@@ -75,9 +75,9 @@
       emit(event,data);
     });
     try{
-      const res=await nativeFetch(EDGE,{method:'POST',headers:{'content-type':'application/json','accept':'text/event-stream','apikey':SUPABASE_KEY,'x-client-info':'wae-streaming-client/2.2'},body:JSON.stringify({...payload,stream:true,routing_variant:'candidate'}),cache:'no-store',signal:controller.signal});
-      if(!res.ok)throw Object.assign(new Error(`stream_http_${res.status}`),{status:res.status,serverStarted});
-      if(!(res.headers.get('content-type')||'').toLowerCase().includes('text/event-stream')||!res.body)throw Object.assign(new Error('stream_transport_invalid'),{serverStarted});
+      const res=await nativeFetch(EDGE,{method:'POST',headers:{'content-type':'application/json','accept':'text/event-stream','apikey':SUPABASE_KEY,'x-client-info':'wae-streaming-client/2.3'},body:JSON.stringify({...payload,stream:true,routing_variant:routingVariant()}),cache:'no-store',signal:controller.signal});
+      if(!res.ok)throw Object.assign(new Error(`stream_http_${res.status}`),{status:res.status,serverStarted,hasPartial:false});
+      if(!(res.headers.get('content-type')||'').toLowerCase().includes('text/event-stream')||!res.body)throw Object.assign(new Error('stream_transport_invalid'),{serverStarted,hasPartial:false});
       const reader=res.body.getReader(),decoder=new TextDecoder();
       while(true){const {done,value}=await reader.read();if(done)break;parser.push(decoder.decode(value,{stream:true}))}
       parser.push(decoder.decode());parser.end();
@@ -87,14 +87,14 @@
         if(rid&&firstClientTtft!==null){void edge({action:'client_metric',...sessionPayload(),request_id:rid,client_ttft_ms:firstClientTtft,client_first_token_at:firstTokenAt}).catch(()=>{})}
         return finalData;
       }
-      if(streamError)throw Object.assign(new Error(streamError.error||'stream_failed'),{serverStarted,recoverable:streamError.recoverable!==false});
-      throw Object.assign(new Error('stream_ended_without_completion'),{serverStarted});
+      if(streamError)throw Object.assign(new Error(streamError.error||'stream_failed'),{serverStarted,recoverable:streamError.recoverable!==false,hasPartial:!!partial.trim()});
+      throw Object.assign(new Error('stream_ended_without_completion'),{serverStarted,hasPartial:!!partial.trim()});
     }catch(err){
       if(controller.signal.aborted&&partial.trim()){
         const data={success:true,reply:partial.trim(),response:{schema:'assistant-response/v1',content:partial.trim(),components:[],actions:[],sources:[],speechText:partial.trim(),metadata:{cancelled:true}},speech_text:partial.trim(),components:[],actions:[],web_sources:[],conversation_id:localStorage.getItem(CONVERSATION_ID)||null,message_id:null,request_id:currentStream?.requestId||null,provider:null,model:null,memory_count:0,web_used:false,latency_ms:Math.round(performance.now()-startedPerf),ttft_ms:firstClientTtft,runtime:runtimeCaps?.version||null,response_schema:'assistant-response/v1',cancelled:true,client_partial:true};
         emit('response.complete',data);return data;
       }
-      err.serverStarted=err.serverStarted||serverStarted;throw err;
+      err.serverStarted=err.serverStarted||serverStarted;err.hasPartial=err.hasPartial||!!partial.trim();throw err;
     }finally{currentStream=null}
   }
 
@@ -118,14 +118,14 @@
       let data;
       if(await streamingAllowed())data=await streamChat(payload,init.signal);
       else data=await edge(payload,{signal:init.signal});
-      const clean=sanitizeReply(data.reply);if(!clean)throw Object.assign(new Error('unsafe_or_empty_output'),{status:502,serverStarted:true});
+      const clean=sanitizeReply(data.reply);if(!clean)throw Object.assign(new Error('unsafe_or_empty_output'),{status:502,serverStarted:true,hasPartial:false});
       if(data.conversation_id)localStorage.setItem(CONVERSATION_ID,data.conversation_id);
       window.__iuLastRuntime={...data,reply:clean};
       queueMicrotask(()=>{updateRuntimeCard(data);loadConversations().catch(()=>{});loadPerformanceGate(true).catch(()=>{})});
       return new Response(JSON.stringify({...data,reply:clean}),{status:200,headers:{'content-type':'application/json','cache-control':'no-store','x-wae-runtime':'universal-core'}});
     }catch(err){
       console.warn('[Universal Core] primary runtime unavailable',err?.message||err);
-      if(err?.serverStarted){
+      if(err?.serverStarted&&err?.hasPartial){
         return new Response(JSON.stringify({error:'primary_stream_interrupted',recoverable:true}),{status:503,headers:{'content-type':'application/json','cache-control':'no-store'}});
       }
       try{
@@ -144,7 +144,7 @@
     const copy=document.querySelector('.v2-runtime-copy'),eff=document.querySelector('.v2-efficiency');if(!copy)return;
     const latency=Number(data?.latency_ms),memories=Number(data?.memory_count),sources=(data?.web_sources||data?.response?.sources||[]).length;
     if(data?.model_count!==undefined){
-      const state=performanceGate?.routing_state==='PROMOTE'?'adaptativo':performanceGate?.fast_lane_ready?'rápido':'estable';
+      const state=performanceGate?.stream_ready?'streaming':performanceGate?.routing_state==='PROMOTE'?'adaptativo':performanceGate?.fast_lane_ready?'rápido':'estable';
       copy.innerHTML=`<strong>Universal Core · online</strong><small>memoria · web · herramientas · seguridad · modo ${state}</small>`;
       if(eff)eff.innerHTML='<strong>LIVE</strong><small>WAE OS</small>';
       document.documentElement.dataset.runtimeReady=data.model_count?'true':'false';return;
