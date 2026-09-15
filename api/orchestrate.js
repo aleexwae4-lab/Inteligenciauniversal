@@ -1,6 +1,7 @@
 import { executeMission } from '../lib/runtime.js';
 import { planMission, specialistPrompt, synthesisPrompt, ORCHESTRATOR_VERSION } from '../lib/orchestrator.js';
 import { allowRequest, originAllowed, applyHeaders, getClientIp } from '../lib/security.js';
+import { normalizeUserIntent } from '../lib/input-intelligence.js';
 
 const cleanHistory=(value)=>Array.isArray(value)?value.slice(-16).filter(x=>x&&['user','assistant'].includes(x.role)).map(x=>({role:x.role,text:String(x.text??x.content??'').slice(0,12000)})):[];
 const cleanAttachments=(value)=>Array.isArray(value)?value.slice(0,5):[];
@@ -16,9 +17,11 @@ export default async function handler(req,res){
   if(!allowRequest(req,Number(process.env.WAE_DEEP_RATE_LIMIT_PER_MINUTE||6)))return res.status(429).json({error:'deep_rate_limited'});
 
   const body=req.body||{};
-  const message=String(body.message||body.task||'').trim();
-  if(!message)return res.status(400).json({error:'message_required'});
-  if(message.length>30000)return res.status(413).json({error:'message_too_large'});
+  const rawMessage=String(body.message||body.task||'').trim();
+  if(!rawMessage)return res.status(400).json({error:'message_required'});
+  if(rawMessage.length>30000)return res.status(413).json({error:'message_too_large'});
+  const intent=normalizeUserIntent(rawMessage);
+  const message=intent.changed?intent.text:rawMessage;
 
   const started=Date.now();
   const sessionId=String(body.sessionId||body.session_id||'').slice(0,160);
@@ -60,6 +63,7 @@ export default async function handler(req,res){
       model:undefined,
       fallbackFailures:undefined,
       deep:true,
+      input_interpretation:intent.changed?{normalized:true,domain:intent.domain,confidence:intent.confidence,corrections:intent.corrections}:undefined,
       orchestration:{
         schema:ORCHESTRATOR_VERSION,
         strategy:plan.strategy,

@@ -4,18 +4,37 @@ import { readFile } from 'node:fs/promises';
 
 const read = name => readFile(new URL(`../${name}`, import.meta.url), 'utf8');
 
-test('server exposes Universal Core mobile and routes mobile root to it', async () => {
+test('server exposes the premium Universal Core mobile route and mobile root delegation', async () => {
   const server = await read('server.js');
   assert.match(server, /\/api\/mobile/);
   assert.match(server, /\/api\/ui-diagnostics/);
   assert.match(server, /isMobileRequest/);
   assert.match(server, /sec-ch-ua-mobile/);
   assert.match(server, /url\.pathname === '\/'/);
-  assert.match(server, /mobileHandler\(req, res\)/);
+  assert.match(server, /mobilePremiumHandler\(req, res\)/);
+  assert.match(server, /return mobileHandler\(req,res\)/);
+  assert.match(server, /mobile-v26\.css/);
+  assert.match(server, /fast-lane-v23\.js/);
+  assert.match(server, /mobile-v26\.js/);
+  assert.match(server, /mobile-voice-v27\.js/);
+  assert.match(server, /semantic-ux-v32\.js/);
+  assert.match(server, /learning-client-v29\.js/);
+  assert.match(server, /universal-core-mobile-v32-context-intelligence/);
   assert.match(server, /desktop.*=== '1'/s);
 });
 
-test('mobile v25 is a self-contained premium conversational surface', async () => {
+test('semantic v32 repairs the exact answer surface used by mobile', async () => {
+  const semantic = await read('semantic-ux-v32.js');
+  assert.match(semantic, /\.assistant-body table/);
+  assert.match(semantic, /\.rich-answer,\.assistant-body/);
+  assert.match(semantic, /data-mobile-table/);
+  assert.match(semantic, /Ω/g);
+  assert.match(semantic, /ohmios/);
+  assert.match(semantic, /speechSynthesis/);
+  assert.match(semantic, /__waeVoice/);
+});
+
+test('mobile base remains a self-contained premium conversational surface', async () => {
   const mobile = await read('api/mobile.js');
   assert.match(mobile, /universal-core-mobile-v25/);
   assert.match(mobile, /¿En qué trabajamos\?/);
@@ -44,7 +63,7 @@ test('mobile v25 is a self-contained premium conversational surface', async () =
   assert.doesNotMatch(mobile, /navigator\.serviceWorker\.register/);
 });
 
-test('mobile v25 keeps diagnostics privacy-safe and never logs prompt content', async () => {
+test('mobile keeps diagnostics privacy-safe and never logs prompt content', async () => {
   const mobile = await read('api/mobile.js');
   const diagnostics = await read('api/ui-diagnostics.js');
   assert.match(mobile, /valueLength/);
@@ -55,7 +74,7 @@ test('mobile v25 keeps diagnostics privacy-safe and never logs prompt content', 
   assert.doesNotMatch(diagnostics, /body\.content/);
 });
 
-test('mobile v25 preserves fail-safe generation paths', async () => {
+test('mobile preserves fail-safe generation paths', async () => {
   const mobile = await read('api/mobile.js');
   assert.match(mobile, /streamAvailable/);
   assert.match(mobile, /streamEdge/);
