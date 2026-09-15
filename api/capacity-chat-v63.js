@@ -8,6 +8,10 @@ import {
   SCALE_TARGET_SUBSCRIBERS
 } from '../lib/scale-control-v63.js';
 import {
+  capacityAutopilotDecision,
+  CAPACITY_CERTIFICATION_VERSION
+} from '../lib/capacity-certification-v65.js';
+import {
   hydratePersistentProviderReputation,
   drainPersistentObservations,
   PERFORMANCE_ROUTER_VERSION
@@ -76,6 +80,7 @@ export default async function capacityChatV63(req,res){
     res.setHeader('X-WAE-Scale-Control',SCALE_CONTROL_VERSION);
     res.setHeader('X-WAE-Subscriber-Target',String(SCALE_TARGET_SUBSCRIBERS));
     res.setHeader('X-WAE-Performance-Router',PERFORMANCE_ROUTER_VERSION);
+    res.setHeader('X-WAE-Capacity-Certification',CAPACITY_CERTIFICATION_VERSION);
     res.setHeader('X-WAE-Distributed-Admission',admission?.applied?String(admission?.allowed?'admitted':'rejected'):'bypassed');
 
     if(admission?.allowed===false){
@@ -90,6 +95,26 @@ export default async function capacityChatV63(req,res){
         retry_after_ms:retry*1000,
         scale_control:SCALE_CONTROL_VERSION
       });
+    }
+
+    if(admission?.applied&&admission?.allowed===true&&Number(admission?.shardLimit)>0){
+      const autopilot=capacityAutopilotDecision({active:Number(admission.shardActive||0),target:Number(admission.shardLimit||1)});
+      res.setHeader('X-WAE-Capacity-Mode',autopilot.mode);
+      body.preferences={...(body.preferences&&typeof body.preferences==='object'?body.preferences:{}),capacityMode:autopilot.mode,capacityMaxSpecialists:autopilot.maxSpecialists};
+      if(autopilot.mode==='SHED'){
+        const retry=Math.max(1,Number(autopilot.retryAfterSeconds||3));
+        res.setHeader('Retry-After',String(retry));
+        responded=true;
+        return res.status(503).json({
+          error:'CAPACITY_BUSY',
+          message:'Universal Core reservó margen operativo antes de saturar este shard. El turno no se perdió y puede reintentarse.',
+          recoverable:true,
+          retry_after_ms:retry*1000,
+          capacity_mode:autopilot.mode,
+          scale_control:SCALE_CONTROL_VERSION,
+          capacity_certification:CAPACITY_CERTIFICATION_VERSION
+        });
+      }
     }
 
     const buffered=bufferedResponse(res);
