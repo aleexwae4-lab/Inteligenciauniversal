@@ -3,12 +3,13 @@
   window.__waeSemanticUxV32={version:'semantic-ux/v32'};
 
   const normalizeMath=value=>String(value??'')
+    .replace(/\\times\b/g,' × ').replace(/\\cdot\b/g,' · ')
+    .replace(/\\Omega\b/g,' Ω ').replace(/\\Delta\b/g,' Δ ').replace(/\\mu\b/g,' μ ').replace(/\\pi\b/g,' π ')
     .replace(/\\frac\{([^{}]+)\}\{([^{}]+)\}/g,'$1 ÷ $2')
     .replace(/\\(?:text|mathrm|operatorname)\{([^{}]+)\}/g,'$1')
-    .replace(/\\times\b/g,'×').replace(/\\cdot\b/g,'·')
-    .replace(/\\Omega\b/g,'Ω').replace(/\\Delta\b/g,'Δ').replace(/\\mu\b/g,'μ').replace(/\\pi\b/g,'π')
     .replace(/\\(?:left|right)\b/g,'').replace(/\\[()[\]]/g,'')
-    .replace(/\$([^$]+)\$/g,'$1');
+    .replace(/\$([^$]+)\$/g,'$1')
+    .replace(/[ \t]{2,}/g,' ');
 
   const cleanSpeech=value=>normalizeMath(value)
     .replace(/```[\s\S]*?```/g,' código omitido ')
@@ -17,6 +18,9 @@
     .replace(/[#*_`~>|]/g,' ')
     .replace(/[•▪◦●◆◇■□►▶✓✔✦✣⌕⌘▦↻◈▤▧⚙＋➜☰◉]/g,' ')
     .replace(/[\p{Extended_Pictographic}\uFE0F\u200D]/gu,' ')
+    .replace(/\bΩ\b/g,' ohmios ')
+    .replace(/×/g,' por ')
+    .replace(/÷/g,' dividido entre ')
     .replace(/\s+/g,' ').trim();
 
   function enhanceTables(root=document){
