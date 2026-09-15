@@ -1,0 +1,45 @@
+name: Adversarial Evidence v72
+
+on:
+  pull_request:
+    paths:
+      - 'lib/adversarial-evidence-v72.js'
+      - 'api/evals.js'
+      - 'tests/adversarial-evidence-v72.test.js'
+      - 'supabase/migrations/20260915235500_trusted_evidence_certification_v72.sql'
+      - '.github/workflows/adversarial-evidence-v72.yml'
+      - 'package.json'
+  push:
+    branches: [main]
+    paths:
+      - 'lib/adversarial-evidence-v72.js'
+      - 'api/evals.js'
+      - 'tests/adversarial-evidence-v72.test.js'
+      - 'supabase/migrations/20260915235500_trusted_evidence_certification_v72.sql'
+
+permissions:
+  contents: read
+
+jobs:
+  adversarial-evidence:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - run: npm install --no-audit --no-fund
+      - name: Syntax gate
+        run: |
+          node --check lib/adversarial-evidence-v72.js
+          node --check api/evals.js
+      - name: Adversarial benchmark unit gate
+        run: node --test tests/adversarial-evidence-v72.test.js
+      - name: Migration security contract
+        run: |
+          grep -q 'complete_64_case_suite_required' supabase/migrations/20260915235500_trusted_evidence_certification_v72.sql
+          grep -q 'enable row level security' supabase/migrations/20260915235500_trusted_evidence_certification_v72.sql
+          grep -q 'target_answer_hash' supabase/migrations/20260915235500_trusted_evidence_certification_v72.sql
+          grep -q 'wae_validate_worker_token' supabase/migrations/20260915235500_trusted_evidence_certification_v72.sql
+          ! grep -Eq 'target_answer[[:space:]]+text|reference_answer[[:space:]]+text' supabase/migrations/20260915235500_trusted_evidence_certification_v72.sql
