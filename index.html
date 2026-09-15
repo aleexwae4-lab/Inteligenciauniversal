@@ -68,10 +68,10 @@
     <form class="composer" id="composer">
       <div class="mode-pill" id="modePill">General</div>
       <textarea id="messageInput" rows="1" placeholder="Describe una misión, crea un sistema o pide un análisis…"></textarea>
-      <div class="composer-actions"><div><button type="button" class="mini-btn" id="attachBtn" title="Adjuntar">＋</button><button type="button" class="mini-btn" id="voiceBtn" title="Voz">◉</button></div><button class="send-btn" type="submit" aria-label="Enviar">➜</button></div>
+      <div class="composer-actions"><div><button type="button" class="mini-btn" id="attachBtn" title="Adjuntar">＋</button><button type="button" class="mini-btn" id="voiceBtn" title="Voz" aria-pressed="true">◉</button></div><button class="send-btn" type="submit" aria-label="Enviar">➜</button></div>
     </form>
 
-    <footer class="runtime-bar"><div><span class="pulse"></span><strong>Universal Core</strong><small> · operativo</small></div><strong class="health">100%</strong></footer>
+    <footer class="runtime-bar"><div><span class="pulse"></span><strong>Universal Core</strong><small> · operativo</small></div><strong class="health">LIVE</strong></footer>
 
     <aside class="drawer" id="drawer" aria-hidden="true">
       <div class="drawer-head"><div class="brand compact"><img src="./assets/logo.svg" alt="WAE" /><div><strong>WAE OS Enterprise</strong><span>Universal Core</span></div></div><button class="icon-btn" id="closeDrawerBtn">×</button></div>
@@ -119,9 +119,12 @@
   </form>
 
   <script src="./startup-guard-v23.js" defer></script>
+  <script src="./voice-client.js" defer></script>
   <script src="./runtime-client.js" defer></script>
+  <script src="./fast-lane-v23.js" defer></script>
   <script src="./streaming-v2.js" defer></script>
   <script src="./app.js" defer></script>
+  <script src="./voice-bridge-v23.js" defer></script>
   <script src="./mobile-safe-composer.js" defer></script>
   <script src="./progressive-boot-v23.js" defer></script>
 </body>
