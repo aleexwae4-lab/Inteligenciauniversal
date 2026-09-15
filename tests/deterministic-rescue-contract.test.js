@@ -4,13 +4,12 @@ import { readFile } from 'node:fs/promises';
 
 const source=await readFile(new URL('../supabase/functions/wae-deterministic-rescue-v1/index.ts',import.meta.url),'utf8');
 
-test('deterministic rescue is evidence-only and zero-token',()=>{
+test('deterministic rescue remains evidence-only and zero-token',()=>{
   assert.match(source,/wae-deterministic-rescue-v1/);
   assert.match(source,/zero_token:true/);
   assert.match(source,/external_model:false/);
   assert.match(source,/evidence_only:true/);
-  assert.doesNotMatch(source,/fetch\s*\(/);
-  assert.doesNotMatch(source,/createClient/);
+  assert.doesNotMatch(source,/api\.openai\.com|api\.anthropic\.com|generativelanguage\.googleapis\.com|openrouter\.ai/i);
 });
 
 test('rescue prioritizes private memory and file evidence without treating embedded instructions as privileged',()=>{
@@ -33,4 +32,15 @@ test('rescue returns a compatible chat completion envelope',()=>{
   assert.match(source,/object:'chat\.completion'/);
   assert.match(source,/choices:\[\{index:0,message:\{role:'assistant',content\}/);
   assert.match(source,/prompt_tokens:0,completion_tokens:0,total_tokens:0/);
+});
+
+test('audit ledger proxy requires a private derived token and validates receipts before service-role insert',()=>{
+  assert.match(source,/x-wae-ledger-token/i);
+  assert.match(source,/expectedLedgerFingerprint/);
+  assert.match(source,/timingSafeHex/);
+  assert.match(source,/validReceipt/);
+  assert.match(source,/universal-execution-receipt\/v1/);
+  assert.match(source,/authenticated_edge_proxy/);
+  assert.match(source,/SUPABASE_SERVICE_ROLE_KEY/);
+  assert.match(source,/pathname\.endsWith\('\/execution-receipt'\)/);
 });
