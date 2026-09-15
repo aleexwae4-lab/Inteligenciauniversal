@@ -18,6 +18,7 @@ import orchestrateHandler from './api/orchestrate.js';
 import mobileHandler from './api/mobile.js';
 import uiDiagnosticsHandler from './api/ui-diagnostics.js';
 import liveDataHandler from './api/live-data.js';
+import knowledgeHandler from './api/knowledge.js';
 
 const ROOT = fileURLToPath(new URL('.', import.meta.url));
 const PORT = Number(process.env.PORT || 10000);
@@ -56,6 +57,7 @@ function mobilePremiumHandler(req,res) {
       res.setHeader('X-WAE-Live-Data','live-data-mesh/v58');
       res.setHeader('X-WAE-Productivity','productivity/v59');
       res.setHeader('X-WAE-Answer-Intelligence','answer-intelligence/v60');
+      res.setHeader('X-WAE-Knowledge-Fabric','universal-knowledge-fabric/v1');
     }
     return nativeEnd(chunk, encoding, callback);
   };
@@ -77,6 +79,10 @@ const apiRoutes = new Map([
   ['/api/tasks', tasksHandler],
   ['/api/orchestrate', orchestrateHandler],
   ['/api/live-data', liveDataHandler],
+  ['/api/knowledge/search', knowledgeHandler],
+  ['/api/knowledge/research', knowledgeHandler],
+  ['/api/knowledge/sources', knowledgeHandler],
+  ['/api/knowledge/health', knowledgeHandler],
   ['/api/mobile', mobilePremiumHandler],
   ['/api/ui-diagnostics', uiDiagnosticsHandler],
 ]);
@@ -204,7 +210,7 @@ function isMobileRequest(req, url) {
 
 const server = createServer(async (req, res) => {
   const url = new URL(req.url || '/', `http://${req.headers.host || 'localhost'}`);
-  const handler = apiRoutes.get(url.pathname);
+  const handler = apiRoutes.get(url.pathname) || (url.pathname.startsWith('/api/knowledge/source/') ? knowledgeHandler : null);
 
   if (handler) return runApi(req, res, handler);
 
