@@ -12,6 +12,15 @@ export default function handler(req,res){
     interface:'experience-v8-living-core',
     reasoningProfiles:['auto','deep'],
     orchestration:{schema:ORCHESTRATOR_VERSION,parallel:true,maxSpecialists:3,synthesis:'executive',endpoint:'/api/orchestrate'},
+    verification:{
+      enabled:true,
+      version:'cognitive-verification/v34',
+      requirementSchema:'universal-requirements/v1',
+      coverageSchema:'universal-requirement-coverage/v1',
+      failClosedOnHardRequirements:true,
+      repairAware:true,
+      verifiedConstraints:['list_count','table','json','code','sources','citations','comparison','risks','steps','pros_cons','word_limit','exact_phrase']
+    },
     agents:Object.values(AGENTS).map(({id,name,description,tools})=>({id,name,description,tools}))
   });
 }
