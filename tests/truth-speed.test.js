@@ -2,12 +2,21 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { deriveTruthSpeedPolicy, planRuntimeTools, auditGrounding, truthSpeedCapabilities } from '../lib/truth-speed.js';
 import { evaluateAnswer, inferCognitivePolicy } from '../lib/quality.js';
+import { extractCoreUserQuery, edgeRequestPolicy } from '../lib/providers.js';
 
 test('stable factual questions stay on the fast policy without mandatory web evidence',()=>{
   const policy=deriveTruthSpeedPolicy({message:'¿Qué es un diodo?',mode:'general'});
   assert.equal(policy.complexity,'fast');
   assert.equal(policy.evidenceRequired,false);
   assert.equal(policy.timeoutMs,22000);
+});
+
+test('routing policy text cannot contaminate the actual user intent',()=>{
+  const enriched='REGLA DE VERACIDAD: verifica hechos actuales con evidencia.\n\nSOLICITUD DEL USUARIO:\n¿Qué es un diodo?\n\nMEMORIA RECUPERADA\nNada relevante';
+  assert.equal(extractCoreUserQuery(enriched),'¿Qué es un diodo?');
+  const route=edgeRequestPolicy(enriched);
+  assert.equal(route.mode,'general');
+  assert.equal(route.webEnabled,false);
 });
 
 test('local document evidence is not mistaken for a web research request',()=>{
