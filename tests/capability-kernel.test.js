@@ -7,7 +7,7 @@ test('capability kernel exposes the complete 38-domain map',()=>{
   assert.equal(snapshot.version,CAPABILITY_KERNEL_VERSION);
   assert.equal(snapshot.domainCount,38);
   assert.equal(CAPABILITY_DOMAINS.length,38);
-  assert.equal(snapshot.abilityCount,300);
+  assert.equal(snapshot.abilityCount,302);
   assert.equal(snapshot.domains[0].index,1);
   assert.equal(snapshot.domains.at(-1).index,38);
 });
@@ -33,11 +33,11 @@ test('intent classification maps mixed missions to relevant capability domains',
 });
 
 test('capability plan separates executable and unavailable requirements',()=>{
-  const plan=capabilityPlan('Revisa este repositorio de GitHub y luego controla mi computadora.');
+  const plan=capabilityPlan('Revisa este repositorio de GitHub y luego navega una página en el browser.');
   assert.equal(plan.schema,'universal-capability-plan/v1');
   assert.ok(plan.matched.some((item)=>item.id==='software_engineering'));
-  assert.ok(plan.matched.some((item)=>item.id==='computer_use'));
-  assert.ok(plan.planned.some((item)=>item.id==='computer_use'));
+  assert.ok(plan.matched.some((item)=>item.id==='cloud_browser'));
+  assert.ok(plan.planned.some((item)=>item.id==='cloud_browser'));
   assert.equal(plan.failClosedOnUnavailableTools,true);
 });
 
