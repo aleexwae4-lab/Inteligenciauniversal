@@ -9,6 +9,7 @@ const structuredRx=/\b(json|csv|tabla|estructur|extrae|clasifica|columnas?|filas
 const creativeRx=/\b(crea|dise[nñ]a|copy|historia|guion|slogan|marca|branding|creativo)\b/i;
 const enterpriseRx=/\b(empresa|negocio|saas|finanzas|ventas|operaciones|kpi|ebitda|cfo|ceo|cto|rrhh|recursos humanos|compliance|auditor[ií]a)\b/i;
 const factualRx=/^\s*(qu[eé]|qui[eé]n|cu[aá]l|cu[aá]nto|d[oó]nde|cu[aá]ndo|define|explica)\b/i;
+const RESCUE_PROVIDER='wae_deterministic_rescue';
 
 export function classifyTask(q:string,mode='general',attachments:any[]=[]){
   q=String(q||'').trim();const files=a(attachments).length>0;let category='analysis';
@@ -43,21 +44,26 @@ export function streamEligible(m:any){
 function capabilityMatch(m:any,req:any){if(req.risk==='high'&&m.supports_sensitive_data!==true)return 0;if(req.vision&&!m.vision_capable)return 0;if(req.tools&&!m.tools_capable)return 0;if(req.streaming&&!streamEligible(m))return 0;if(req.context_window&&Number(m.context_window||0)<Number(req.context_window))return 0;let z=100;if(req.reasoning==='high'&&!m.reasoning_capable)z-=25;if(req.structured_output&&!m.structured_output_capable)z-=8;if(req.streaming&&m.streaming_verified)z+=8;return Math.max(0,Math.min(108,z))}
 function scoreModel(m:any,task:any,req:any,specific:any){const cap=capabilityMatch(m,req);if(cap<=0)return{...m,eligible:false,score:-999};const quality=n(specific?.quality_score??m.eval_score??m.quality_score??m.reputation_score,70),reliability=n(m.reliability_score??specific?.reliability_score??m.reputation_reliability_score,60),w=weights(task.path);let score=quality*w.q+reliability*w.r+latScore(m.ewma_latency_ms)*w.l+ttftScore(m.ewma_ttft_ms)*w.t+costScore(m)*w.c+cap*w.m;const health=String(m.effective_health||m.registry_health||'unknown').toLowerCase();if(health==='degraded')score-=12;if(health==='unknown')score-=5;if(m.circuit_state==='HALF_OPEN')score-=25;score-=failurePenalty(m);const minimum=task.path==='FAST'?65:task.path==='DEEP'?78:70,sufficient=quality>=minimum&&reliability>=45;if(!sufficient)score-=20;return{...m,eligible:true,quality,reliability,sufficient,failure_debt:failureDebt(m),score:Number(score.toFixed(3))}}
 function canInvoke(m:any){const c=o(m.capabilities),base=s(c.base_url)||s(Deno.env.get(s(c.base_url_env)||'WAE_AI_BASE_URL')),key=s(Deno.env.get(s(c.api_key_env)||'WAE_AI_API_KEY'));if(c.runtime==='browser')return false;return!!base&&!!m.model_name&&(c.requires_api_key===false||!!key)}
+function placeRescueLast(primary:any[],rescue:any[]){if(!rescue.length)return primary;const fallback={...rescue[0],score:-1,rescue_only:true};return[...primary.slice(0,5),fallback,...primary.slice(5)]}
 
 export async function registry(db:any,task:any,q:string){const cap=evalCapability(task,q);const[{data:models},{data:rep}]=await Promise.all([db.from('iu_adaptive_model_registry_v2').select('*').eq('enabled',true).in('access_tier',['FREE','TRIAL','LOCAL']),db.from('wae_provider_capability_reputation_v1').select('provider,model,quality_score,reliability_score,reputation_score,confidence_score,samples').eq('capability',cap)]);const map=new Map((rep||[]).map((x:any)=>[`${x.provider}::${x.model}`,x]));return(models||[]).filter(canInvoke).map((m:any)=>({...m,specific:map.get(`${m.provider}::${m.model_name}`)||null}))}
 
 export function rank(reg:any[],task:any,req:any,variant='candidate'){
-  let list=reg.filter((m:any)=>m.circuit_state!=='OPEN'&&m.effective_health!=='offline');
+  let list=reg.filter((m:any)=>m.circuit_state!=='OPEN'&&m.effective_health!=='offline'&&capabilityMatch(m,req)>0);
   if(req.streaming)list=list.filter(streamEligible);
-  if(variant==='control')return list.sort((x:any,y:any)=>Number(x.priority)-Number(y.priority)).map((x:any)=>({...x,score:null}));
-  const ranked=list.map((m:any)=>scoreModel(m,task,req,m.specific)).filter((x:any)=>x.eligible).sort((x:any,y:any)=>y.score-x.score);
+  const rescue=list.filter((m:any)=>m.provider===RESCUE_PROVIDER),primary=list.filter((m:any)=>m.provider!==RESCUE_PROVIDER);
+  if(variant==='control'){
+    const ordered=primary.sort((x:any,y:any)=>Number(x.priority)-Number(y.priority)).map((x:any)=>({...x,score:null}));
+    return placeRescueLast(ordered,rescue);
+  }
+  const ranked=primary.map((m:any)=>scoreModel(m,task,req,m.specific)).filter((x:any)=>x.eligible).sort((x:any,y:any)=>y.score-x.score);
   const preferred=ranked.filter((x:any)=>x.sufficient&&x.circuit_state==='CLOSED');
   const preferredSet=new Set(preferred);
   const closedFallbacks=ranked.filter((x:any)=>x.circuit_state==='CLOSED'&&!preferredSet.has(x));
   const halfOpenFallbacks=ranked.filter((x:any)=>x.circuit_state==='HALF_OPEN');
   const known=new Set([...preferred,...closedFallbacks,...halfOpenFallbacks]);
   const remaining=ranked.filter((x:any)=>!known.has(x));
-  return[...preferred,...closedFallbacks,...halfOpenFallbacks,...remaining];
+  return placeRescueLast([...preferred,...closedFallbacks,...halfOpenFallbacks,...remaining],rescue);
 }
 
 function hashPct(v:string){let h=2166136261;for(let i=0;i<v.length;i++){h^=v.charCodeAt(i);h=Math.imul(h,16777619)}return Math.abs(h)%100}
