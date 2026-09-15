@@ -23,22 +23,32 @@ jobs:
             python3 -c 'import json,re,sys; t=sys.stdin.read().strip(); t=re.sub(r"^```(?:json)?\s*", "", t, flags=re.I); t=re.sub(r"\s*```$", "", t); m=re.search(r"\{[\s\S]*\}", t); print(json.dumps(json.loads(m.group(0) if m else t), ensure_ascii=False))'
           }
           post_json() {
-            local payload="$1" timeout="${2:-45}" attempt=1 output code
+            local payload="$1" timeout="${2:-45}" attempt=1 response body http code
             while true; do
               set +e
-              output=$(curl -fsS --max-time "$timeout" "$EDGE_URL" -H 'content-type: application/json' -H "origin: $ORIGIN" --data-binary "$payload")
+              response=$(curl -sS --max-time "$timeout" -w $'\n%{http_code}' "$EDGE_URL" -H 'content-type: application/json' -H "origin: $ORIGIN" --data-binary "$payload")
               code=$?
               set -e
-              if [ "$code" -eq 0 ]; then printf '%s' "$output"; return 0; fi
-              case "$code" in
-                5|6|7|18|28|35|52|55|56)
-                  if [ "$attempt" -lt 3 ]; then
-                    echo "Transient transport error $code; retry $attempt/2" >&2
-                    sleep "$attempt"; attempt=$((attempt+1)); continue
-                  fi
-                  ;;
-              esac
-              return "$code"
+              if [ "$code" -ne 0 ]; then
+                case "$code" in
+                  5|6|7|18|28|35|52|55|56)
+                    if [ "$attempt" -lt 3 ]; then
+                      echo "Transient transport error $code; retry $attempt/2" >&2
+                      sleep "$attempt"; attempt=$((attempt+1)); continue
+                    fi
+                    ;;
+                esac
+                return "$code"
+              fi
+              http=$(tail -n1 <<<"$response")
+              body=$(sed '$d' <<<"$response")
+              if [[ "$http" =~ ^2[0-9][0-9]$ ]]; then printf '%s' "$body"; return 0; fi
+              if { [ "$http" = "429" ] || [ "$http" -ge 500 ]; } && [ "$attempt" -lt 3 ]; then
+                echo "Transient HTTP $http; retry $attempt/2" >&2
+                sleep "$attempt"; attempt=$((attempt+1)); continue
+              fi
+              echo "HTTP $http: ${body:0:600}" >&2
+              return 22
             done
           }
 
@@ -70,19 +80,32 @@ jobs:
             python3 -c 'import json,re,sys; t=sys.stdin.read().strip(); t=re.sub(r"^```(?:json)?\s*", "", t, flags=re.I); t=re.sub(r"\s*```$", "", t); m=re.search(r"\{[\s\S]*\}", t); print(json.dumps(json.loads(m.group(0) if m else t), ensure_ascii=False))'
           }
           post_json() {
-            local payload="$1" timeout="${2:-45}" attempt=1 output code
+            local payload="$1" timeout="${2:-45}" attempt=1 response body http code
             while true; do
               set +e
-              output=$(curl -fsS --max-time "$timeout" "$EDGE_URL" -H 'content-type: application/json' -H "origin: $ORIGIN" --data-binary "$payload")
+              response=$(curl -sS --max-time "$timeout" -w $'\n%{http_code}' "$EDGE_URL" -H 'content-type: application/json' -H "origin: $ORIGIN" --data-binary "$payload")
               code=$?
               set -e
-              if [ "$code" -eq 0 ]; then printf '%s' "$output"; return 0; fi
-              case "$code" in
-                5|6|7|18|28|35|52|55|56)
-                  if [ "$attempt" -lt 3 ]; then sleep "$attempt"; attempt=$((attempt+1)); continue; fi
-                  ;;
-              esac
-              return "$code"
+              if [ "$code" -ne 0 ]; then
+                case "$code" in
+                  5|6|7|18|28|35|52|55|56)
+                    if [ "$attempt" -lt 3 ]; then
+                      echo "Transient transport error $code; retry $attempt/2" >&2
+                      sleep "$attempt"; attempt=$((attempt+1)); continue
+                    fi
+                    ;;
+                esac
+                return "$code"
+              fi
+              http=$(tail -n1 <<<"$response")
+              body=$(sed '$d' <<<"$response")
+              if [[ "$http" =~ ^2[0-9][0-9]$ ]]; then printf '%s' "$body"; return 0; fi
+              if { [ "$http" = "429" ] || [ "$http" -ge 500 ]; } && [ "$attempt" -lt 3 ]; then
+                echo "Transient HTTP $http; retry $attempt/2" >&2
+                sleep "$attempt"; attempt=$((attempt+1)); continue
+              fi
+              echo "HTTP $http: ${body:0:600}" >&2
+              return 22
             done
           }
 
