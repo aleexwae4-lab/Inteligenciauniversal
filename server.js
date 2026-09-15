@@ -4,7 +4,7 @@ import { createReadStream } from 'node:fs';
 import { stat } from 'node:fs/promises';
 import { extname, join, normalize, basename } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import chatHandler from './api/chat.js';
+import chatHandler from './api/capacity-chat.js';
 import continuityHandler from './api/continuity.js';
 import performanceHandler from './api/performance.js';
 import healthHandler from './api/health.js';
@@ -45,6 +45,7 @@ function mobilePremiumHandler(req,res) {
       res.setHeader('Expires','0');
       res.setHeader('X-WAE-Mobile-Release','universal-core-mobile-v47-long-session');
       res.setHeader('X-WAE-Mobile-Fix','long-session-backpressure-v47');
+      res.setHeader('X-WAE-Capacity-Release','capacity-governor-v48');
       res.setHeader('X-WAE-Premium-Release','universal-core-rich-v43');
     }
     return nativeEnd(chunk, encoding, callback);
