@@ -54,6 +54,15 @@ test('successful outcomes update reliability and latency without claiming model 
   assert.ok(gateway.reliability>80);
 });
 
+test('nested provider labels are credited to the actual attempted WAE route',()=>{
+  __resetProviderMeshForTests();
+  const route={selectedProvider:'wae_edge',fallbackOrder:['wae_edge','wae_supabase','openai']};
+  observeProviderOutcome({route,result:{provider:'gemini',latencyMs:250,degraded:false,fallbackFailures:[]},now:35_000});
+  const snap=providerMeshSnapshot({registry,now:35_010});
+  assert.equal(snap.providers.find(x=>x.id==='wae_edge').successes,1);
+  assert.equal(snap.providers.find(x=>x.id==='openai').successes,0);
+});
+
 test('explicit provider selection is respected and simple chat stays on local fast path',()=>{
   __resetProviderMeshForTests();
   const explicit=selectProviderRoute({message:'Escribe una función en JavaScript.',mode:'code',requestedProvider:'openai',registry,now:40_000});
