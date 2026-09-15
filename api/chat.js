@@ -29,6 +29,11 @@ const publicIntent=intent=>intent?.changed?{
   corrections:intent.corrections
 }:undefined;
 
+function hardTruthFailure(error){
+  const quality=error?.quality;
+  return quality?.grounding?.hardFailure===true||quality?.requirementCoverage?.hardFailure===true;
+}
+
 export default async function handler(req,res) {
   applyHeaders(res);
   if (req.method !== 'POST') return res.status(405).json({error:'method_not_allowed'});
@@ -51,6 +56,20 @@ export default async function handler(req,res) {
     const result = await executeMission({ ...runtimeBody, userKey });
     return res.status(200).json({ ...result, input_interpretation:publicIntent(intent) });
   } catch (error) {
+    if (hardTruthFailure(error)) {
+      res.setHeader('X-WAE-Truth-Gate','rejected');
+      return res.status(422).json({
+        error:'truth_gate_rejected',
+        message:'La respuesta fue bloqueada porque no cumplió el contrato de evidencia o veracidad.',
+        recoverable:false,
+        quality:{
+          score:error.quality?.score,
+          reasons:error.quality?.reasons,
+          grounding:error.quality?.grounding,
+          requirementCoverage:error.quality?.requirementCoverage
+        }
+      });
+    }
     if (recoverableRuntimeError(error)) {
       try {
         const rescued = await rescueMission({ payload:runtimeBody, userKey, error });
