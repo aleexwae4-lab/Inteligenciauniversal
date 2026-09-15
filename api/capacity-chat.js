@@ -1,6 +1,33 @@
 import chatHandler from './chat.js';
 import { getClientIp } from '../lib/security.js';
 import { tryAcquireChatSlot } from '../lib/concurrency-governor.js';
+import { emergencyGenerate, EMERGENCY_GENERATION_VERSION } from '../lib/emergency-generation-v49.js';
+
+function bufferedResponse(real){
+  let code=200,payload,hasJson=false;
+  const proxy=new Proxy(real,{
+    get(target,prop){
+      if(prop==='status')return status=>{code=Number(status)||500;return proxy};
+      if(prop==='json')return body=>{payload=body;hasJson=true;return proxy};
+      if(prop==='statusCode')return code;
+      if(prop==='writableEnded')return target.writableEnded;
+      const value=target[prop];
+      return typeof value==='function'?value.bind(target):value;
+    },
+    set(target,prop,value){
+      if(prop==='statusCode'){code=Number(value)||code;return true}
+      target[prop]=value;return true;
+    }
+  });
+  return{proxy,get code(){return code},get payload(){return payload},get hasJson(){return hasJson}};
+}
+
+function retryableFailure(status,payload){
+  if(status<400)return false;
+  const code=String(payload?.error||payload?.code||'').toUpperCase();
+  if(['METHOD_NOT_ALLOWED','ORIGIN_NOT_ALLOWED','RATE_LIMITED','CAPACITY_BUSY'].includes(code))return false;
+  return payload?.recoverable===true||status>=500||/CONTINUITY|PROVIDER|RUNTIME|QUALITY|DEADLINE/.test(code);
+}
 
 export default async function capacityChatHandler(req,res){
   const body=req.body||{};
@@ -18,9 +45,33 @@ export default async function capacityChatHandler(req,res){
       retry_after_ms:slot.retryAfterMs
     });
   }
+
   res.setHeader('X-WAE-Capacity','admitted-v48');
   try{
-    return await chatHandler(req,res);
+    const buffered=bufferedResponse(res);
+    await chatHandler(req,buffered.proxy);
+
+    if(res.writableEnded)return;
+    if(!buffered.hasJson)return;
+
+    if(buffered.code<400){
+      return res.status(buffered.code).json(buffered.payload);
+    }
+
+    if(retryableFailure(buffered.code,buffered.payload)){
+      try{
+        const emergency=await emergencyGenerate({body,userKey:key,failure:buffered.payload});
+        if(emergency){
+          res.setHeader('X-WAE-Resilience',EMERGENCY_GENERATION_VERSION);
+          res.setHeader('X-WAE-Emergency-Provider',String(emergency.provider||'universal_core'));
+          return res.status(200).json(emergency);
+        }
+      }catch(error){
+        console.warn('[Emergency Generation v49]',String(error?.message||error).slice(0,240));
+      }
+    }
+
+    return res.status(buffered.code).json(buffered.payload);
   }finally{
     slot.release();
   }
