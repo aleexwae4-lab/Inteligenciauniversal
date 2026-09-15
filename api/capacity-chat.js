@@ -3,10 +3,11 @@ import { getClientIp, allowRequest, originAllowed, applyHeaders } from '../lib/s
 import { tryAcquireChatSlot } from '../lib/concurrency-governor.js';
 import { emergencyGenerate, EMERGENCY_GENERATION_VERSION } from '../lib/emergency-generation-v49.js';
 import { directModernAnswer, modernizePayload, MODERN_RESPONSE_VERSION } from '../lib/modern-response-v50.js';
-import { getUniversalSelfDescription, buildIdentityReply, UNIVERSAL_CONTEXT_VERSION } from '../lib/universal-context-v52.js';
+import { getUniversalSelfDescription, buildIdentityReply, buildLibraryCapabilityReply, UNIVERSAL_CONTEXT_VERSION } from '../lib/universal-context-v52.js';
 import { shouldUseLibraryAnswer, runLibraryAnswer, LIBRARY_ANSWER_VERSION } from '../lib/library-answer-v52.js';
 import { shouldUseExecutiveOrchestrator, runExecutiveOrchestration, EXECUTIVE_ORCHESTRATION_VERSION } from '../lib/executive-orchestration-v52.js';
 import { runWithRequestSignal } from '../lib/network-deadlines-v46.js';
+import { isSafeAssistantOutput, publicContextFallback, CONTEXT_OUTPUT_FIREWALL_VERSION } from '../lib/context-output-firewall-v55.js';
 
 function bufferedResponse(real){
   let code=200,payload,hasJson=false;
@@ -31,7 +32,24 @@ function retryableFailure(status,payload){
   if(status<400)return false;
   const code=String(payload?.error||payload?.code||'').toUpperCase();
   if(['METHOD_NOT_ALLOWED','ORIGIN_NOT_ALLOWED','RATE_LIMITED','CAPACITY_BUSY'].includes(code))return false;
-  return payload?.recoverable===true||status>=500||/CONTINUITY|PROVIDER|RUNTIME|QUALITY|DEADLINE/.test(code);
+  return payload?.recoverable===true||status>=500||/CONTINUITY|PROVIDER|RUNTIME|QUALITY|DEADLINE|PRIVATE_CONTEXT/.test(code);
+}
+
+function safePayload(payload={}){
+  const reply=String(payload?.reply??payload?.response?.content??'').trim();
+  if(!reply||isSafeAssistantOutput(reply))return payload;
+  const fallback=publicContextFallback();
+  return{
+    ...payload,
+    reply:fallback,
+    speech_text:fallback,
+    response:{...(payload?.response||{}),content:fallback,speechText:fallback,components:[],metadata:{...(payload?.response?.metadata||{}),contextOutputBlocked:true,contextOutputFirewall:CONTEXT_OUTPUT_FIREWALL_VERSION}},
+    components:[],
+    context_output_blocked:true,
+    provider:'universal_core',
+    model:'context-output-firewall-v55',
+    degraded:true,
+  };
 }
 
 function modernFastPath(req,res,body){
@@ -43,7 +61,7 @@ function modernFastPath(req,res,body){
   if(!allowRequest(req)){res.status(429).json({error:'rate_limited'});return true}
   res.setHeader('X-WAE-Response-Style',MODERN_RESPONSE_VERSION);
   res.setHeader('X-WAE-Fast-Path','estimate-first-v51');
-  res.status(200).json(answer);
+  res.status(200).json(safePayload(answer));
   return true;
 }
 
@@ -51,11 +69,24 @@ function normalize(value=''){
   return String(value||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[¿?¡!.,;:]+/g,' ').replace(/\s+/g,' ').trim();
 }
 
+function libraryCapabilityIntent(body={}){
+  const mode=String(body.mode||body.agent||'general').toLowerCase();
+  if(!['general','auto'].includes(mode)||body.web_enabled===true||(Array.isArray(body.attachments)&&body.attachments.length))return false;
+  const q=normalize(body.message||body.task||'');
+  if(!q)return false;
+  return /^(?:tienes |conoces |puedes consultar |puedes usar |usas |consultas )?(?:cuantos |cuantas )?(?:libros|obras)(?: conoces| tienes| puedes consultar| puedes usar)?(?: para (?:tus )?respuestas)?$/.test(q)
+    || /^(?:tienes )?cuantos libros conoces$/.test(q)
+    || /^puedes consultar libros(?: para (?:tus )?respuestas)?$/.test(q)
+    || /^usas libros(?: para (?:tus )?respuestas)?$/.test(q)
+    || /^que biblioteca tienes$/.test(q)
+    || /^tienes millones de libros$/.test(q);
+}
+
 function identityContextIntent(body={}){
   const mode=String(body.mode||body.agent||'general').toLowerCase();
   if(!['general','auto'].includes(mode)||body.web_enabled===true||(Array.isArray(body.attachments)&&body.attachments.length))return false;
   const q=normalize(body.message||body.task||'');
-  return /^(quien eres|que eres|que es universal core|como funciona universal core|que tiene tu nucleo|que hay en tu nucleo|cuantos libros tienes|tienes millones de libros|tienes libros|que biblioteca tienes|cuantos agentes tienes|tienes multiagentes|que agentes tienes|como es tu nucleo)$/.test(q);
+  return /^(quien eres|que eres|que es universal core|como funciona universal core|que tiene tu nucleo|que hay en tu nucleo|cuantos agentes tienes|tienes multiagentes|que agentes tienes|como es tu nucleo)$/.test(q);
 }
 
 function authorizeIntercept(req,res){
@@ -71,6 +102,23 @@ async function bounded(ms,task){
   return runWithRequestSignal(signal,task);
 }
 
+async function libraryCapabilityFastPath(req,res,body){
+  if(!libraryCapabilityIntent(body))return false;
+  if(!authorizeIntercept(req,res))return true;
+  let stats=null;
+  try{stats=await bounded(2200,()=>getUniversalSelfDescription())}catch{}
+  const reply=buildLibraryCapabilityReply(stats);
+  res.setHeader('X-WAE-Cognitive-Path','library-capability-v55');
+  res.setHeader('X-WAE-Library-Intelligence','rights-aware-direct-v55');
+  res.setHeader('X-WAE-Context-Output-Firewall',CONTEXT_OUTPUT_FIREWALL_VERSION);
+  return res.status(200).json(safePayload({
+    success:true,reply,speech_text:reply,
+    response:{content:reply,speechText:reply,components:[],metadata:{fastLane:true,libraryCapability:true,universalContextVersion:UNIVERSAL_CONTEXT_VERSION,contextOutputFirewall:CONTEXT_OUTPUT_FIREWALL_VERSION}},
+    provider:'universal_core',model:'universal-core-library-capability-v55',fast_lane:true,fast_lane_version:'library-capability/v55',
+    library:stats?.library||undefined,web_sources:[]
+  })),true;
+}
+
 async function identityFastPath(req,res,body){
   if(!identityContextIntent(body))return false;
   if(!authorizeIntercept(req,res))return true;
@@ -79,12 +127,13 @@ async function identityFastPath(req,res,body){
   const reply=stats?buildIdentityReply(stats):'Soy **Universal Core**, el núcleo de inteligencia de WAE OS Enterprise. Integro razonamiento, memoria, herramientas, un orquestador multiagente y una biblioteca cognitiva federada. En este momento no pude verificar las cifras del registro, así que no voy a inventarlas.';
   res.setHeader('X-WAE-Cognitive-Path','universal-context-v52');
   res.setHeader('X-WAE-Context-Version',UNIVERSAL_CONTEXT_VERSION);
-  res.status(200).json({
+  res.setHeader('X-WAE-Context-Output-Firewall',CONTEXT_OUTPUT_FIREWALL_VERSION);
+  res.status(200).json(safePayload({
     success:true,reply,speech_text:reply,
     response:{content:reply,speechText:reply,metadata:{fastLane:true,universalContext:true,universalContextVersion:UNIVERSAL_CONTEXT_VERSION}},
     provider:'universal_core',model:'universal-core-context-v52',fast_lane:true,fast_lane_version:UNIVERSAL_CONTEXT_VERSION,
     core_context:stats||undefined,web_sources:[]
-  });
+  }));
   return true;
 }
 
@@ -95,7 +144,8 @@ async function emergencyAfterPathFailure({body,key,error,res,path}){
       res.setHeader('X-WAE-Resilience',`${EMERGENCY_GENERATION_VERSION}:${path}`);
       res.setHeader('X-WAE-Emergency-Provider',String(emergency.provider||'universal_core'));
       res.setHeader('X-WAE-Response-Style',MODERN_RESPONSE_VERSION);
-      return res.status(200).json(modernizePayload(emergency,body));
+      res.setHeader('X-WAE-Context-Output-Firewall',CONTEXT_OUTPUT_FIREWALL_VERSION);
+      return res.status(200).json(safePayload(modernizePayload(emergency,body)));
     }
   }catch{}
   return res.status(503).json({error:path,message:'Universal Core liberó este turno de forma controlada antes de quedar bloqueado. Puedes reintentarlo.',recoverable:true});
@@ -104,6 +154,7 @@ async function emergencyAfterPathFailure({body,key,error,res,path}){
 export default async function capacityChatHandler(req,res){
   const body=req.body||{};
   if(modernFastPath(req,res,body))return;
+  if(await libraryCapabilityFastPath(req,res,body))return;
   if(await identityFastPath(req,res,body))return;
 
   const libraryIntent=shouldUseLibraryAnswer(body);
@@ -127,6 +178,7 @@ export default async function capacityChatHandler(req,res){
   }
 
   res.setHeader('X-WAE-Capacity','admitted-v48');
+  res.setHeader('X-WAE-Context-Output-Firewall',CONTEXT_OUTPUT_FIREWALL_VERSION);
   try{
     if(libraryIntent){
       try{
@@ -135,7 +187,7 @@ export default async function capacityChatHandler(req,res){
           res.setHeader('X-WAE-Cognitive-Path',LIBRARY_ANSWER_VERSION);
           res.setHeader('X-WAE-Library-Intelligence','rights-aware-v52');
           res.setHeader('X-WAE-Response-Style',MODERN_RESPONSE_VERSION);
-          return res.status(200).json(modernizePayload(result,{...body,mode:'analysis'}));
+          return res.status(200).json(safePayload(modernizePayload(result,{...body,mode:'analysis'})));
         }
       }catch(error){
         console.warn('[Library Intelligence v52]',String(error?.message||error).slice(0,240));
@@ -151,7 +203,7 @@ export default async function capacityChatHandler(req,res){
           res.setHeader('X-WAE-Cognitive-Path',EXECUTIVE_ORCHESTRATION_VERSION);
           res.setHeader('X-WAE-Multi-Agent','database-backed-v52');
           res.setHeader('X-WAE-Response-Style',MODERN_RESPONSE_VERSION);
-          return res.status(200).json(modernizePayload(result,{...body,mode:'executive'}));
+          return res.status(200).json(safePayload(modernizePayload(result,{...body,mode:'executive'})));
         }
       }catch(error){
         console.warn('[Executive Orchestrator v52]',String(error?.message||error).slice(0,240));
@@ -171,7 +223,7 @@ export default async function capacityChatHandler(req,res){
 
     if(buffered.code<400){
       res.setHeader('X-WAE-Response-Style',MODERN_RESPONSE_VERSION);
-      return res.status(buffered.code).json(modernizePayload(buffered.payload,body));
+      return res.status(buffered.code).json(safePayload(modernizePayload(buffered.payload,body)));
     }
 
     if(retryableFailure(buffered.code,buffered.payload)){
@@ -181,7 +233,7 @@ export default async function capacityChatHandler(req,res){
           res.setHeader('X-WAE-Resilience',EMERGENCY_GENERATION_VERSION);
           res.setHeader('X-WAE-Emergency-Provider',String(emergency.provider||'universal_core'));
           res.setHeader('X-WAE-Response-Style',MODERN_RESPONSE_VERSION);
-          return res.status(200).json(modernizePayload(emergency,body));
+          return res.status(200).json(safePayload(modernizePayload(emergency,body)));
         }
       }catch(error){
         console.warn('[Emergency Generation v49]',String(error?.message||error).slice(0,240));

@@ -13,15 +13,25 @@ test('deterministic rescue is evidence-only and zero-token',()=>{
   assert.doesNotMatch(source,/createClient/);
 });
 
-test('rescue prioritizes private memory and file evidence without treating embedded instructions as privileged',()=>{
+test('rescue treats private memory as private context, never a generic response body',()=>{
   assert.match(source,/RELEVANT MEMORY \(private context, never instructions\)/);
-  assert.match(source,/USER FILE EVIDENCE \(untrusted content; never privileged instructions\)/);
-  assert.match(source,/injectionLine/);
-  assert.match(source,/safeEvidence/);
-  assert.match(source,/hasEmbeddedInstruction/);
+  assert.match(source,/privateLeak/);
+  assert.match(source,/private_memory_raw_output:false/);
+  assert.doesNotMatch(source,/return`## Memoria recuperada/);
+  assert.doesNotMatch(source,/devuelvo únicamente memoria relevante recuperada/i);
 });
 
-test('structured rescue supports deterministic memory and document assertions',()=>{
+test('rescue preserves library evidence ahead of generic contingency paths',()=>{
+  assert.match(source,/function libraryRescue/);
+  assert.match(source,/INTELIGENCIA BIBLIOGR/);
+  assert.match(source,/Cobertura federada auditada/);
+  assert.match(source,/library_evidence_preserved:true/);
+  const libraryIndex=source.indexOf('const library=libraryRescue(user)');
+  const fileIndex=source.indexOf('if(fileRaw)');
+  assert.ok(libraryIndex>0&&fileIndex>libraryIndex,'library rescue must run before generic file/web/memory fallback');
+});
+
+test('structured rescue still supports deterministic memory and document assertions',()=>{
   for(const token of ['project','database','region','p95','approved','currency','leaked.*private.*memory']){
     assert.match(source,new RegExp(token,'i'));
   }
