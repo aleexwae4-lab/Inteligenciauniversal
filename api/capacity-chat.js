@@ -1,7 +1,8 @@
 import chatHandler from './chat.js';
-import { getClientIp } from '../lib/security.js';
+import { getClientIp, allowRequest, originAllowed, applyHeaders } from '../lib/security.js';
 import { tryAcquireChatSlot } from '../lib/concurrency-governor.js';
 import { emergencyGenerate, EMERGENCY_GENERATION_VERSION } from '../lib/emergency-generation-v49.js';
+import { directModernAnswer, modernizePayload, MODERN_RESPONSE_VERSION } from '../lib/modern-response-v50.js';
 
 function bufferedResponse(real){
   let code=200,payload,hasJson=false;
@@ -29,8 +30,23 @@ function retryableFailure(status,payload){
   return payload?.recoverable===true||status>=500||/CONTINUITY|PROVIDER|RUNTIME|QUALITY|DEADLINE/.test(code);
 }
 
+function modernFastPath(req,res,body){
+  const answer=directModernAnswer(body);
+  if(!answer)return false;
+  applyHeaders(res);
+  if(req.method!=='POST'){res.status(405).json({error:'method_not_allowed'});return true}
+  if(!originAllowed(req)){res.status(403).json({error:'origin_not_allowed'});return true}
+  if(!allowRequest(req)){res.status(429).json({error:'rate_limited'});return true}
+  res.setHeader('X-WAE-Response-Style',MODERN_RESPONSE_VERSION);
+  res.setHeader('X-WAE-Fast-Path','modern-conversation-v50');
+  res.status(200).json(answer);
+  return true;
+}
+
 export default async function capacityChatHandler(req,res){
   const body=req.body||{};
+  if(modernFastPath(req,res,body))return;
+
   const key=body.userKey||body.sessionId||body.session_id||getClientIp(req);
   const slot=tryAcquireChatSlot(key);
   if(!slot.ok){
@@ -55,7 +71,8 @@ export default async function capacityChatHandler(req,res){
     if(!buffered.hasJson)return;
 
     if(buffered.code<400){
-      return res.status(buffered.code).json(buffered.payload);
+      res.setHeader('X-WAE-Response-Style',MODERN_RESPONSE_VERSION);
+      return res.status(buffered.code).json(modernizePayload(buffered.payload,body));
     }
 
     if(retryableFailure(buffered.code,buffered.payload)){
@@ -64,7 +81,8 @@ export default async function capacityChatHandler(req,res){
         if(emergency){
           res.setHeader('X-WAE-Resilience',EMERGENCY_GENERATION_VERSION);
           res.setHeader('X-WAE-Emergency-Provider',String(emergency.provider||'universal_core'));
-          return res.status(200).json(emergency);
+          res.setHeader('X-WAE-Response-Style',MODERN_RESPONSE_VERSION);
+          return res.status(200).json(modernizePayload(emergency,body));
         }
       }catch(error){
         console.warn('[Emergency Generation v49]',String(error?.message||error).slice(0,240));
