@@ -29,26 +29,31 @@ function mobilePremiumHandler(req,res) {
     if (typeof chunk === 'string' && chunk.includes('</head>') && chunk.includes('</body>')) {
       if (!chunk.includes('mobile-v26.css')) chunk = chunk.replace('</head>', '<link rel="stylesheet" href="/mobile-v26.css?v=34"></head>');
       if (!chunk.includes('premium-v5.css')) chunk = chunk.replace('</head>', '<link rel="stylesheet" href="/premium-v5.css?v=43"></head>');
+      if (!chunk.includes('productivity-v59.css')) chunk = chunk.replace('</head>', '<link rel="stylesheet" href="/productivity-v59.css?v=59"></head>');
       const scripts = [];
       if (!chunk.includes('fast-lane-v23.js')) scripts.push('<script src="/fast-lane-v23.js?v=34" defer></script>');
       if (!chunk.includes('mobile-v26.js')) scripts.push('<script src="/mobile-v26.js?v=34" defer></script>');
       if (!chunk.includes('telemetry-throttle-v47.js')) scripts.push('<script src="/telemetry-throttle-v47.js?v=47" defer></script>');
-      if (!chunk.includes('mobile-runtime-v47.js')) scripts.push('<script src="/mobile-runtime-v47.js?v=47" defer></script>');
+      if (!chunk.includes('mobile-runtime-v47.js')) scripts.push('<script src="/mobile-runtime-v47.js?v=47&rev=59" defer></script>');
       if (!chunk.includes('mobile-bootstrap-v45.js')) scripts.push('<script src="/mobile-bootstrap-v45.js?v=45" defer></script>');
       if (!chunk.includes('semantic-ux-v32.js')) scripts.push('<script src="/semantic-ux-v32.js?v=46" defer></script>');
       if (!chunk.includes('speech-lifecycle-v46.js')) scripts.push('<script src="/speech-lifecycle-v46.js?v=46" defer></script>');
       if (!chunk.includes('mobile-voice-v46.js')) scripts.push('<script src="/mobile-voice-v46.js?v=46" defer></script>');
       if (!chunk.includes('learning-client-v29.js')) scripts.push('<script src="/learning-client-v29.js?v=34" defer></script>');
       if (!chunk.includes('premium-v5.js')) scripts.push('<script src="/premium-v5.js?v=43" defer></script>');
+      if (!chunk.includes('productivity-v59.js')) scripts.push('<script src="/productivity-v59.js?v=59" defer></script>');
       if (scripts.length) chunk = chunk.replace('</body>', `${scripts.join('')}</body>`);
       res.setHeader('Cache-Control','no-store, max-age=0, must-revalidate');
       res.setHeader('Pragma','no-cache');
       res.setHeader('Expires','0');
-      res.setHeader('X-WAE-Mobile-Release','universal-core-mobile-v47-long-session');
-      res.setHeader('X-WAE-Mobile-Fix','long-session-backpressure-v47');
+      res.setHeader('X-WAE-Mobile-Release','universal-core-mobile-v59-productivity');
+      res.setHeader('X-WAE-Mobile-Fix','context-history-projects-v59');
+      res.setHeader('X-WAE-Mobile-Compatible','universal-core-mobile-v47-long-session');
+      res.setHeader('X-WAE-Mobile-Compatible-Fix','long-session-backpressure-v47');
       res.setHeader('X-WAE-Capacity-Release','capacity-governor-v48');
       res.setHeader('X-WAE-Premium-Release','universal-core-rich-v43');
       res.setHeader('X-WAE-Live-Data','live-data-mesh/v58');
+      res.setHeader('X-WAE-Productivity','productivity/v59');
     }
     return nativeEnd(chunk, encoding, callback);
   };

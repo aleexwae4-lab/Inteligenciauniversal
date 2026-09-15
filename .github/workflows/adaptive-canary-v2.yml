@@ -30,7 +30,7 @@ jobs:
     env:
       EDGE_URL: https://pbswcbryxawsmltyromd.supabase.co/functions/v1/wae-local-voice-demo-v61
       ORIGIN: https://wae-inteligencia-universal.onrender.com
-      EDGE_VERSION: 1.9.0-universal-core-streaming-v22
+      EDGE_VERSION: 1.9.1-context-isolation-v55
       EDGE_ROUTER: wae-adaptive-router-v22
     steps:
       - name: Verify v22 adaptive control plane
