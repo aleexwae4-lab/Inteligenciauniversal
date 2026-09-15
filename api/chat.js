@@ -36,6 +36,33 @@ function protocolFastPathEligible(body={}) {
   return false;
 }
 
+function conversationalHelpReply(body={}) {
+  const mode=String(body?.mode || 'general').toLowerCase();
+  if(!['general','auto'].includes(mode) || body?.web_enabled===true || (Array.isArray(body?.attachments)&&body.attachments.length))return null;
+  const q=normalizeFastPath(body?.message || body?.task || '');
+  const match=q.match(/^(?:me )?(?:puedes|podrias) ayudar(?:me)? (?:con|en|a) (.+)$/);
+  if(!match)return null;
+  const topic=match[1].trim();
+  if(!topic||topic.length>180)return null;
+  if(/presidencia.*universidad|universidad.*presidencia/.test(topic)){
+    return 'Sí. Puedo ayudarte con la presidencia de tu universidad: estrategia, plan de trabajo, propuestas, discurso, organización, comunicación y toma de decisiones. Dime si buscas ganar la presidencia, preparar una propuesta o dirigirla mejor y avanzamos desde ahí.';
+  }
+  return `Sí. Puedo ayudarte con ${topic}. Dime qué resultado quieres conseguir, qué contexto ya tienes y qué restricción es la más importante; con eso te propongo el siguiente paso concreto.`;
+}
+
+function responseBudgetMs(body={}){
+  const mode=String(body?.mode||body?.agent||'general').toLowerCase();
+  if(body?.web_enabled===true||mode==='research')return 30_000;
+  if(['analysis','code','design','executive'].includes(mode))return 24_000;
+  return 18_000;
+}
+
+function withDeadline(promise,ms,code){
+  let timer;
+  const deadline=new Promise((_,reject)=>{timer=setTimeout(()=>{const error=new Error(`${code.toLowerCase()}_${ms}ms`);error.code=code;error.statusCode=504;reject(error)},ms)});
+  return Promise.race([promise,deadline]).finally(()=>clearTimeout(timer));
+}
+
 const publicIntent=intent=>intent?.changed?{
   normalized:true,
   domain:intent.domain,
@@ -61,6 +88,8 @@ export default async function handler(req,res) {
   const userKey = body.userKey || body.sessionId || getClientIp(req);
   const intent=normalizeUserIntent(body.message || body.task || '');
   const runtimeBody=intent.changed?{...body,message:intent.text}:body;
+  const budget=responseBudgetMs(runtimeBody);
+  res.setHeader('X-WAE-Response-Budget-Ms',String(budget));
 
   if (protocolFastPathEligible(runtimeBody)) {
     const protocolBody={...runtimeBody,message:canonicalProtocolPrompt(runtimeBody.message || runtimeBody.task || '')};
@@ -69,6 +98,23 @@ export default async function handler(req,res) {
       res.setHeader('X-WAE-Fast-Path','deterministic-protocol-v4');
       return res.status(200).json({ ...fast, fast_lane:true, fast_lane_version:'server-protocol/v4', input_interpretation:publicIntent(intent) });
     }
+  }
+
+  const helpReply=conversationalHelpReply(runtimeBody);
+  if(helpReply){
+    res.setHeader('X-WAE-Fast-Path','conversational-help-v46');
+    return res.status(200).json({
+      success:true,
+      reply:helpReply,
+      speech_text:helpReply,
+      response:{content:helpReply,speechText:helpReply,metadata:{fastLane:true,fastLaneVersion:'conversational-help/v46'}},
+      provider:'universal_core',
+      model:'universal-core-conversation-fast-v46',
+      fast_lane:true,
+      fast_lane_version:'conversational-help/v46',
+      web_sources:[],
+      input_interpretation:publicIntent(intent)
+    });
   }
 
   const route=selectProviderRoute({
@@ -81,7 +127,7 @@ export default async function handler(req,res) {
 
   if(councilEligible({route,body:runtimeBody})){
     try{
-      const council=await deliberateMission({body:runtimeBody,userKey,route});
+      const council=await withDeadline(deliberateMission({body:runtimeBody,userKey,route}),Math.min(10_000,budget),'COUNCIL_DEADLINE');
       if(council){
         res.setHeader('X-WAE-Cognitive-Path','universal-council-v40');
         if(council?.response?.metadata)council.response.metadata={...council.response.metadata,providerMesh:routing};
@@ -94,15 +140,15 @@ export default async function handler(req,res) {
 
   const routedBody=route.applied?{...runtimeBody,provider:route.selectedProvider}:runtimeBody;
   try {
-    const result = await executeMission({ ...routedBody, userKey });
+    const result = await withDeadline(executeMission({ ...routedBody, userKey }),budget,'RUNTIME_DEADLINE');
     observeProviderOutcome({route,result});
     if(result?.response?.metadata)result.response.metadata={...result.response.metadata,providerMesh:routing};
     return res.status(200).json({ ...result, input_interpretation:publicIntent(intent), provider_mesh:routing });
   } catch (error) {
     observeProviderOutcome({route,error});
-    if (recoverableRuntimeError(error)) {
+    if (error?.code !== 'RUNTIME_DEADLINE' && recoverableRuntimeError(error)) {
       try {
-        const rescued = await rescueMission({ payload:runtimeBody, userKey, error });
+        const rescued = await withDeadline(rescueMission({ payload:runtimeBody, userKey, error }),2_500,'RESCUE_DEADLINE');
         if (rescued) {
           res.setHeader('X-WAE-Resilience','recovered');
           return res.status(200).json({ ...rescued, input_interpretation:publicIntent(intent), provider_mesh:routing });
@@ -111,7 +157,9 @@ export default async function handler(req,res) {
         console.warn('[Universal Core Rescue]', String(rescueError?.message || rescueError));
       }
     }
+    const deadline=error?.code==='RUNTIME_DEADLINE';
+    if(deadline)res.setHeader('X-WAE-Resilience','deadline-enforced-v46');
     const status = error.statusCode || (error.code === 'NO_PROVIDER' ? 503 : 502);
-    return res.status(status).json({ error:error.code || 'runtime_error', message:String(error.message || error), failures:error.failures || undefined, recoverable:recoverableRuntimeError(error), provider_mesh:routing });
+    return res.status(status).json({ error:error.code || 'runtime_error', message:deadline?'Universal Core agotó el presupuesto de respuesta antes de quedar bloqueado por una dependencia externa.':String(error.message || error), failures:error.failures || undefined, recoverable:true, provider_mesh:routing });
   }
 }
