@@ -2,6 +2,7 @@ import { executeMission } from '../lib/runtime.js';
 import { allowRequest, originAllowed, applyHeaders, getClientIp } from '../lib/security.js';
 import { rescueMission, recoverableRuntimeError } from '../lib/intelligence-rescue.js';
 import { normalizeUserIntent } from '../lib/input-intelligence.js';
+import { selectProviderRoute, observeProviderOutcome } from '../lib/provider-mesh.js';
 
 function normalizeFastPath(value='') {
   return String(value || '')
@@ -39,6 +40,15 @@ const publicIntent=intent=>intent?.changed?{
   corrections:intent.corrections
 }:undefined;
 
+const publicRoute=route=>route?{
+  contract:route.contract,
+  strategy:route.strategy,
+  applied:route.applied===true,
+  selected_provider:route.selectedProvider,
+  task:{category:route.task?.category,path:route.task?.path,risk:route.task?.risk,complexity:route.task?.complexity},
+  candidates:Array.isArray(route.candidates)?route.candidates:[]
+}:undefined;
+
 export default async function handler(req,res) {
   applyHeaders(res);
   if (req.method !== 'POST') return res.status(405).json({error:'method_not_allowed'});
@@ -58,22 +68,34 @@ export default async function handler(req,res) {
     }
   }
 
+  const route=selectProviderRoute({
+    message:runtimeBody.message || runtimeBody.task || '',
+    mode:runtimeBody.mode || runtimeBody.agent || 'general',
+    attachments:Array.isArray(runtimeBody.attachments)?runtimeBody.attachments:[],
+    requestedProvider:runtimeBody.provider || 'auto'
+  });
+  const routedBody=route.applied?{...runtimeBody,provider:route.selectedProvider}:runtimeBody;
+
   try {
-    const result = await executeMission({ ...runtimeBody, userKey });
-    return res.status(200).json({ ...result, input_interpretation:publicIntent(intent) });
+    const result = await executeMission({ ...routedBody, userKey });
+    observeProviderOutcome({route,result});
+    const routing=publicRoute(route);
+    if(result?.response?.metadata)result.response.metadata={...result.response.metadata,providerMesh:routing};
+    return res.status(200).json({ ...result, input_interpretation:publicIntent(intent), provider_mesh:routing });
   } catch (error) {
+    observeProviderOutcome({route,error});
     if (recoverableRuntimeError(error)) {
       try {
         const rescued = await rescueMission({ payload:runtimeBody, userKey, error });
         if (rescued) {
           res.setHeader('X-WAE-Resilience','recovered');
-          return res.status(200).json({ ...rescued, input_interpretation:publicIntent(intent) });
+          return res.status(200).json({ ...rescued, input_interpretation:publicIntent(intent), provider_mesh:publicRoute(route) });
         }
       } catch (rescueError) {
         console.warn('[Universal Core Rescue]', String(rescueError?.message || rescueError));
       }
     }
     const status = error.statusCode || (error.code === 'NO_PROVIDER' ? 503 : 502);
-    return res.status(status).json({ error:error.code || 'runtime_error', message:String(error.message || error), failures:error.failures || undefined, recoverable:recoverableRuntimeError(error) });
+    return res.status(status).json({ error:error.code || 'runtime_error', message:String(error.message || error), failures:error.failures || undefined, recoverable:recoverableRuntimeError(error), provider_mesh:publicRoute(route) });
   }
 }
