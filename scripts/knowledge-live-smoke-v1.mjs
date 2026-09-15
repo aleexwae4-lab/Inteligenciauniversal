@@ -1,4 +1,4 @@
-import { createKnowledgeConnectors } from '../lib/knowledge/connectors-live-v1.js';
+import { createKnowledgeConnectors } from '../lib/knowledge/connectors-scientific-v2.js';
 import { searchKnowledge } from '../lib/knowledge/fabric-v1.js';
 
 const connectors=createKnowledgeConnectors();
@@ -8,6 +8,7 @@ const probes=[
   ['wikidata','Albert Einstein'],
   ['wikipedia','Albert Einstein'],
   ['pubmed','hypertension'],
+  ['europe_pmc','hypertension randomized controlled trial'],
   ['arxiv','transformer neural network'],
   ['open_library','Don Quixote'],
   ['zenodo','machine learning']
@@ -36,16 +37,18 @@ for(const [id,query] of probes){
 }
 
 try{
-  const fused=await searchKnowledge('machine learning',{sources:['openalex','crossref'],perSource:2,limit:4});
+  const fused=await searchKnowledge('hypertension clinical evidence',{sources:['pubmed','europe_pmc','openalex','crossref'],perSource:2,limit:6,includeGlobalIndex:false});
   if(!fused.records?.length)throw new Error('fused_retrieval_empty');
   if(fused.citations.length!==fused.records.length)throw new Error('citation_count_mismatch');
   if(!fused.citations.every(c=>c.url&&c.title&&c.source))throw new Error('citation_provenance_incomplete');
   if(!fused.source_status.every(s=>s.status==='healthy'))throw new Error(`fused_source_degraded:${JSON.stringify(fused.source_status)}`);
-  results.push({source:'fabric_fusion',status:'PASS',documents_retrieved:fused.documents_retrieved,documents_after_dedup:fused.documents_after_dedup,citations:fused.citations.length,source_status:fused.source_status});
+  if(!fused.scientific_evidence||fused.scientific_evidence.total!==fused.records.length)throw new Error('scientific_profile_missing');
+  if(!fused.records.every(r=>r.quality?.scientific?.integrity))throw new Error('integrity_profile_missing');
+  results.push({source:'scientific_fusion',status:'PASS',documents_retrieved:fused.documents_retrieved,documents_after_dedup:fused.documents_after_dedup,citations:fused.citations.length,scientific_evidence:fused.scientific_evidence,integrity_conflicts:fused.integrity_conflicts?.length||0,source_status:fused.source_status});
 }catch(error){
   failed=true;
-  results.push({source:'fabric_fusion',status:'FAIL',error:String(error?.message||error).slice(0,180)});
+  results.push({source:'scientific_fusion',status:'FAIL',error:String(error?.message||error).slice(0,240)});
 }
 
-console.log(JSON.stringify({schema:'wae-knowledge-live-smoke/v1',checked_at:new Date().toISOString(),results},null,2));
+console.log(JSON.stringify({schema:'wae-knowledge-live-smoke/v70-scientific',checked_at:new Date().toISOString(),results},null,2));
 if(failed)process.exitCode=1;
