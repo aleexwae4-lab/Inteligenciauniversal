@@ -4,7 +4,7 @@ import { createReadStream } from 'node:fs';
 import { stat } from 'node:fs/promises';
 import { extname, join, normalize, basename } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import chatHandler from './api/capacity-chat-v58.js';
+import chatHandler from './api/capacity-chat-v60.js';
 import continuityHandler from './api/continuity.js';
 import performanceHandler from './api/performance.js';
 import healthHandler from './api/health.js';
@@ -34,7 +34,7 @@ function mobilePremiumHandler(req,res) {
       if (!chunk.includes('fast-lane-v23.js')) scripts.push('<script src="/fast-lane-v23.js?v=34" defer></script>');
       if (!chunk.includes('mobile-v26.js')) scripts.push('<script src="/mobile-v26.js?v=34" defer></script>');
       if (!chunk.includes('telemetry-throttle-v47.js')) scripts.push('<script src="/telemetry-throttle-v47.js?v=47" defer></script>');
-      if (!chunk.includes('mobile-runtime-v47.js')) scripts.push('<script src="/mobile-runtime-v47.js?v=47&rev=59" defer></script>');
+      if (!chunk.includes('mobile-runtime-v47.js')) scripts.push('<script src="/mobile-runtime-v47.js?v=47&rev=60" defer></script>');
       if (!chunk.includes('mobile-bootstrap-v45.js')) scripts.push('<script src="/mobile-bootstrap-v45.js?v=45" defer></script>');
       if (!chunk.includes('semantic-ux-v32.js')) scripts.push('<script src="/semantic-ux-v32.js?v=46" defer></script>');
       if (!chunk.includes('speech-lifecycle-v46.js')) scripts.push('<script src="/speech-lifecycle-v46.js?v=46" defer></script>');
@@ -46,7 +46,7 @@ function mobilePremiumHandler(req,res) {
       res.setHeader('Cache-Control','no-store, max-age=0, must-revalidate');
       res.setHeader('Pragma','no-cache');
       res.setHeader('Expires','0');
-      res.setHeader('X-WAE-Mobile-Release','universal-core-mobile-v59-productivity');
+      res.setHeader('X-WAE-Mobile-Release','universal-core-mobile-v60-answer-intelligence');
       res.setHeader('X-WAE-Mobile-Fix','context-history-projects-v59');
       res.setHeader('X-WAE-Mobile-Compatible','universal-core-mobile-v47-long-session');
       res.setHeader('X-WAE-Mobile-Compatible-Fix','long-session-backpressure-v47');
@@ -54,6 +54,7 @@ function mobilePremiumHandler(req,res) {
       res.setHeader('X-WAE-Premium-Release','universal-core-rich-v43');
       res.setHeader('X-WAE-Live-Data','live-data-mesh/v58');
       res.setHeader('X-WAE-Productivity','productivity/v59');
+      res.setHeader('X-WAE-Answer-Intelligence','answer-intelligence/v60');
     }
     return nativeEnd(chunk, encoding, callback);
   };
