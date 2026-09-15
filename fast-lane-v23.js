@@ -2,6 +2,7 @@
   'use strict';
   const downstream=window.fetch.bind(window);
   const FAST_ENDPOINT='/api/fast-chat';
+  const RETRYABLE_STATUS=new Set([500,502,503,504]);
   const normalize=value=>String(value||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[¿?¡!.,;:]+/g,' ').replace(/\s+/g,' ').trim();
   const safeMode=body=>String(body?.mode||'general').toLowerCase()==='general';
   const noHeavyContext=body=>!(Array.isArray(body?.attachments)&&body.attachments.length)&&body?.web_enabled!==true;
@@ -19,6 +20,40 @@
       const raw=typeof input==='string'?input:input?.url,url=new URL(raw,location.href);
       return url.pathname==='/api/chat'||url.pathname.includes('/functions/v1/wae-local-voice-demo-v61');
     }catch{return false}
+  }
+  const wait=ms=>new Promise(resolve=>setTimeout(resolve,ms));
+  function retryInit(init={}){
+    const headers=new Headers(init.headers||{});
+    headers.set('x-wae-lifecycle-retry','1');
+    return {...init,headers};
+  }
+  async function responseRetryable(response){
+    if(!response||!RETRYABLE_STATUS.has(Number(response.status)))return false;
+    let data={};
+    try{data=await response.clone().json()}catch{}
+    const code=String(data?.error||'').toUpperCase();
+    if(['RATE_LIMITED','CAPACITY_BUSY'].includes(code)||Number(response.status)===429)return false;
+    return data?.recoverable!==false;
+  }
+  async function resilientDownstream(input,init={}){
+    try{
+      const first=await downstream(input,init);
+      if(!(await responseRetryable(first))||init.signal?.aborted)return first;
+      await wait(180);
+      if(init.signal?.aborted)return first;
+      const second=await downstream(input,retryInit(init));
+      window.dispatchEvent(new CustomEvent('wae:lifecycle-retry',{detail:{firstStatus:first.status,secondStatus:second.status,recovered:second.ok}}));
+      return second;
+    }catch(firstError){
+      if(init.signal?.aborted)throw firstError;
+      await wait(180);
+      if(init.signal?.aborted)throw firstError;
+      try{
+        const second=await downstream(input,retryInit(init));
+        window.dispatchEvent(new CustomEvent('wae:lifecycle-retry',{detail:{firstStatus:0,secondStatus:second.status,recovered:second.ok}}));
+        return second;
+      }catch{throw firstError}
+    }
   }
   async function fastReply(body,signal){
     const message=String(body?.message||body?.task||'').trim();
@@ -40,7 +75,7 @@
     const body=parseBody(init);
     if(body?.action&&body.action!=='chat')return downstream(input,init);
     const fast=await fastReply(body,init.signal);
-    return fast||downstream(input,init);
+    return fast||resilientDownstream(input,init);
   };
-  window.__iuFastLane={eligible,version:'v23'};
+  window.__iuFastLane={eligible,version:'v64-response-lifecycle',retryPolicy:{attempts:1,delayMs:180,excludedErrors:['RATE_LIMITED','CAPACITY_BUSY']}};
 })();
