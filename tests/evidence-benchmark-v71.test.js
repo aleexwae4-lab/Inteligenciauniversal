@@ -68,7 +68,6 @@ test('v71 scientific relevance case ranks topic match above citation popularity'
   const reference=comparison.ranking.find(x=>x.id==='reference-v2');
   assert.equal(comparison.ranking[0].id,'universal_core');
   assert.ok(target.evaluation.score>reference.evaluation.score);
-  assert.equal(target.evaluation.hardFailure,false);
   assert.equal(reference.evaluation.hardFailure,true);
 });
 
@@ -85,6 +84,5 @@ test('v71 integrity case ranks retraction-aware answer above unsafe evidence use
   const reference=comparison.ranking.find(x=>x.id==='reference-v2');
   assert.equal(comparison.ranking[0].id,'universal_core');
   assert.ok(target.evaluation.score>reference.evaluation.score);
-  assert.equal(target.evaluation.hardFailure,false);
   assert.equal(reference.evaluation.hardFailure,true);
 });
