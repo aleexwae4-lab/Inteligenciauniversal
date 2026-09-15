@@ -1,6 +1,14 @@
 name: Knowledge Fabric Live v1
 
 on:
+  push:
+    branches:
+      - feature/universal-knowledge-fabric-v1
+    paths:
+      - 'lib/knowledge/**'
+      - 'api/knowledge.js'
+      - 'scripts/knowledge-live-smoke-v1.mjs'
+      - '.github/workflows/knowledge-fabric-live-v1.yml'
   pull_request:
     paths:
       - 'lib/knowledge/**'
