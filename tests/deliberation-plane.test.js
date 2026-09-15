@@ -17,21 +17,25 @@ const registry=[
   {id:'openai',configured:false,model:'gpt'}
 ];
 
-test('Council v40 activates for substantive analysis and preserves explicit opt-out',()=>{
+test('Council v40 is opt-in or reserved for explicit deep analytical modes',()=>{
   assert.equal(COUNCIL_VERSION,'universal-council/v40');
-  assert.equal(councilEligible({route:route(),body:{message:'Analiza esta arquitectura y compara sus riesgos operativos con alternativas de producción.',provider:'auto'}}),true);
-  assert.equal(councilEligible({route:route(),body:{message:'Analiza esta arquitectura y compara sus riesgos operativos con alternativas de producción.',provider:'auto',council_mode:false}}),false);
+  const message='Analiza esta arquitectura y compara sus riesgos operativos con alternativas de producción.';
+  assert.equal(councilEligible({route:route(),body:{message,mode:'general',provider:'auto'}}),false);
+  assert.equal(councilEligible({route:route(),body:{message,mode:'analysis',provider:'auto'}}),false);
+  assert.equal(councilEligible({route:route({task:{category:'analysis',path:'DEEP',risk:'low',complexity:'high'}}),body:{message,mode:'analysis',provider:'auto'}}),true);
+  assert.equal(councilEligible({route:route(),body:{message,mode:'general',provider:'auto',council_mode:true}}),true);
+  assert.equal(councilEligible({route:route(),body:{message,mode:'analysis',provider:'auto',council_mode:false}}),false);
 });
 
 test('Council v40 fails closed for sensitive data, attachments, research and high-risk routes',()=>{
-  assert.equal(councilEligible({route:route(),body:{message:'Analiza el expediente del paciente con CURP ABCD000000HJCLXX00',provider:'auto'}}),false);
-  assert.equal(councilEligible({route:route(),body:{message:'Analiza esta estrategia empresarial con profundidad suficiente para decidir.',provider:'auto',attachments:[{name:'private.txt'}]}}),false);
-  assert.equal(councilEligible({route:route(),body:{message:'Investiga noticias recientes y compara las fuentes.',provider:'auto',web_enabled:true}}),false);
-  assert.equal(councilEligible({route:route({task:{category:'high_risk',path:'DEEP',risk:'high',complexity:'high'}}),body:{message:'Analiza este caso legal complejo con información privada.',provider:'auto'}}),false);
+  assert.equal(councilEligible({route:route(),body:{message:'Analiza el expediente del paciente con CURP ABCD000000HJCLXX00',mode:'analysis',provider:'auto',council_mode:true}}),false);
+  assert.equal(councilEligible({route:route(),body:{message:'Analiza esta estrategia empresarial con profundidad suficiente para decidir.',mode:'analysis',provider:'auto',attachments:[{name:'private.txt'}],council_mode:true}}),false);
+  assert.equal(councilEligible({route:route(),body:{message:'Investiga noticias recientes y compara las fuentes.',mode:'research',provider:'auto',web_enabled:true,council_mode:true}}),false);
+  assert.equal(councilEligible({route:route({task:{category:'high_risk',path:'DEEP',risk:'high',complexity:'high'}}),body:{message:'Analiza este caso legal complejo con información privada.',mode:'analysis',provider:'auto',council_mode:true}}),false);
 });
 
 test('Council v40 respects explicit provider choice and requires multiple configured providers',()=>{
-  assert.equal(councilEligible({route:route(),body:{message:'Analiza esta arquitectura en profundidad y produce una recomendación.',provider:'gemini'}}),false);
+  assert.equal(councilEligible({route:route({task:{category:'analysis',path:'DEEP',risk:'low',complexity:'high'}}),body:{message:'Analiza esta arquitectura en profundidad y produce una recomendación.',mode:'analysis',provider:'gemini'}}),false);
   assert.deepEqual(selectCouncilProviders(route(),registry,3),['wae_edge','wae_supabase','gemini']);
   assert.deepEqual(selectCouncilProviders(route(),registry.slice(0,1),3),['wae_edge']);
 });

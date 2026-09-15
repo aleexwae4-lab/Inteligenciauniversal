@@ -4,7 +4,7 @@ import { readFile } from 'node:fs/promises';
 
 const read = name => readFile(new URL(`../${name}`, import.meta.url), 'utf8');
 
-test('server exposes the premium Universal Core mobile route with v34 transport and v46 voice', async () => {
+test('server exposes premium mobile route with v47 backpressure and v46 voice', async () => {
   const server = await read('server.js');
   assert.match(server, /\/api\/mobile/);
   assert.match(server, /\/api\/ui-diagnostics/);
@@ -17,14 +17,15 @@ test('server exposes the premium Universal Core mobile route with v34 transport 
   assert.match(server, /mobile-v26\.css\?v=34/);
   assert.match(server, /fast-lane-v23\.js\?v=34/);
   assert.match(server, /mobile-v26\.js\?v=34/);
-  assert.match(server, /mobile-runtime-v34\.js\?v=44/);
+  assert.match(server, /telemetry-throttle-v47\.js\?v=47/);
+  assert.match(server, /mobile-runtime-v47\.js\?v=47/);
   assert.match(server, /mobile-bootstrap-v45\.js\?v=45/);
   assert.match(server, /semantic-ux-v32\.js\?v=46/);
   assert.match(server, /speech-lifecycle-v46\.js\?v=46/);
   assert.match(server, /mobile-voice-v46\.js\?v=46/);
   assert.match(server, /learning-client-v29\.js\?v=34/);
-  assert.match(server, /universal-core-mobile-v46-responsive-voice/);
-  assert.match(server, /voice-chat-deadline-v46/);
+  assert.match(server, /universal-core-mobile-v47-long-session/);
+  assert.match(server, /long-session-backpressure-v47/);
   assert.match(server, /desktop.*=== '1'/s);
 });
 
@@ -77,20 +78,23 @@ test('mobile base remains a self-contained premium conversational surface', asyn
   assert.doesNotMatch(mobile, /navigator\.serviceWorker\.register/);
 });
 
-test('mobile keeps diagnostics privacy-safe and never logs prompt content', async () => {
+test('mobile keeps diagnostics privacy-safe and v47 suppresses per-key transport', async () => {
   const mobile = await read('api/mobile.js');
   const diagnostics = await read('api/ui-diagnostics.js');
+  const throttle = await read('telemetry-throttle-v47.js');
   assert.match(mobile, /valueLength/);
   assert.match(diagnostics, /ALLOWED_EVENTS/);
   assert.match(diagnostics, /\[UI_DIAGNOSTIC\]/);
   assert.doesNotMatch(diagnostics, /body\.message/);
   assert.doesNotMatch(diagnostics, /body\.text/);
   assert.doesNotMatch(diagnostics, /body\.content/);
+  assert.match(throttle, /'input'/);
+  assert.match(throttle, /throttled:true/);
 });
 
-test('legacy mobile surface remains compatible while v34 bridge strips forced control routing', async () => {
+test('legacy mobile surface remains compatible while v47 strips forced control and deduplicates fallbacks', async () => {
   const mobile = await read('api/mobile.js');
-  const bridge = await read('mobile-runtime-v34.js');
+  const bridge = await read('mobile-runtime-v47.js');
   assert.match(mobile, /streamAvailable/);
   assert.match(mobile, /streamEdge/);
   assert.match(mobile, /edge\(payload,70000\)/);
@@ -100,5 +104,6 @@ test('legacy mobile surface remains compatible while v34 bridge strips forced co
   assert.match(mobile, /routing_variant:'control'/);
   assert.match(bridge, /delete body\.routing_variant/);
   assert.match(bridge, /\/api\/chat/);
+  assert.match(bridge, /directChatRequest/);
   assert.doesNotMatch(bridge, /routing_variant:'control'/);
 });

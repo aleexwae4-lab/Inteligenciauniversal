@@ -31,7 +31,8 @@ function mobilePremiumHandler(req,res) {
       const scripts = [];
       if (!chunk.includes('fast-lane-v23.js')) scripts.push('<script src="/fast-lane-v23.js?v=34" defer></script>');
       if (!chunk.includes('mobile-v26.js')) scripts.push('<script src="/mobile-v26.js?v=34" defer></script>');
-      if (!chunk.includes('mobile-runtime-v34.js')) scripts.push('<script src="/mobile-runtime-v34.js?v=44" defer></script>');
+      if (!chunk.includes('telemetry-throttle-v47.js')) scripts.push('<script src="/telemetry-throttle-v47.js?v=47" defer></script>');
+      if (!chunk.includes('mobile-runtime-v47.js')) scripts.push('<script src="/mobile-runtime-v47.js?v=47" defer></script>');
       if (!chunk.includes('mobile-bootstrap-v45.js')) scripts.push('<script src="/mobile-bootstrap-v45.js?v=45" defer></script>');
       if (!chunk.includes('semantic-ux-v32.js')) scripts.push('<script src="/semantic-ux-v32.js?v=46" defer></script>');
       if (!chunk.includes('speech-lifecycle-v46.js')) scripts.push('<script src="/speech-lifecycle-v46.js?v=46" defer></script>');
@@ -42,8 +43,8 @@ function mobilePremiumHandler(req,res) {
       res.setHeader('Cache-Control','no-store, max-age=0, must-revalidate');
       res.setHeader('Pragma','no-cache');
       res.setHeader('Expires','0');
-      res.setHeader('X-WAE-Mobile-Release','universal-core-mobile-v46-responsive-voice');
-      res.setHeader('X-WAE-Mobile-Fix','voice-chat-deadline-v46');
+      res.setHeader('X-WAE-Mobile-Release','universal-core-mobile-v47-long-session');
+      res.setHeader('X-WAE-Mobile-Fix','long-session-backpressure-v47');
       res.setHeader('X-WAE-Premium-Release','universal-core-rich-v43');
     }
     return nativeEnd(chunk, encoding, callback);

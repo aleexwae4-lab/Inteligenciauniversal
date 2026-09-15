@@ -4,6 +4,7 @@ import { rescueMission, recoverableRuntimeError } from '../lib/intelligence-resc
 import { normalizeUserIntent } from '../lib/input-intelligence.js';
 import { selectProviderRoute, observeProviderOutcome } from '../lib/provider-mesh.js';
 import { councilEligible, deliberateMission } from '../lib/deliberation-plane.js';
+import { runWithRequestSignal } from '../lib/network-deadlines-v46.js';
 
 function normalizeFastPath(value='') {
   return String(value || '')
@@ -57,10 +58,38 @@ function responseBudgetMs(body={}){
   return 18_000;
 }
 
-function withDeadline(promise,ms,code){
-  let timer;
-  const deadline=new Promise((_,reject)=>{timer=setTimeout(()=>{const error=new Error(`${code.toLowerCase()}_${ms}ms`);error.code=code;error.statusCode=504;reject(error)},ms)});
-  return Promise.race([promise,deadline]).finally(()=>clearTimeout(timer));
+function withAbortableDeadline(task,ms,code,parentSignal){
+  const controller=new AbortController();
+  let timer=null,settled=false,removeParent=()=>{};
+  return new Promise((resolve,reject)=>{
+    const finish=(fn,value)=>{
+      if(settled)return;
+      settled=true;
+      if(timer)clearTimeout(timer);
+      removeParent();
+      fn(value);
+    };
+    const abortFor=(error)=>{
+      if(!controller.signal.aborted)controller.abort(error);
+      finish(reject,error);
+    };
+    if(parentSignal){
+      const relay=()=>{
+        const error=Object.assign(new Error('request_cancelled'),{code:'REQUEST_CANCELLED',statusCode:499});
+        abortFor(error);
+      };
+      if(parentSignal.aborted)return relay();
+      parentSignal.addEventListener('abort',relay,{once:true});
+      removeParent=()=>parentSignal.removeEventListener('abort',relay);
+    }
+    timer=setTimeout(()=>{
+      const error=Object.assign(new Error(`${code.toLowerCase()}_${ms}ms`),{code,statusCode:504});
+      abortFor(error);
+    },ms);
+    Promise.resolve()
+      .then(()=>runWithRequestSignal(controller.signal,task))
+      .then(value=>finish(resolve,value),error=>finish(reject,error));
+  });
 }
 
 const publicIntent=intent=>intent?.changed?{
@@ -84,12 +113,21 @@ export default async function handler(req,res) {
   if (req.method !== 'POST') return res.status(405).json({error:'method_not_allowed'});
   if (!originAllowed(req)) return res.status(403).json({error:'origin_not_allowed'});
   if (!allowRequest(req)) return res.status(429).json({error:'rate_limited'});
+
+  const clientController=new AbortController();
+  const abortClient=()=>{
+    if(!clientController.signal.aborted)clientController.abort(new DOMException('Client disconnected','AbortError'));
+  };
+  req.once?.('aborted',abortClient);
+  res.once?.('close',()=>{if(!res.writableEnded)abortClient()});
+
   const body = req.body || {};
   const userKey = body.userKey || body.sessionId || getClientIp(req);
   const intent=normalizeUserIntent(body.message || body.task || '');
   const runtimeBody=intent.changed?{...body,message:intent.text}:body;
   const budget=responseBudgetMs(runtimeBody);
   res.setHeader('X-WAE-Response-Budget-Ms',String(budget));
+  res.setHeader('X-WAE-Long-Session','abortable-v47');
 
   if (protocolFastPathEligible(runtimeBody)) {
     const protocolBody={...runtimeBody,message:canonicalProtocolPrompt(runtimeBody.message || runtimeBody.task || '')};
@@ -127,39 +165,57 @@ export default async function handler(req,res) {
 
   if(councilEligible({route,body:runtimeBody})){
     try{
-      const council=await withDeadline(deliberateMission({body:runtimeBody,userKey,route}),Math.min(10_000,budget),'COUNCIL_DEADLINE');
+      const council=await withAbortableDeadline(
+        ()=>deliberateMission({body:runtimeBody,userKey,route}),
+        Math.min(10_000,budget),
+        'COUNCIL_DEADLINE',
+        clientController.signal
+      );
       if(council){
         res.setHeader('X-WAE-Cognitive-Path','universal-council-v40');
         if(council?.response?.metadata)council.response.metadata={...council.response.metadata,providerMesh:routing};
         return res.status(200).json({...council,input_interpretation:publicIntent(intent),provider_mesh:routing});
       }
     }catch(councilError){
+      if(councilError?.code==='REQUEST_CANCELLED')return;
       console.warn('[Universal Council v40]',String(councilError?.message||councilError));
     }
   }
 
   const routedBody=route.applied?{...runtimeBody,provider:route.selectedProvider}:runtimeBody;
   try {
-    const result = await withDeadline(executeMission({ ...routedBody, userKey }),budget,'RUNTIME_DEADLINE');
+    const result = await withAbortableDeadline(
+      ()=>executeMission({ ...routedBody, userKey }),
+      budget,
+      'RUNTIME_DEADLINE',
+      clientController.signal
+    );
     observeProviderOutcome({route,result});
     if(result?.response?.metadata)result.response.metadata={...result.response.metadata,providerMesh:routing};
     return res.status(200).json({ ...result, input_interpretation:publicIntent(intent), provider_mesh:routing });
   } catch (error) {
+    if(error?.code==='REQUEST_CANCELLED')return;
     observeProviderOutcome({route,error});
     if (error?.code !== 'RUNTIME_DEADLINE' && recoverableRuntimeError(error)) {
       try {
-        const rescued = await withDeadline(rescueMission({ payload:runtimeBody, userKey, error }),2_500,'RESCUE_DEADLINE');
+        const rescued = await withAbortableDeadline(
+          ()=>rescueMission({ payload:runtimeBody, userKey, error }),
+          2_500,
+          'RESCUE_DEADLINE',
+          clientController.signal
+        );
         if (rescued) {
           res.setHeader('X-WAE-Resilience','recovered');
           return res.status(200).json({ ...rescued, input_interpretation:publicIntent(intent), provider_mesh:routing });
         }
       } catch (rescueError) {
+        if(rescueError?.code==='REQUEST_CANCELLED')return;
         console.warn('[Universal Core Rescue]', String(rescueError?.message || rescueError));
       }
     }
     const deadline=error?.code==='RUNTIME_DEADLINE';
-    if(deadline)res.setHeader('X-WAE-Resilience','deadline-enforced-v46');
+    if(deadline)res.setHeader('X-WAE-Resilience','deadline-enforced-v47');
     const status = error.statusCode || (error.code === 'NO_PROVIDER' ? 503 : 502);
-    return res.status(status).json({ error:error.code || 'runtime_error', message:deadline?'Universal Core agotó el presupuesto de respuesta antes de quedar bloqueado por una dependencia externa.':String(error.message || error), failures:error.failures || undefined, recoverable:true, provider_mesh:routing });
+    return res.status(status).json({ error:error.code || 'runtime_error', message:deadline?'Universal Core agotó el presupuesto de respuesta y canceló el trabajo interno antes de quedar bloqueado.':String(error.message || error), failures:error.failures || undefined, recoverable:true, provider_mesh:routing });
   }
 }
