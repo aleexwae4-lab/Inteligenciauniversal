@@ -28,16 +28,21 @@
     return {matches:!!url&&url.origin===location.origin&&url.pathname==='/api/chat'&&String(init.method||'GET').toUpperCase()==='POST',body};
   }
 
+  function safeHistory(value){
+    return (Array.isArray(value)?value:[]).slice(-20).filter(x=>x&&['user','assistant'].includes(x.role)).map(x=>({role:x.role,text:String(x.text??x.content??'').slice(0,12000)}));
+  }
+
   function renderPayload(body={}){
     return {
       message:String(body.message||''),
       mode:String(body.mode||'general'),
       sessionId:String(body.session_id||body.sessionId||''),
+      history:safeHistory(body.history),
       attachments:Array.isArray(body.attachments)?body.attachments:[],
       web_enabled:body.web_enabled===true,
       provider:'auto',
       council_mode:false,
-      preferences:{responseStyle:'premium-rich',voiceNatural:true,longSession:true}
+      preferences:{responseStyle:'premium-rich',voiceNatural:true,longSession:true,...(body.preferences&&typeof body.preferences==='object'?body.preferences:{})}
     };
   }
 
@@ -49,7 +54,8 @@
 
   function turnKey(body={}){
     const attachments=(Array.isArray(body.attachments)?body.attachments:[]).map(a=>`${String(a?.name||'').slice(0,80)}:${String(a?.text||'').length}`).join('|');
-    const material=[String(body.message||''),String(body.mode||'general'),body.web_enabled===true?'1':'0',attachments].join('\u241f');
+    const history=safeHistory(body.history).slice(-4).map(x=>`${x.role}:${x.text.slice(0,160)}`).join('|');
+    const material=[String(body.message||''),String(body.mode||'general'),body.web_enabled===true?'1':'0',attachments,history].join('\u241f');
     return hash(material);
   }
 
@@ -84,7 +90,7 @@
         method:'POST',
         headers:{
           'content-type':'application/json',
-          'x-wae-mobile-runtime':'v47-long-session-backpressure',
+          'x-wae-mobile-runtime':'v59-context-continuity',
           'x-wae-mobile-attempt':'1'
         },
         body:JSON.stringify(payload),
@@ -112,7 +118,7 @@
       headers:{
         'content-type':'application/json; charset=utf-8',
         'cache-control':'no-store',
-        'x-wae-runtime':'mobile-long-session-v47',
+        'x-wae-runtime':'mobile-context-v59',
         ...extra
       }
     });
@@ -134,7 +140,7 @@
       headers:{
         'content-type':'text/event-stream; charset=utf-8',
         'cache-control':'no-store',
-        'x-wae-runtime':'mobile-long-session-v47',
+        'x-wae-runtime':'mobile-context-v59',
         ...extra
       }
     });
@@ -220,6 +226,6 @@
     return previousFetch(input,init);
   };
 
-  window.__WAE_MOBILE_RUNTIME_V47__={version:'47.0.0',singleAttempt:true,dedupeMs:RECENT_TTL_MS,backpressure:true};
-  document.documentElement.dataset.mobileRuntime='v47-long-session-backpressure';
+  window.__WAE_MOBILE_RUNTIME_V47__={version:'59.0.0',singleAttempt:true,dedupeMs:RECENT_TTL_MS,backpressure:true,history:true};
+  document.documentElement.dataset.mobileRuntime='v59-context-continuity';
 })();
