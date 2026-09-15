@@ -23,19 +23,33 @@
     .replace(/÷/g,' dividido entre ')
     .replace(/\s+/g,' ').trim();
 
+  function wrapTable(table){
+    table.classList.add('rich-table');
+    let wrap=table.closest('.rich-table-wrap');
+    if(!wrap&&table.parentNode){
+      wrap=document.createElement('div');
+      wrap.className='rich-table-wrap';
+      table.parentNode.insertBefore(wrap,table);
+      wrap.appendChild(table);
+    }
+    return wrap;
+  }
+
   function enhanceTables(root=document){
-    root.querySelectorAll?.('.rich-table').forEach(table=>{
+    const tables=root.querySelectorAll?.('.rich-table,.assistant-body table')||[];
+    tables.forEach(table=>{
+      const wrap=wrapTable(table);
       const headers=[...table.querySelectorAll('thead th')].map(x=>x.textContent.trim());
       table.querySelectorAll('tbody tr').forEach(row=>[...row.children].forEach((cell,index)=>{
         if(cell.tagName==='TD'&&!cell.dataset.label)cell.dataset.label=headers[index]||`Columna ${index+1}`;
       }));
-      table.closest('.rich-table-wrap')?.setAttribute('data-mobile-table','stacked');
+      wrap?.setAttribute('data-mobile-table','stacked');
     });
   }
 
   function normalizeRenderedMath(root=document){
     const scope=root.querySelectorAll?root:document;
-    scope.querySelectorAll?.('.rich-answer').forEach(answer=>{
+    scope.querySelectorAll?.('.rich-answer,.assistant-body').forEach(answer=>{
       const walker=document.createTreeWalker(answer,NodeFilter.SHOW_TEXT);
       const nodes=[];let node;
       while((node=walker.nextNode())){
@@ -49,12 +63,12 @@
   const style=document.createElement('style');
   style.id='semanticUxV32Styles';
   style.textContent=`
-    .rich-answer{overflow-wrap:anywhere;word-break:normal}
+    .rich-answer,.assistant-body{overflow-wrap:anywhere;word-break:normal}
     .rich-table-wrap{max-width:100%;overflow-x:auto;overscroll-behavior-x:contain;-webkit-overflow-scrolling:touch}
     .rich-table{max-width:100%}
     @media(max-width:640px){
       .rich-table-wrap[data-mobile-table="stacked"]{overflow:visible;border:0!important;background:transparent!important}
-      .rich-table-wrap[data-mobile-table="stacked"] .rich-table{display:block;width:100%;min-width:0!important;border-collapse:separate}
+      .rich-table-wrap[data-mobile-table="stacked"] .rich-table{display:block;width:100%;min-width:0!important;border-collapse:separate;margin:8px 0 14px!important;overflow:visible!important}
       .rich-table-wrap[data-mobile-table="stacked"] thead{position:absolute!important;width:1px!important;height:1px!important;overflow:hidden!important;clip:rect(0 0 0 0)!important;white-space:nowrap!important}
       .rich-table-wrap[data-mobile-table="stacked"] tbody{display:grid;gap:8px;width:100%}
       .rich-table-wrap[data-mobile-table="stacked"] tr{display:block;width:100%;border:1px solid rgba(255,255,255,.08);border-radius:12px;background:rgba(255,255,255,.025);overflow:hidden}
