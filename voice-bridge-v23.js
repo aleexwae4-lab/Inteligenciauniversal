@@ -10,7 +10,7 @@
   async function applyDesired(){const v=engine();if(!v)return false;await v.unlock?.();await v.setEnabled?.(desired());sync({enabled:v.enabled,state:v.enabled?'ready':'disabled'});return true}
   function install(){
     const legacySpeak=window.speakAnswer;
-    if(typeof legacySpeak==='function')window.speakAnswer=(text)=>{const v=engine();if(v)return v.speak?.(text);return legacySpeak(text)};
+    if(typeof legacySpeak==='function')window.speakAnswer=(text)=>{if(window.__iuSuppressNextAutoSpeech===true){window.__iuSuppressNextAutoSpeech=false;return false}return legacySpeak(text)};
     const native=document.getElementById('voiceBtn');
     if(native){native.setAttribute('aria-pressed',String(desired()));native.addEventListener('click',()=>{queueMicrotask(async()=>{const v=engine();if(!v)return;await v.unlock?.();await v.setEnabled?.(desired());sync({enabled:v.enabled})})})}
     const form=document.getElementById('mobileSafeComposer'),send=document.getElementById('mobileSafeSend');
