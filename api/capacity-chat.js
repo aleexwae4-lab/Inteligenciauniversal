@@ -38,7 +38,7 @@ function modernFastPath(req,res,body){
   if(!originAllowed(req)){res.status(403).json({error:'origin_not_allowed'});return true}
   if(!allowRequest(req)){res.status(429).json({error:'rate_limited'});return true}
   res.setHeader('X-WAE-Response-Style',MODERN_RESPONSE_VERSION);
-  res.setHeader('X-WAE-Fast-Path','modern-conversation-v50');
+  res.setHeader('X-WAE-Fast-Path','estimate-first-v51');
   res.status(200).json(answer);
   return true;
 }

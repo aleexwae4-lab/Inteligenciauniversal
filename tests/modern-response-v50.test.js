@@ -12,12 +12,14 @@ test('OpenAI comparison from clip answers directly and concisely',()=>{
   assert.equal(out.response.metadata.modernResponseVersion,MODERN_RESPONSE_VERSION);
 });
 
-test('development cost question gives useful range instead of refusal-first answer',()=>{
+test('development cost question gives auditable engineering range instead of refusal-first answer',()=>{
   const out=directModernAnswer({message:'Cuánto dinero crees que cueste tu desarrollo como Universal Core?',mode:'general'});
   assert.equal(out.success,true);
-  assert.match(out.reply,/\$2–8 M MXN/);
-  assert.match(out.reply,/\$8–20\+ M MXN/);
-  assert.doesNotMatch(out.reply,/^No es posible/i);
+  assert.match(out.reply,/\$6–18 M MXN/);
+  assert.match(out.reply,/\$15–30\+ M MXN/);
+  assert.match(out.reply,/5–8 perfiles senior/);
+  assert.match(out.reply,/20–35%/);
+  assert.doesNotMatch(out.reply,/^No es posible|no hay datos oficiales/i);
 });
 
 test('simple general oversized answers are compacted for mobile and voice',()=>{
