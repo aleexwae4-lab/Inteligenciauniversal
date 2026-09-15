@@ -27,10 +27,10 @@ function mobilePremiumHandler(req,res) {
       if (!chunk.includes('mobile-v26.js')) scripts.push('<script src="/mobile-v26.js" defer></script>');
       if (!chunk.includes('fast-lane-v23.js')) scripts.push('<script src="/fast-lane-v23.js" defer></script>');
       if (!chunk.includes('mobile-voice-v27.js')) scripts.push('<script src="/mobile-voice-v27.js" defer></script>');
-      if (!chunk.includes('learning-client-v28.js')) scripts.push('<script src="/learning-client-v28.js?v=1" defer></script>');
+      if (!chunk.includes('learning-client-v29.js')) scripts.push('<script src="/learning-client-v29.js?v=1" defer></script>');
       if (scripts.length) chunk = chunk.replace('</body>', `${scripts.join('')}</body>`);
       res.setHeader('Cache-Control','no-store, max-age=0');
-      res.setHeader('X-WAE-Mobile-Release','universal-core-mobile-v28-adaptive-learning');
+      res.setHeader('X-WAE-Mobile-Release','universal-core-mobile-v29-promotion-gated-learning');
     }
     return nativeEnd(chunk, encoding, callback);
   };
