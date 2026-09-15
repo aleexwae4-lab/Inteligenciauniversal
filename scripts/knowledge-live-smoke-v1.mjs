@@ -50,5 +50,23 @@ try{
   results.push({source:'scientific_fusion',status:'FAIL',error:String(error?.message||error).slice(0,240)});
 }
 
-console.log(JSON.stringify({schema:'wae-knowledge-live-smoke/v70-scientific',checked_at:new Date().toISOString(),results},null,2));
+try{
+  const query='¿Qué tipo de evidencia científica existe sobre hipertensión y cómo debo interpretar preprints frente a ensayos aleatorizados?';
+  const multilingual=await searchKnowledge(query,{mode:'research',maxSources:5,perSource:2,limit:6,includeGlobalIndex:false});
+  if(multilingual.understanding?.domains?.[0]!=='medicine')throw new Error(`spanish_domain_wrong:${JSON.stringify(multilingual.understanding?.domains)}`);
+  if(multilingual.sources_selected?.[0]!=='pubmed'||multilingual.sources_selected?.[1]!=='europe_pmc')throw new Error(`spanish_source_priority_wrong:${JSON.stringify(multilingual.sources_selected)}`);
+  const q=String(multilingual.understanding?.rerank_normalized||'');
+  if(!q.includes('hypertension')||!q.includes('randomized')||!q.includes('trial'))throw new Error(`spanish_rerank_query_wrong:${q}`);
+  if(!multilingual.records?.length)throw new Error('spanish_retrieval_empty');
+  const top=multilingual.records[0];
+  const semanticText=`${top.title||''} ${(top.topics||[]).join(' ')}`.toLowerCase();
+  if(!/(hypertension|blood pressure|hypertensive)/.test(semanticText))throw new Error(`spanish_top_result_not_hypertension:${top.title||'missing'}`);
+  if(!multilingual.source_status.filter(s=>['pubmed','europe_pmc'].includes(s.source_id)).every(s=>s.status==='healthy'))throw new Error(`spanish_biomedical_source_degraded:${JSON.stringify(multilingual.source_status)}`);
+  results.push({source:'spanish_scientific_routing_reranking',status:'PASS',domain:multilingual.understanding.domains[0],sources:multilingual.sources_selected.slice(0,4),rerank_query:q,top_title:String(top.title).slice(0,140),top_source:top.source?.id,top_relevance:top.quality?.relevance,top_score:top.quality?.rerank_score});
+}catch(error){
+  failed=true;
+  results.push({source:'spanish_scientific_routing_reranking',status:'FAIL',error:String(error?.message||error).slice(0,300)});
+}
+
+console.log(JSON.stringify({schema:'wae-knowledge-live-smoke/v70.2-multilingual',checked_at:new Date().toISOString(),results},null,2));
 if(failed)process.exitCode=1;
