@@ -8,6 +8,7 @@ import continuityHandler from './api/continuity.js';
 import performanceHandler from './api/performance.js';
 import healthHandler from './api/health.js';
 import capabilitiesHandler from './api/capabilities.js';
+import evalsHandler from './api/evals.js';
 import tasksHandler from './api/tasks.js';
 import orchestrateHandler from './api/orchestrate.js';
 import mobileHandler from './api/mobile.js';
@@ -24,8 +25,6 @@ function mobilePremiumHandler(req,res) {
     if (typeof chunk === 'string' && chunk.includes('</head>') && chunk.includes('</body>')) {
       if (!chunk.includes('mobile-v26.css')) chunk = chunk.replace('</head>', '<link rel="stylesheet" href="/mobile-v26.css?v=30"></head>');
       const scripts = [];
-      // Fast lane must wrap fetch before the cognitive interceptor. This lets mobile-v26
-      // delegate conversational/meta prompts to /api/fast-chat instead of bypassing it.
       if (!chunk.includes('fast-lane-v23.js')) scripts.push('<script src="/fast-lane-v23.js?v=30" defer></script>');
       if (!chunk.includes('mobile-v26.js')) scripts.push('<script src="/mobile-v26.js?v=30" defer></script>');
       if (!chunk.includes('mobile-voice-v27.js')) scripts.push('<script src="/mobile-voice-v27.js?v=30" defer></script>');
@@ -47,6 +46,7 @@ const apiRoutes = new Map([
   ['/api/performance', performanceHandler],
   ['/api/health', healthHandler],
   ['/api/capabilities', capabilitiesHandler],
+  ['/api/evals', evalsHandler],
   ['/api/tasks', tasksHandler],
   ['/api/orchestrate', orchestrateHandler],
   ['/api/mobile', mobilePremiumHandler],
@@ -58,7 +58,7 @@ const contentTypes = {
   '.css': 'text/css; charset=utf-8',
   '.js': 'text/javascript; charset=utf-8',
   '.json': 'application/json; charset=utf-8',
-  '.webmanifest': 'application/manifest+json; charset=utf-8',
+  '.webmanifest': 'application/manifest+json',
   '.svg': 'image/svg+xml',
   '.png': 'image/png',
   '.jpg': 'image/jpg',
@@ -191,5 +191,5 @@ server.headersTimeout = 65_000;
 server.keepAliveTimeout = 5_000;
 
 server.listen(PORT, HOST, () => {
-  console.log(`[WAE Universal Runtime] listening on http://0.0.0.0:${PORT}`);
+  console.log(`[WAE Universal Runtime] listening on http://${HOST}:${PORT}`);
 });

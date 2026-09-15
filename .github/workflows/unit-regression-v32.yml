@@ -1,4 +1,4 @@
-name: Unit Regression Matrix v34
+name: Unit Regression Matrix v35
 
 on:
   pull_request:
@@ -27,12 +27,13 @@ jobs:
           - test/response.test.js
           - test/sse-events.test.js
           - test/universal-core-ui.test.js
+          - tests/evaluation-plane.test.js
           - tests/input-intelligence.test.js
           - tests/quality.test.js
-          - tests/verification.test.js
           - tests/response-assurance.test.js
           - tests/self-improvement.test.js
           - tests/supremacy-runtime.test.js
+          - tests/verification.test.js
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
