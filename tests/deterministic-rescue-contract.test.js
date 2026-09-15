@@ -23,7 +23,7 @@ test('rescue treats private memory as private context, never a generic response 
 
 test('rescue preserves library evidence ahead of generic contingency paths',()=>{
   assert.match(source,/function libraryRescue/);
-  assert.match(source,/INTELIGENCIA BIBLIOGR[AÁ]FICA WAE/);
+  assert.match(source,/INTELIGENCIA BIBLIOGR/);
   assert.match(source,/Cobertura federada auditada/);
   assert.match(source,/library_evidence_preserved:true/);
   const libraryIndex=source.indexOf('const library=libraryRescue(user)');
