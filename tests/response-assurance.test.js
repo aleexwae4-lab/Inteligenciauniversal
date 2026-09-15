@@ -131,15 +131,18 @@ test('mobile v34 bridges Edge chat to Render adaptive provider mesh', () => {
   assert.doesNotMatch(bridge,/routing_variant:'control'/);
 });
 
-test('mobile boot loads adaptive bridge after relevance guard', () => {
+test('mobile boot loads adaptive bridge and non-blocking bootstrap before auxiliary layers', () => {
   const source=readFileSync(new URL('../server.js',import.meta.url),'utf8');
   const fast=source.indexOf("fast-lane-v23.js?v=34");
   const cognitive=source.indexOf("mobile-v26.js?v=34");
   const bridge=source.indexOf("mobile-runtime-v34.js?v=44");
+  const bootstrap=source.indexOf("mobile-bootstrap-v45.js?v=45");
+  const voice=source.indexOf("mobile-voice-v27.js?v=34");
   const semantic=source.indexOf("semantic-ux-v32.js?v=34");
-  assert.ok(fast>=0 && cognitive>=0 && bridge>=0 && semantic>=0 && fast<cognitive && cognitive<bridge && bridge<semantic);
+  assert.ok(fast>=0 && cognitive>=0 && bridge>=0 && bootstrap>=0 && voice>=0 && semantic>=0);
+  assert.ok(fast<cognitive && cognitive<bridge && bridge<bootstrap && bootstrap<voice && voice<semantic);
   assert.match(source,/universal-core-mobile-v34-adaptive-mesh/);
-  assert.match(source,/auto-fastpath-v44/);
+  assert.match(source,/render-first-bootstrap-v45/);
 });
 
 test('service worker v34 evicts stale cache and makes navigations network-first', () => {

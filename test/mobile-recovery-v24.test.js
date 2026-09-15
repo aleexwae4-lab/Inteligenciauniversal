@@ -18,11 +18,12 @@ test('server exposes the premium Universal Core mobile route and v34 adaptive ru
   assert.match(server, /fast-lane-v23\.js\?v=34/);
   assert.match(server, /mobile-v26\.js\?v=34/);
   assert.match(server, /mobile-runtime-v34\.js\?v=44/);
+  assert.match(server, /mobile-bootstrap-v45\.js\?v=45/);
   assert.match(server, /mobile-voice-v27\.js\?v=34/);
   assert.match(server, /semantic-ux-v32\.js\?v=34/);
   assert.match(server, /learning-client-v29\.js\?v=34/);
   assert.match(server, /universal-core-mobile-v34-adaptive-mesh/);
-  assert.match(server, /auto-fastpath-v44/);
+  assert.match(server, /render-first-bootstrap-v45/);
   assert.match(server, /desktop.*=== '1'/s);
 });
 
