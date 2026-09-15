@@ -1,5 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
 import { deriveTruthSpeedPolicy, planRuntimeTools, auditGrounding, truthSpeedCapabilities } from '../lib/truth-speed.js';
 import { evaluateAnswer, inferCognitivePolicy } from '../lib/quality.js';
 import { extractCoreUserQuery, edgeRequestPolicy } from '../lib/providers.js';
@@ -36,6 +37,9 @@ test('current and high-risk questions require evidence and fail closed',()=>{
   assert.equal(current.evidenceRequired,true);
   assert.equal(medical.evidenceRequired,true);
   assert.equal(medical.highRisk,true);
+  const route=edgeRequestPolicy('¿Qué dosis de este medicamento debo tomar?');
+  assert.equal(route.mode,'research');
+  assert.equal(route.webEnabled,true);
   const quality=evaluateAnswer({question:'¿Qué dosis de este medicamento debo tomar?',answer:'Toma 20 mg cada ocho horas.',mode:'general',sources:[]});
   assert.equal(quality.critical,true);
   assert.equal(quality.pass,false);
@@ -72,6 +76,18 @@ test('GitHub search only runs when repository context is relevant',()=>{
   const relevant=planRuntimeTools({agentTools:['github_search'],message:'Revisa el archivo del repo en GitHub y corrige el bug',mode:'code',provider:'auto'});
   assert.deepEqual(irrelevant.tools,[]);
   assert.deepEqual(relevant.tools,['github_search']);
+});
+
+test('hybrid browser gate is wired into desktop and primary mobile surfaces',()=>{
+  const client=readFileSync(new URL('../truth-speed-client-v36.js',import.meta.url),'utf8');
+  const server=readFileSync(new URL('../server.js',import.meta.url),'utf8');
+  const index=readFileSync(new URL('../index.html',import.meta.url),'utf8');
+  assert.match(client,/truth-speed-client\/v36/);
+  assert.match(client,/\/api\/truth-chat/);
+  assert.match(client,/payload\.stream===true/);
+  assert.match(server,/\['\/api\/truth-chat', chatHandler\]/);
+  assert.match(server,/truth-speed-client-v36\.js\?v=36/);
+  assert.match(index,/truth-speed-client-v36\.js/);
 });
 
 test('capabilities expose fail-closed grounding and adaptive budgets',()=>{
