@@ -28,11 +28,14 @@ function mobilePremiumHandler(req,res) {
       if (!chunk.includes('fast-lane-v23.js')) scripts.push('<script src="/fast-lane-v23.js?v=30" defer></script>');
       if (!chunk.includes('mobile-v26.js')) scripts.push('<script src="/mobile-v26.js?v=30" defer></script>');
       if (!chunk.includes('mobile-voice-v27.js')) scripts.push('<script src="/mobile-voice-v27.js?v=30" defer></script>');
+      // Truth-Speed wraps fetch before semantic-ux. semantic-ux remains outermost so
+      // contextual ASR normalization still happens before sensitive routing decisions.
+      if (!chunk.includes('truth-speed-client-v36.js')) scripts.push('<script src="/truth-speed-client-v36.js?v=36" defer></script>');
       if (!chunk.includes('semantic-ux-v32.js')) scripts.push('<script src="/semantic-ux-v32.js?v=33" defer></script>');
       if (!chunk.includes('learning-client-v29.js')) scripts.push('<script src="/learning-client-v29.js?v=30" defer></script>');
       if (scripts.length) chunk = chunk.replace('</body>', `${scripts.join('')}</body>`);
       res.setHeader('Cache-Control','no-store, max-age=0');
-      res.setHeader('X-WAE-Mobile-Release','universal-core-mobile-v33-edge-context');
+      res.setHeader('X-WAE-Mobile-Release','universal-core-mobile-v36-truth-speed');
     }
     return nativeEnd(chunk, encoding, callback);
   };
@@ -41,6 +44,7 @@ function mobilePremiumHandler(req,res) {
 
 const apiRoutes = new Map([
   ['/api/chat', chatHandler],
+  ['/api/truth-chat', chatHandler],
   ['/api/fast-chat', chatHandler],
   ['/api/continuity/chat/completions', continuityHandler],
   ['/api/performance', performanceHandler],
