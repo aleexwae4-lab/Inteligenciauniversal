@@ -8,16 +8,17 @@ const registry=[
   {id:'openai',configured:true,model:'model-a'}
 ];
 
-test('provider mesh v62 preserves stable priority before evidence exists',()=>{
+test('provider mesh v63 preserves stable priority before persistent evidence exists',()=>{
   __resetProviderMeshForTests();
   const route=selectProviderRoute({message:'Analiza la arquitectura de este servicio y sus riesgos.',mode:'analysis',registry,now:1_000});
-  assert.equal(route.contract,'universal-provider-mesh/v2');
-  assert.equal(route.version,'adaptive-performance-router/v62');
+  assert.equal(route.contract,'universal-provider-mesh/v3');
+  assert.equal(route.version,'adaptive-performance-router/v63');
   assert.equal(route.applied,true);
   assert.equal(route.selectedProvider,'wae_edge');
-  assert.equal(route.strategy,'quality_performance_adaptive');
+  assert.equal(route.strategy,'persistent_quality_performance_adaptive');
   assert.equal(route.policy.qualityAware,true);
   assert.equal(route.policy.ttftAware,true);
+  assert.equal(route.policy.persistentLearning,true);
 });
 
 test('rate limit opens provider circuit and moves the next request to a healthy route',()=>{
@@ -52,7 +53,7 @@ test('successful outcomes learn reliability latency TTFT and cost without claimi
   const gateway=snap.providers.find(x=>x.id==='wae_supabase');
   assert.equal(snap.learning,'operational_runtime_quality_feedback');
   assert.equal(snap.baseModelWeightsChanged,false);
-  assert.equal(snap.persistent,false);
+  assert.equal(snap.persistent,true);
   assert.equal(gateway.successes,2);
   assert.ok(gateway.ewmaLatencyMs>300&&gateway.ewmaLatencyMs<420);
   assert.ok(gateway.ewmaTtftMs>120&&gateway.ewmaTtftMs<180);
