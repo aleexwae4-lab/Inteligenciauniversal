@@ -12,7 +12,8 @@ import { benchmarkSuiteManifest } from '../lib/supremacy-benchmark-v62.js';
 import { continuousImprovementCapabilities, getContinuousImprovementStatus } from '../lib/continuous-improvement-v54.js';
 import { answerIntelligenceCapabilities } from '../lib/answer-intelligence-v60.js';
 import { qualityReliabilityCapabilities } from '../lib/quality-reliability-v61.js';
-import { performanceRouterCapabilities, providerMeshSnapshot } from '../lib/provider-mesh-v62.js';
+import { performanceRouterCapabilities, providerMeshSnapshot } from '../lib/provider-mesh-v63.js';
+import { scaleControlCapabilities, scaleControlSnapshot } from '../lib/scale-control-v63.js';
 import { applyHeaders } from '../lib/security.js';
 
 export default async function handler(req,res){
@@ -48,6 +49,7 @@ export default async function handler(req,res){
     reasoningProfiles:['auto','deep'],
     answerIntelligence:answerIntelligenceCapabilities(),
     qualityReliability:qualityReliabilityCapabilities(),
+    scaleControl:{...scaleControlCapabilities(),snapshot:scaleControlSnapshot()},
     performanceRouter:{...performanceRouterCapabilities(),snapshot:providerMeshSnapshot()},
     orchestration:{
       schema:EXECUTIVE_ORCHESTRATION_VERSION,
