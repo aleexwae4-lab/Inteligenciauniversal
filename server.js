@@ -22,8 +22,6 @@ const ROOT = fileURLToPath(new URL('.', import.meta.url));
 const PORT = Number(process.env.PORT || 10000);
 const HOST = '0.0.0.0';
 const MAX_BODY_BYTES = Number(process.env.WAE_MAX_BODY_BYTES || 2_000_000);
-const LEGACY_MOBILE_COMPAT = 'mobile-runtime-v47.js?v=47 universal-core-mobile-v47-long-session long-session-backpressure-v47';
-void LEGACY_MOBILE_COMPAT;
 
 function mobilePremiumHandler(req,res) {
   const nativeEnd = res.end.bind(res);
