@@ -10,9 +10,21 @@ test('tool fabric is default-deny and exposes immutable contracts',()=>{
   assert.equal(snapshot.policy.defaultDeny,true);
   assert.equal(snapshot.policy.mutationsEnabled,false);
   assert.equal(snapshot.policy.clientApprovalTrusted,false);
-  assert.equal(snapshot.toolCount,9);
+  assert.equal(snapshot.toolCount,10);
   assert.equal(snapshot.blockedToolCount,3);
   assert.ok(snapshot.tools.every((tool)=>tool.contractHash.length===64));
+});
+
+test('GitHub repository intelligence is registered as read-only evaluation, not execution',()=>{
+  const tool=getToolDefinition('github.repository_evaluate');
+  assert.ok(tool);
+  assert.equal(tool.provider,'github');
+  assert.deepEqual(tool.actions,['evaluate_repository']);
+  assert.equal(tool.sideEffect,'read');
+  assert.equal(tool.riskLevel,'low');
+  assert.equal(tool.approval,'none');
+  assert.ok(tool.tags.includes('supply-chain'));
+  assert.ok(tool.contractHash.length===64);
 });
 
 test('sensitive tools are discoverable but never enabled',()=>{
@@ -28,6 +40,7 @@ test('sensitive tools are discoverable but never enabled',()=>{
 
 test('tool input contracts reject missing and oversized inputs',()=>{
   assert.deepEqual(validateToolInput('text.inspect',{}),{ok:false,error:'tool_input_required',field:'content'});
+  assert.deepEqual(validateToolInput('github.repository_evaluate',{}),{ok:false,error:'tool_input_required',field:'repository'});
   const oversized='x'.repeat(120001);
   const invalid=validateToolInput('text.inspect',{content:oversized});
   assert.equal(invalid.ok,false);
@@ -57,6 +70,7 @@ test('local CSV profiler handles quoted cells and null counts',()=>{
 test('file and data capability routing selects only explicit safe local primitives',()=>{
   assert.equal(resolveTool('file_analysis','inspect_text')?.id,'text.inspect');
   assert.equal(resolveTool('advanced_data_analysis','profile_csv')?.id,'data.csv_profile');
+  assert.equal(resolveTool('software_engineering','evaluate_repository')?.id,'github.repository_evaluate');
   assert.equal(resolveTool('computer_use','click')?.enabled,false);
 });
 
