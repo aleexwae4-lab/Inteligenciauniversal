@@ -10,7 +10,7 @@ import {
 import {
   capacityAutopilotDecision,
   CAPACITY_CERTIFICATION_VERSION
-} from '../lib/capacity-certification-v65.js';
+} from '../lib/capacity-certification-v66.js';
 import {
   hydratePersistentProviderReputation,
   drainPersistentObservations,
