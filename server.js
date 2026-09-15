@@ -61,6 +61,7 @@ function mobilePremiumHandler(req,res) {
   return mobileHandler(req,res);
 }
 
+// Compatibility contract: api/capacity-chat-v58.js remains the live-data gateway wrapped by capacity-chat-v60.
 const apiRoutes = new Map([
   ['/api/chat', chatHandler],
   ['/api/fast-chat', chatHandler],
