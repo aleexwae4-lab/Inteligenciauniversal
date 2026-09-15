@@ -14,7 +14,7 @@
     const [polish,premium,learning]=await Promise.all([
       loadScript('./polish-v2.js'),
       loadScript('./gpt-experience-v1.js?v=1'),
-      loadScript('./learning-client-v28.js?v=1')
+      loadScript('./learning-client-v29.js?v=1')
     ]);
     const ok=polish&&premium&&learning;
     document.documentElement.dataset.enhancement=ok?'ready':'degraded';
@@ -31,5 +31,5 @@
 
   document.addEventListener('pointerdown',()=>start(),{once:true,passive:true});
   document.addEventListener('keydown',()=>start(),{once:true});
-  window.__waeProgressiveBoot={version:'v28-premium-learning',start};
+  window.__waeProgressiveBoot={version:'v29-promotion-gated-learning',start};
 })();
