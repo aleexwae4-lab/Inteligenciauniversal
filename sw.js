@@ -1,5 +1,5 @@
-const CACHE='wae-universal-v23-progressive-boot';
-const CORE=['./','./index.html','./styles.css','./polish-v2.css','./mobile-safe-composer.css','./startup-guard-v23.js','./runtime-client.js','./app.js','./mobile-safe-composer.js','./progressive-boot-v23.js','./manifest.webmanifest','./assets/logo.svg','./assets/logo-v2.svg'];
+const CACHE='wae-universal-v23-progressive-boot-v36-truth-speed';
+const CORE=['./','./index.html','./styles.css','./polish-v2.css','./mobile-safe-composer.css','./startup-guard-v23.js','./runtime-client.js','./truth-speed-client-v36.js','./app.js','./mobile-safe-composer.js','./progressive-boot-v23.js','./manifest.webmanifest','./assets/logo.svg','./assets/logo-v2.svg'];
 const OPTIONAL=['./premium-v3.css','./premium-v4.css','./experience-v5.css','./experience-v6.css','./experience-v7.css','./experience-v8.css','./voice-client.js','./premium-v4.js','./streaming-v2.js','./experience-v5.js','./experience-v6.js','./experience-v7.js','./experience-v8.js','./interaction-guard-v21.js','./lib/sse-events.js','./polish-v2.js'];
 
 self.addEventListener('install',event=>{
