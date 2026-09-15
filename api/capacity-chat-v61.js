@@ -1,4 +1,5 @@
-import capacityChatV60 from './capacity-chat-v60.js';
+import capacityChatV58 from './capacity-chat-v58.js';
+import { applyAnswerIntelligence, ANSWER_INTELLIGENCE_VERSION } from '../lib/answer-intelligence-v60.js';
 import { applyQualityReliability, QUALITY_RELIABILITY_VERSION } from '../lib/quality-reliability-v61.js';
 
 function bufferedResponse(real){
@@ -19,12 +20,16 @@ function bufferedResponse(real){
 
 export default async function capacityChatV61(req,res){
   const buffered=bufferedResponse(res);
-  await capacityChatV60(req,buffered.proxy);
+  await capacityChatV58(req,buffered.proxy);
   if(res.writableEnded||!buffered.hasJson)return;
   let payload=buffered.payload;
   if(buffered.code<400&&payload&&typeof payload==='object'){
+    payload=applyAnswerIntelligence(payload);
     payload=applyQualityReliability(payload,{prompt:req?.body?.message||req?.body?.prompt||''});
-    const q=payload.quality_reliability||{};
+    const ai=payload.answer_intelligence||{},q=payload.quality_reliability||{};
+    res.setHeader('X-WAE-Answer-Intelligence',ANSWER_INTELLIGENCE_VERSION);
+    res.setHeader('X-WAE-Answer-Gate',String(ai.gate||'PASS'));
+    res.setHeader('X-WAE-Citation-Coverage',String(ai.citation_coverage??1));
     res.setHeader('X-WAE-Quality-Reliability',QUALITY_RELIABILITY_VERSION);
     res.setHeader('X-WAE-Quality-Score',String(q.score??0));
     res.setHeader('X-WAE-Quality-Grade',String(q.grade||'UNKNOWN'));
