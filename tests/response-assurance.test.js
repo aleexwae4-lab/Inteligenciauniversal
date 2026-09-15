@@ -57,7 +57,7 @@ test('chat serves intelligence meta prompt before provider routing', async () =>
   const req={method:'POST',headers:{},socket:{remoteAddress:'127.0.0.44'},body:{message:'¿Qué tan inteligente eres?',mode:'general'}};
   await chatHandler(req,res);
   assert.equal(res.statusCode,200);
-  assert.equal(headers['x-wae-fast-path'],'deterministic-protocol-v3');
+  assert.equal(headers['x-wae-fast-path'],'deterministic-protocol-v4');
   assert.equal(res.payload?.provider,'universal_core_protocol');
   assert.equal(res.payload?.fast_lane,true);
   assert.match(res.payload?.reply||'',/Soy Universal Core/i);
@@ -70,7 +70,7 @@ test('casual feeling greeting is answered locally and never leaks web recovery',
   const req={method:'POST',headers:{},socket:{remoteAddress:'127.0.0.45'},body:{message:'Hola, ¿cómo te sientes?',mode:'general'}};
   await chatHandler(req,res);
   assert.equal(res.statusCode,200);
-  assert.equal(headers['x-wae-fast-path'],'deterministic-protocol-v3');
+  assert.equal(headers['x-wae-fast-path'],'deterministic-protocol-v4');
   assert.equal(res.payload?.provider,'universal_core_protocol');
   assert.equal(res.payload?.fast_lane,true);
   assert.equal(Array.isArray(res.payload?.web_sources),true);
@@ -78,12 +78,24 @@ test('casual feeling greeting is answered locally and never leaks web recovery',
   assert.doesNotMatch(res.payload?.reply||'',/evidencia recuperada|rutas generativas|cdc|swine|google/i);
 });
 
+test('mobile Auto greeting bypasses providers and returns deterministic protocol immediately', async () => {
+  const {headers,res}=fakeResponse();
+  const req={method:'POST',headers:{},socket:{remoteAddress:'127.0.0.47'},body:{message:'Hola cómo estás ?',mode:'auto'}};
+  await chatHandler(req,res);
+  assert.equal(res.statusCode,200);
+  assert.equal(headers['x-wae-fast-path'],'deterministic-protocol-v4');
+  assert.equal(res.payload?.provider,'universal_core_protocol');
+  assert.equal(res.payload?.fast_lane,true);
+  assert.match(res.payload?.reply||'',/Muy bien|listo/i);
+  assert.doesNotMatch(res.payload?.reply||'',/no llegó completa|recuperando|evidencia recuperada|rutas generativas|saturadas/i);
+});
+
 test('capabilities prompt from the clip bypasses saturated providers entirely', async () => {
   const {headers,res}=fakeResponse();
   const req={method:'POST',headers:{},socket:{remoteAddress:'127.0.0.46'},body:{message:'Cuales son tus capacidades?',mode:'general'}};
   await chatHandler(req,res);
   assert.equal(res.statusCode,200);
-  assert.equal(headers['x-wae-fast-path'],'deterministic-protocol-v3');
+  assert.equal(headers['x-wae-fast-path'],'deterministic-protocol-v4');
   assert.equal(res.payload?.provider,'universal_core_protocol');
   assert.equal(res.payload?.fast_lane,true);
   assert.equal(Array.isArray(res.payload?.web_sources),true);
@@ -114,6 +126,8 @@ test('mobile v34 bridges Edge chat to Render adaptive provider mesh', () => {
   assert.match(bridge,/delete body\.routing_variant/);
   assert.match(bridge,/mobile-adaptive-mesh-v34/);
   assert.match(bridge,/saturation_fallback_rejected/);
+  assert.match(bridge,/RETRYABLE_STATUS/);
+  assert.match(bridge,/x-wae-mobile-attempt/);
   assert.doesNotMatch(bridge,/routing_variant:'control'/);
 });
 
@@ -121,10 +135,11 @@ test('mobile boot loads adaptive bridge after relevance guard', () => {
   const source=readFileSync(new URL('../server.js',import.meta.url),'utf8');
   const fast=source.indexOf("fast-lane-v23.js?v=34");
   const cognitive=source.indexOf("mobile-v26.js?v=34");
-  const bridge=source.indexOf("mobile-runtime-v34.js?v=34");
+  const bridge=source.indexOf("mobile-runtime-v34.js?v=44");
   const semantic=source.indexOf("semantic-ux-v32.js?v=34");
   assert.ok(fast>=0 && cognitive>=0 && bridge>=0 && semantic>=0 && fast<cognitive && cognitive<bridge && bridge<semantic);
   assert.match(source,/universal-core-mobile-v34-adaptive-mesh/);
+  assert.match(source,/auto-fastpath-v44/);
 });
 
 test('service worker v34 evicts stale cache and makes navigations network-first', () => {

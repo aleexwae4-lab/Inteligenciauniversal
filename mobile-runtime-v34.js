@@ -4,6 +4,7 @@
   const previousFetch=window.fetch.bind(window);
   const EDGE_MARK='/functions/v1/wae-local-voice-demo-v61';
   const SATURATION_RX=/rutas generativas|temporalmente saturadas|respuesta con evidencia recuperada|all_models_unavailable|todos los proveedores configurados fallaron/i;
+  const RETRYABLE_STATUS=new Set([502,503,504]);
 
   function parseJsonBody(init={}){
     try{return typeof init.body==='string'?JSON.parse(init.body):{}}catch{return{}}
@@ -33,21 +34,48 @@
     };
   }
 
+  function wait(ms){return new Promise(resolve=>setTimeout(resolve,ms))}
+
   async function renderChat(body,signal){
-    const response=await previousFetch('/api/chat',{
-      method:'POST',
-      headers:{'content-type':'application/json','x-wae-mobile-runtime':'v34-adaptive-mesh'},
-      body:JSON.stringify(renderPayload(body)),
-      cache:'no-store',
-      signal
-    });
-    const data=await response.json().catch(()=>({}));
-    if(!response.ok)throw new Error(data?.message||data?.error||`render_chat_${response.status}`);
-    const reply=String(data?.reply||data?.response?.content||'').trim();
-    if(!reply)throw new Error('render_chat_empty');
-    if(SATURATION_RX.test(reply))throw new Error('saturation_fallback_rejected');
-    if(body.web_enabled!==true&&String(data?.provider||'')==='web_recovery')throw new Error('unexpected_web_recovery');
-    return {...data,success:true,reply,response:data?.response||{content:reply},web_sources:Array.isArray(data?.web_sources)?data.web_sources:[]};
+    let lastError=null;
+    for(let attempt=1;attempt<=2;attempt++){
+      if(signal?.aborted)throw signal.reason||new DOMException('Aborted','AbortError');
+      try{
+        const response=await previousFetch('/api/chat',{
+          method:'POST',
+          headers:{
+            'content-type':'application/json',
+            'x-wae-mobile-runtime':'v34-adaptive-mesh',
+            'x-wae-mobile-attempt':String(attempt)
+          },
+          body:JSON.stringify(renderPayload(body)),
+          cache:'no-store',
+          signal
+        });
+        const data=await response.json().catch(()=>({}));
+        if(!response.ok){
+          const error=new Error(data?.message||data?.error||`render_chat_${response.status}`);
+          error.status=response.status;
+          if(attempt<2&&RETRYABLE_STATUS.has(response.status)){
+            lastError=error;
+            await wait(180);
+            continue;
+          }
+          throw error;
+        }
+        const reply=String(data?.reply||data?.response?.content||'').trim();
+        if(!reply)throw new Error('render_chat_empty');
+        if(SATURATION_RX.test(reply))throw new Error('saturation_fallback_rejected');
+        if(body.web_enabled!==true&&String(data?.provider||'')==='web_recovery')throw new Error('unexpected_web_recovery');
+        return {...data,success:true,reply,response:data?.response||{content:reply},web_sources:Array.isArray(data?.web_sources)?data.web_sources:[]};
+      }catch(error){
+        lastError=error;
+        if(signal?.aborted||attempt>=2)throw error;
+        if(error?.status&&!RETRYABLE_STATUS.has(error.status))throw error;
+        await wait(180);
+      }
+    }
+    throw lastError||new Error('render_chat_unavailable');
   }
 
   function jsonResponse(data,status=200){
@@ -85,7 +113,7 @@
   function cleanFailure(body,error){
     return jsonResponse({
       error:'adaptive_runtime_unavailable',
-      message:'Universal Core no obtuvo una respuesta válida por la ruta principal. La consulta se conservó y puede reintentarse sin convertirla automáticamente en una búsqueda web.',
+      message:'Universal Core agotó las rutas automáticas disponibles sin perder tu consulta. Puedes reintentar cuando el servicio externo se recupere.',
       recoverable:true,
       provider:'universal_core_adaptive_mesh',
       mode:String(body?.mode||'general'),
