@@ -3,7 +3,7 @@
   const nativeFetch=window.fetch.bind(window);
   const EDGE_MARK='/functions/v1/wae-local-voice-demo-v61';
   const html=document.documentElement;
-  html.dataset.mobileRelease='v30-zero-failure-client';
+  html.dataset.mobileRelease='v31-relevance-guard';
 
   const CURRENT_RX=/\b(hoy|ahora|actual(?:es|idad|izado|izada)?|reciente|últim[oa]s?|latest|today|current|news|noticias|precio|cotización|jurisprudencia|reforma|ley vigente|verifica|fuentes?|evidencia|web)\b/i;
   const RESEARCH_RX=/\b(investiga|investigación|mercado|competidor|benchmark|tendencia|estadística)\b/i;
@@ -22,7 +22,8 @@
     const raw=String(value||'').trim(),q=normalize(raw);
     if(!q&&/[?¿]+/.test(raw))return true;
     if(META_RX.test(q))return true;
-    return /^(hola|hey|buenas|buenos dias|buenas tardes|buenas noches|hola buenas|como estas|como andas|que tal|quien eres|que eres|que tan inteligente eres|que es universal core|que puedes hacer|como puedes ayudarme|ayuda|ayudame|gracias|muchas gracias|ok|okay|vale|perfecto|listo)$/.test(q);
+    if(/^(hola|hey|buenas|buenos dias|buenas tardes|buenas noches)(?:\s+(como estas|como te sientes|como andas|que tal))?$/.test(q))return true;
+    return /^(como estas|como te sientes|como andas|que tal|quien eres|que eres|que tan inteligente eres|que es universal core|que puedes hacer|como puedes ayudarme|ayuda|ayudame|gracias|muchas gracias|ok|okay|vale|perfecto|listo)$/.test(q);
   }
   function protocolPrompt(value=''){
     const raw=String(value||'').trim();
@@ -52,7 +53,7 @@
     delete next.routing_variant;
     return next;
   }
-  function jsonResponse(data,status=200){return new Response(JSON.stringify(data),{status,headers:{'content-type':'application/json; charset=utf-8','cache-control':'no-store','x-wae-runtime':'universal-core-mobile-zero-failure-v30'}})}
+  function jsonResponse(data,status=200){return new Response(JSON.stringify(data),{status,headers:{'content-type':'application/json; charset=utf-8','cache-control':'no-store','x-wae-runtime':'universal-core-mobile-relevance-guard-v31'}})}
   async function renderFallback(body,signal){
     const route=infer(body);
     const r=await nativeFetch('/api/chat',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({message:String(body.message||''),mode:route.mode,sessionId:String(body.session_id||body.sessionId||''),attachments:Array.isArray(body.attachments)?body.attachments:[],disableTools:protocolPrompt(body.message),preferences:{responseStyle:'premium-rich',voiceNatural:true}}),cache:'no-store',signal});
@@ -71,6 +72,16 @@
     if(!route.webEnabled&&RECOVERY_RX.test(reply))return true;
     if(quality?.critical===true||reasons.includes('low_relevance'))return true;
     return false;
+  }
+  function blockedRecovery(body){
+    return jsonResponse({
+      error:'irrelevant_recovery_blocked',
+      message:'Universal Core bloqueó una recuperación no relacionada con tu consulta. Reintenta la respuesta; no se mostrará evidencia ajena como si fuera una respuesta válida.',
+      recoverable:true,
+      provider:'universal_core_relevance_guard',
+      web_sources:[],
+      mode:infer(body).mode
+    },503);
   }
 
   window.fetch=async(input,init={})=>{
@@ -91,8 +102,11 @@
     try{
       const data=await response.clone().json();
       if(shouldRejectEdgeReply(data,enhanced)){
-        const fallback=await renderFallback(enhanced,init.signal);
-        if(fallback)return fallback;
+        try{
+          const fallback=await renderFallback(enhanced,init.signal);
+          if(fallback)return fallback;
+        }catch{}
+        return blockedRecovery(enhanced);
       }
     }catch{}
     return response;

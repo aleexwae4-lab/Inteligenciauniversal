@@ -18,6 +18,7 @@ test('factual API question gets factual response contract, not coding contract',
 
 test('casual and exact-format prompts never trigger evidence rescue', () => {
   assert.equal(researchRescueEligible('Hola, ¿qué tan inteligente eres?','general'),false);
+  assert.equal(researchRescueEligible('Hola, ¿cómo te sientes?','general'),false);
   assert.equal(researchRescueEligible('Responde exactamente con la palabra OK.','general'),false);
   assert.equal(shouldEvidenceRescue('Escribe un poema corto.'),false);
 });
@@ -46,7 +47,7 @@ test('chat serves intelligence meta prompt before provider routing', async () =>
   };
   await chatHandler(req,res);
   assert.equal(res.statusCode,200);
-  assert.equal(headers['x-wae-fast-path'],'deterministic-protocol-v1');
+  assert.equal(headers['x-wae-fast-path'],'deterministic-protocol-v2');
   assert.equal(res.payload?.provider,'universal_core_protocol');
   assert.equal(res.payload?.fast_lane,true);
   assert.match(res.payload?.reply||'',/Soy Universal Core/i);
@@ -54,18 +55,39 @@ test('chat serves intelligence meta prompt before provider routing', async () =>
   assert.equal(res.payload.web_sources.length,0);
 });
 
+test('casual feeling greeting is answered locally and never leaks web recovery', async () => {
+  const headers={};
+  const req={method:'POST',headers:{},socket:{remoteAddress:'127.0.0.45'},body:{message:'Hola, ¿cómo te sientes?',mode:'general'}};
+  const res={
+    statusCode:200,
+    setHeader(name,value){headers[String(name).toLowerCase()]=String(value);},
+    status(code){this.statusCode=code;return this;},
+    json(payload){this.payload=payload;return this;}
+  };
+  await chatHandler(req,res);
+  assert.equal(res.statusCode,200);
+  assert.equal(headers['x-wae-fast-path'],'deterministic-protocol-v2');
+  assert.equal(res.payload?.provider,'universal_core_protocol');
+  assert.equal(res.payload?.fast_lane,true);
+  assert.equal(Array.isArray(res.payload?.web_sources),true);
+  assert.equal(res.payload.web_sources.length,0);
+  assert.doesNotMatch(res.payload?.reply||'',/evidencia recuperada|rutas generativas|cdc|swine|google/i);
+});
+
 test('mobile interceptor routes intelligence meta prompts away from irrelevant web recovery', () => {
   const source=readFileSync(new URL('../mobile-v26.js',import.meta.url),'utf8');
   assert.match(source,/que tan inteligente eres/);
+  assert.match(source,/como te sientes/);
   assert.match(source,/provider==='web_recovery'/);
   assert.match(source,/protocolPrompt\(body\?\.message\)/);
-  assert.match(source,/universal-core-mobile-zero-failure-v30/);
+  assert.match(source,/irrelevant_recovery_blocked/);
+  assert.match(source,/universal-core-mobile-relevance-guard-v31/);
 });
 
 test('mobile boot keeps fast lane first and loads edge semantic intelligence on the clip surface', () => {
   const source=readFileSync(new URL('../server.js',import.meta.url),'utf8');
   const fast=source.indexOf("fast-lane-v23.js?v=30");
-  const cognitive=source.indexOf("mobile-v26.js?v=30");
+  const cognitive=source.indexOf("mobile-v26.js?v=31");
   const semantic=source.indexOf("semantic-ux-v32.js?v=33");
   assert.ok(fast>=0 && cognitive>=0 && semantic>=0 && fast<cognitive && cognitive<semantic);
   assert.match(source,/universal-core-mobile-v33-edge-context/);
