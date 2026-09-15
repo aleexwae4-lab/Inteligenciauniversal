@@ -29,10 +29,11 @@ function mobilePremiumHandler(req,res) {
       if (!chunk.includes('fast-lane-v23.js')) scripts.push('<script src="/fast-lane-v23.js?v=30" defer></script>');
       if (!chunk.includes('mobile-v26.js')) scripts.push('<script src="/mobile-v26.js?v=30" defer></script>');
       if (!chunk.includes('mobile-voice-v27.js')) scripts.push('<script src="/mobile-voice-v27.js?v=30" defer></script>');
+      if (!chunk.includes('semantic-ux-v32.js')) scripts.push('<script src="/semantic-ux-v32.js?v=32" defer></script>');
       if (!chunk.includes('learning-client-v29.js')) scripts.push('<script src="/learning-client-v29.js?v=30" defer></script>');
       if (scripts.length) chunk = chunk.replace('</body>', `${scripts.join('')}</body>`);
       res.setHeader('Cache-Control','no-store, max-age=0');
-      res.setHeader('X-WAE-Mobile-Release','universal-core-mobile-v30-zero-failure-client');
+      res.setHeader('X-WAE-Mobile-Release','universal-core-mobile-v32-context-intelligence');
     }
     return nativeEnd(chunk, encoding, callback);
   };
