@@ -32,6 +32,16 @@ test('premia una respuesta estructurada solicitada',()=>{
   assert.ok(q.signals.structure>=1);
 });
 
+test('la estructura no rescata una respuesta irrelevante',()=>{
+  const q=evaluateAnswer({
+    question:'Explica en cinco puntos una arquitectura SaaS multi-tenant segura',
+    answer:'1. Compra fruta fresca.\n2. Lava los utensilios.\n3. Prepara la mesa.\n4. Sirve la comida.\n5. Guarda las sobras correctamente.',
+    mode:'analysis'
+  });
+  assert.equal(q.pass,false);
+  assert.ok(q.reasons.includes('low_relevance'));
+});
+
 test('investigación sin evidencia queda por debajo del estándar premium',()=>{
   const q=evaluateAnswer({
     question:'Investiga las noticias actuales del mercado de IA',
