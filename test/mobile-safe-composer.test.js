@@ -28,12 +28,16 @@ test('mobile safe composer bypasses premium hit testing and bridges to native su
   assert.match(js,/input\.readOnly=false/);
 });
 
-test('PWA v23 keeps the mobile safe composer in the cache-first core shell',async()=>{
+test('PWA v34 keeps the mobile safe composer offline while refreshing runtime network-first',async()=>{
   const sw=await read('sw.js');
-  assert.match(sw,/v23-progressive-boot/);
+  assert.match(sw,/wae-universal-v34-adaptive-mesh/);
   assert.match(sw,/const CORE=/);
   assert.match(sw,/mobile-safe-composer\.css/);
   assert.match(sw,/mobile-safe-composer\.js/);
   assert.match(sw,/startup-guard-v23\.js/);
   assert.match(sw,/progressive-boot-v23\.js/);
+  assert.match(sw,/mobile-runtime-v34\.js/);
+  assert.match(sw,/fetch\(req,\{cache:'no-store'\}\)/);
+  assert.match(sw,/keys\.filter\(key=>key!==CACHE\).*caches\.delete/s);
+  assert.doesNotMatch(sw,/wae-universal-v23-progressive-boot/);
 });

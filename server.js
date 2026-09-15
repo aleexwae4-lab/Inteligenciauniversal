@@ -1,7 +1,7 @@
 import { createServer } from 'node:http';
 import { createReadStream } from 'node:fs';
 import { stat } from 'node:fs/promises';
-import { extname, join, normalize } from 'node:path';
+import { extname, join, normalize, basename } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import chatHandler from './api/chat.js';
 import continuityHandler from './api/continuity.js';
@@ -25,16 +25,19 @@ function mobilePremiumHandler(req,res) {
   const nativeEnd = res.end.bind(res);
   res.end = (chunk, encoding, callback) => {
     if (typeof chunk === 'string' && chunk.includes('</head>') && chunk.includes('</body>')) {
-      if (!chunk.includes('mobile-v26.css')) chunk = chunk.replace('</head>', '<link rel="stylesheet" href="/mobile-v26.css?v=30"></head>');
+      if (!chunk.includes('mobile-v26.css')) chunk = chunk.replace('</head>', '<link rel="stylesheet" href="/mobile-v26.css?v=34"></head>');
       const scripts = [];
-      if (!chunk.includes('fast-lane-v23.js')) scripts.push('<script src="/fast-lane-v23.js?v=30" defer></script>');
-      if (!chunk.includes('mobile-v26.js')) scripts.push('<script src="/mobile-v26.js?v=31" defer></script>');
-      if (!chunk.includes('mobile-voice-v27.js')) scripts.push('<script src="/mobile-voice-v27.js?v=30" defer></script>');
-      if (!chunk.includes('semantic-ux-v32.js')) scripts.push('<script src="/semantic-ux-v32.js?v=33" defer></script>');
-      if (!chunk.includes('learning-client-v29.js')) scripts.push('<script src="/learning-client-v29.js?v=30" defer></script>');
+      if (!chunk.includes('fast-lane-v23.js')) scripts.push('<script src="/fast-lane-v23.js?v=34" defer></script>');
+      if (!chunk.includes('mobile-v26.js')) scripts.push('<script src="/mobile-v26.js?v=34" defer></script>');
+      if (!chunk.includes('mobile-runtime-v34.js')) scripts.push('<script src="/mobile-runtime-v34.js?v=34" defer></script>');
+      if (!chunk.includes('mobile-voice-v27.js')) scripts.push('<script src="/mobile-voice-v27.js?v=34" defer></script>');
+      if (!chunk.includes('semantic-ux-v32.js')) scripts.push('<script src="/semantic-ux-v32.js?v=34" defer></script>');
+      if (!chunk.includes('learning-client-v29.js')) scripts.push('<script src="/learning-client-v29.js?v=34" defer></script>');
       if (scripts.length) chunk = chunk.replace('</body>', `${scripts.join('')}</body>`);
-      res.setHeader('Cache-Control','no-store, max-age=0');
-      res.setHeader('X-WAE-Mobile-Release','universal-core-mobile-v33-edge-context');
+      res.setHeader('Cache-Control','no-store, max-age=0, must-revalidate');
+      res.setHeader('Pragma','no-cache');
+      res.setHeader('Expires','0');
+      res.setHeader('X-WAE-Mobile-Release','universal-core-mobile-v34-adaptive-mesh');
     }
     return nativeEnd(chunk, encoding, callback);
   };
@@ -147,11 +150,18 @@ async function serveFile(req, res, pathname) {
   }
 
   const ext = extname(filePath).toLowerCase();
+  const name=basename(filePath).toLowerCase();
   res.statusCode = 200;
   res.setHeader('Content-Type', contentTypes[ext] || 'application/octet-stream');
   res.setHeader('X-Content-Type-Options', 'nosniff');
   res.setHeader('Referrer-Policy', 'same-origin');
-  res.setHeader('Cache-Control', ext === '.html' ? 'no-cache' : 'public, max-age=300');
+  if (name === 'sw.js' || ext === '.html') {
+    res.setHeader('Cache-Control','no-store, max-age=0, must-revalidate');
+    res.setHeader('Pragma','no-cache');
+    res.setHeader('Expires','0');
+  } else {
+    res.setHeader('Cache-Control','public, max-age=300');
+  }
 
   if (req.method === 'HEAD') return res.end();
   createReadStream(filePath)

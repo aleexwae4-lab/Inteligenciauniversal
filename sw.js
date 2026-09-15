@@ -1,13 +1,13 @@
-const CACHE='wae-universal-v23-progressive-boot';
-const CORE=['./','./index.html','./styles.css','./polish-v2.css','./mobile-safe-composer.css','./startup-guard-v23.js','./runtime-client.js','./app.js','./mobile-safe-composer.js','./progressive-boot-v23.js','./manifest.webmanifest','./assets/logo.svg','./assets/logo-v2.svg'];
-const OPTIONAL=['./premium-v3.css','./premium-v4.css','./experience-v5.css','./experience-v6.css','./experience-v7.css','./experience-v8.css','./voice-client.js','./premium-v4.js','./streaming-v2.js','./experience-v5.js','./experience-v6.js','./experience-v7.js','./experience-v8.js','./interaction-guard-v21.js','./lib/sse-events.js','./polish-v2.js'];
+const CACHE='wae-universal-v34-adaptive-mesh';
+const CORE=['./index.html','./styles.css','./polish-v2.css','./mobile-safe-composer.css','./startup-guard-v23.js','./runtime-client.js','./app.js','./mobile-safe-composer.js','./progressive-boot-v23.js','./mobile-v26.js','./mobile-runtime-v34.js','./manifest.webmanifest','./assets/logo.svg','./assets/logo-v2.svg'];
+const OPTIONAL=['./premium-v3.css','./premium-v4.css','./experience-v5.css','./experience-v6.css','./experience-v7.css','./experience-v8.css','./voice-client.js','./premium-v4.js','./streaming-v2.js','./experience-v5.js','./experience-v6.js','./experience-v7.js','./experience-v8.js','./interaction-guard-v21.js','./lib/sse-events.js','./polish-v2.js','./mobile-voice-v27.js','./semantic-ux-v32.js','./learning-client-v29.js'];
 
 self.addEventListener('install',event=>{
   event.waitUntil((async()=>{
     const cache=await caches.open(CACHE);
-    await cache.addAll(CORE);
-    await Promise.allSettled(OPTIONAL.map(asset=>cache.add(asset)));
-    self.skipWaiting();
+    await Promise.allSettled(CORE.map(asset=>cache.add(new Request(asset,{cache:'reload'}))));
+    await Promise.allSettled(OPTIONAL.map(asset=>cache.add(new Request(asset,{cache:'reload'}))));
+    await self.skipWaiting();
   })());
 });
 
@@ -16,15 +16,29 @@ self.addEventListener('activate',event=>{
     const keys=await caches.keys();
     await Promise.all(keys.filter(key=>key!==CACHE).map(key=>caches.delete(key)));
     await self.clients.claim();
+    const windows=await self.clients.matchAll({type:'window',includeUncontrolled:true});
+    await Promise.allSettled(windows.map(client=>{
+      try{
+        const url=new URL(client.url);
+        if(url.origin===self.location.origin&&url.searchParams.get('wae_runtime')!=='34'){
+          url.searchParams.set('wae_runtime','34');
+          return client.navigate(url.href);
+        }
+      }catch{}
+      return null;
+    }));
   })());
 });
 
-async function refresh(cache,request,key=request){
+async function networkFirst(request,cacheKey=request){
+  const cache=await caches.open(CACHE);
   try{
-    const response=await fetch(request,{cache:'no-cache'});
-    if(response.ok)await cache.put(key,response.clone());
+    const response=await fetch(request,{cache:'no-store'});
+    if(response.ok&&request.method==='GET')await cache.put(cacheKey,response.clone());
     return response;
-  }catch{return null}
+  }catch{
+    return await cache.match(cacheKey,{ignoreSearch:true})||null;
+  }
 }
 
 self.addEventListener('fetch',event=>{
@@ -35,20 +49,18 @@ self.addEventListener('fetch',event=>{
 
   if(req.mode==='navigate'){
     event.respondWith((async()=>{
-      const cache=await caches.open(CACHE);
-      const cached=await cache.match('./index.html');
-      const network=refresh(cache,req,'./index.html');
-      if(cached){event.waitUntil(network);return cached}
-      return await network||new Response('Universal Core temporalmente sin conexión',{status:503,headers:{'content-type':'text/plain; charset=utf-8'}});
+      try{
+        return await fetch(req,{cache:'no-store'});
+      }catch{
+        const cache=await caches.open(CACHE);
+        return await cache.match('./index.html')||new Response('Universal Core temporalmente sin conexión',{status:503,headers:{'content-type':'text/plain; charset=utf-8'}});
+      }
     })());
     return;
   }
 
   event.respondWith((async()=>{
-    const cache=await caches.open(CACHE);
-    const cached=await cache.match(req,{ignoreSearch:true});
-    const network=refresh(cache,req);
-    if(cached){event.waitUntil(network);return cached}
-    return await network||new Response('',{status:504});
+    const response=await networkFirst(req,req);
+    return response||new Response('',{status:504});
   })());
 });

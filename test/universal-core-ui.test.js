@@ -106,7 +106,7 @@ test('Experience v8 makes the primary interface live and exposes bounded Deep or
   assert.match(server, /\/api\/orchestrate/);
 });
 
-test('v23 makes the mobile composer interactive before premium enhancement', async () => {
+test('v23 bootstrap still makes the mobile composer interactive before premium enhancement', async () => {
   const html = await read('index.html');
   const startup = await read('startup-guard-v23.js');
   const progressive = await read('progressive-boot-v23.js');
@@ -122,18 +122,22 @@ test('v23 makes the mobile composer interactive before premium enhancement', asy
   assert.match(progressive, /\.\/polish-v2\.js/);
 });
 
-test('PWA v23 serves the app shell cache-first and refreshes in background', async () => {
+test('PWA v34 refreshes the app shell network-first and evicts stale runtimes', async () => {
   const sw = await read('sw.js');
-  assert.match(sw, /v23-progressive-boot/);
+  assert.match(sw, /wae-universal-v34-adaptive-mesh/);
   assert.match(sw, /startup-guard-v23\.js/);
   assert.match(sw, /progressive-boot-v23\.js/);
   assert.match(sw, /mobile-safe-composer\.js/);
   assert.match(sw, /mobile-safe-composer\.css/);
-  assert.match(sw, /if\(cached\)\{event\.waitUntil\(network\);return cached\}/);
+  assert.match(sw, /mobile-runtime-v34\.js/);
+  assert.match(sw, /fetch\(req,\{cache:'no-store'\}\)/);
+  assert.match(sw, /keys\.filter\(key=>key!==CACHE\).*caches\.delete/s);
+  assert.match(sw, /client\.navigate/);
   assert.match(sw, /Promise\.allSettled/);
   assert.match(sw, /voice-client\.js/);
   assert.match(sw, /experience-v8\.js/);
   assert.doesNotMatch(sw, /interaction-v9\.js/);
   assert.match(sw, /interaction-guard-v21\.js/);
   assert.match(sw, /polish-v2\.js/);
+  assert.doesNotMatch(sw, /if\(cached\)\{event\.waitUntil\(network\);return cached\}/);
 });

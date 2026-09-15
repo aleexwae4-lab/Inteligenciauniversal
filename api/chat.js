@@ -17,6 +17,8 @@ function canonicalProtocolPrompt(value='') {
     return /como estas|como te sientes|como andas|que tal/.test(q) ? '¿Cómo estás?' : 'Hola';
   }
   if (/^(como estas|como te sientes|como andas|que tal)$/.test(q)) return '¿Cómo estás?';
+  if (/^(cuales son tus capacidades|que capacidades tienes|que puedes hacer|como puedes ayudarme|como funcionas)$/.test(q)) return '¿Qué puedes hacer?';
+  if (/^(quien eres|que eres|que es universal core)$/.test(q)) return '¿Qué eres?';
   return String(value || '');
 }
 
@@ -28,7 +30,7 @@ function protocolFastPathEligible(body={}) {
   if (!q) return false;
   if (/^(hola|hey|buenas|buenos dias|buenas tardes|buenas noches)(?:\s+(como estas|como te sientes|como andas|que tal))?$/.test(q)) return true;
   if (/^(como estas|como te sientes|como andas|que tal|gracias|muchas gracias|ok|vale|perfecto|listo)$/.test(q)) return true;
-  if (/\b(que tan inteligente eres|que puedes hacer|quien eres|que eres)\b/.test(q)) return true;
+  if (/^(que tan inteligente eres|que puedes hacer|cuales son tus capacidades|que capacidades tienes|como puedes ayudarme|como funcionas|quien eres|que eres|que es universal core)$/.test(q)) return true;
   if (/^(responde )?(exactamente |solamente |solo )?(con )?(la )?palabra ok$/.test(q) || /^responde (exactamente|solamente|solo) ok$/.test(q)) return true;
   return false;
 }
@@ -63,8 +65,8 @@ export default async function handler(req,res) {
     const protocolBody={...runtimeBody,message:canonicalProtocolPrompt(runtimeBody.message || runtimeBody.task || '')};
     const fast = await rescueMission({ payload:protocolBody, userKey, error:{code:'PROTOCOL_FAST_PATH'} });
     if (fast?.resilience?.path === 'deterministic_protocol') {
-      res.setHeader('X-WAE-Fast-Path','deterministic-protocol-v2');
-      return res.status(200).json({ ...fast, fast_lane:true, fast_lane_version:'server-protocol/v2', input_interpretation:publicIntent(intent) });
+      res.setHeader('X-WAE-Fast-Path','deterministic-protocol-v3');
+      return res.status(200).json({ ...fast, fast_lane:true, fast_lane_version:'server-protocol/v3', input_interpretation:publicIntent(intent) });
     }
   }
 
