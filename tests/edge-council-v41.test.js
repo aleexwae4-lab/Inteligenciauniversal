@@ -32,12 +32,15 @@ test('Edge Council uses real ranked models, excludes rescue, and stays off for s
   assert.match(council,/provider_identity_used_for_scoring:false/);
 });
 
-test('Edge Council blind scorer rejects rescue language and internal reasoning leakage',()=>{
+test('Edge Council blind scorer rejects rescue leakage and never scores provider identity',()=>{
   const council=read('supabase/functions/wae-local-voice-demo-v61/council.ts');
   assert.match(council,/RESCUE_RX/);
   assert.match(council,/INTERNAL_RX/);
-  assert.match(council,/blindAnswerScore/);
-  assert.doesNotMatch(council,/provider.*score.*\+/i);
+  const start=council.indexOf('export function blindAnswerScore');
+  const end=council.indexOf('function candidateMessages');
+  assert.ok(start>=0&&end>start);
+  const scorer=council.slice(start,end);
+  assert.doesNotMatch(scorer,/\bprovider\b|model_name|actualModel/);
 });
 
 test('Edge Council metadata is persisted without raw candidate answers',()=>{
