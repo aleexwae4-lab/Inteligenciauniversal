@@ -1,4 +1,4 @@
-name: Universal Core v65+v74 Production Certification
+name: Universal Core v65+v75 Production Certification
 
 on:
   push:
@@ -17,13 +17,14 @@ jobs:
       KERNEL_VERSION: universal-capability-kernel/v36
       EXECUTION_VERSION: universal-execution-plane/v65-github-intelligence
       RECEIPT_SCHEMA: universal-execution-receipt/v1
+      AUDIT_LEDGER_VERSION: execution-audit-ledger/v75
       TOOL_FABRIC_VERSION: universal-tool-fabric/v65-github-intelligence
       TOOL_CONTRACT_SCHEMA: universal-tool-contract/v1
       EVAL_VERSION: supremacy-evaluation/v35
       BACKEND_VERSION: universal-core-backend/v73
       CONTROL_PLANE_VERSION: universal-core-control-plane/v74
     steps:
-      - name: Wait for Render v65 and v74 invariants
+      - name: Wait for Render v65 and v75 invariants
         shell: bash
         run: |
           set -euo pipefail
@@ -39,8 +40,8 @@ jobs:
             CLIENT=$(curl -fsS --max-time 20 "$APP_URL/capability-client-v36.js?release=${GITHUB_SHA}" || true)
 
             if jq -e '.ok == true and .ready == true and .service == "wae-universal-runtime" and .responseSchema == "assistant-response/v1"' <<<"$HEALTH" >/dev/null 2>&1 \
-              && jq -e --arg kernel "$KERNEL_VERSION" --arg exec "$EXECUTION_VERSION" --arg receipt "$RECEIPT_SCHEMA" --arg fabric "$TOOL_FABRIC_VERSION" --arg contract "$TOOL_CONTRACT_SCHEMA" --arg eval "$EVAL_VERSION" '.ready == true and .interface == "experience-v8-living-core" and .capabilityKernel.version == $kernel and .capabilityKernel.domainCount == 38 and .capabilityKernel.abilityCount == 302 and .executionPlane.version == $exec and .executionPlane.receiptSchema == $receipt and .executionPlane.toolFabric == $fabric and .executionPlane.endpoint == "/api/execute" and .executionPlane.policy.failClosed == true and .executionPlane.policy.mutationsEnabled == false and .executionPlane.policy.clientApprovalTrusted == false and .toolFabric.version == $fabric and .toolFabric.contractSchema == $contract and .toolFabric.toolCount == 10 and .toolFabric.blockedToolCount == 3 and .toolFabric.enabledToolCount >= 2 and .toolFabric.policy.defaultDeny == true and .toolFabric.policy.toolOutputIsUntrusted == true and .evaluationPlane.version == $eval' <<<"$CAPS" >/dev/null 2>&1 \
-              && jq -e --arg exec "$EXECUTION_VERSION" --arg receipt "$RECEIPT_SCHEMA" --arg fabric "$TOOL_FABRIC_VERSION" '.success == true and .executionPlane.version == $exec and .executionPlane.receiptSchema == $receipt and .executionPlane.toolFabric == $fabric and .executionPlane.policy.failClosed == true and .executionPlane.policy.mutationsEnabled == false and (.executionPlane.adapters | length) >= 7 and .executionPlane.configuredAdapterCount >= 2' <<<"$EXEC" >/dev/null 2>&1 \
+              && jq -e --arg kernel "$KERNEL_VERSION" --arg exec "$EXECUTION_VERSION" --arg receipt "$RECEIPT_SCHEMA" --arg audit "$AUDIT_LEDGER_VERSION" --arg fabric "$TOOL_FABRIC_VERSION" --arg contract "$TOOL_CONTRACT_SCHEMA" --arg eval "$EVAL_VERSION" '.ready == true and .interface == "experience-v8-living-core" and .capabilityKernel.version == $kernel and .capabilityKernel.domainCount == 38 and .capabilityKernel.abilityCount == 302 and .executionPlane.version == $exec and .executionPlane.receiptSchema == $receipt and .executionPlane.auditLedger.version == $audit and .executionPlane.auditLedger.configured == true and .executionPlane.auditLedger.durable == true and .executionPlane.auditLedger.rawContentStored == false and .executionPlane.auditLedger.identityHashesOnly == true and .executionPlane.toolFabric == $fabric and .executionPlane.endpoint == "/api/execute" and .executionPlane.policy.failClosed == true and .executionPlane.policy.mutationsEnabled == false and .executionPlane.policy.clientApprovalTrusted == false and .toolFabric.version == $fabric and .toolFabric.contractSchema == $contract and .toolFabric.toolCount == 10 and .toolFabric.blockedToolCount == 3 and .toolFabric.enabledToolCount >= 2 and .toolFabric.policy.defaultDeny == true and .toolFabric.policy.toolOutputIsUntrusted == true and .evaluationPlane.version == $eval' <<<"$CAPS" >/dev/null 2>&1 \
+              && jq -e --arg exec "$EXECUTION_VERSION" --arg receipt "$RECEIPT_SCHEMA" --arg audit "$AUDIT_LEDGER_VERSION" --arg fabric "$TOOL_FABRIC_VERSION" '.success == true and .executionPlane.version == $exec and .executionPlane.receiptSchema == $receipt and .executionPlane.auditLedger.version == $audit and .executionPlane.auditLedger.configured == true and .executionPlane.auditLedger.durable == true and .executionPlane.toolFabric == $fabric and .executionPlane.policy.failClosed == true and .executionPlane.policy.mutationsEnabled == false and (.executionPlane.adapters | length) >= 7 and .executionPlane.configuredAdapterCount >= 2' <<<"$EXEC" >/dev/null 2>&1 \
               && jq -e --arg fabric "$TOOL_FABRIC_VERSION" --arg contract "$TOOL_CONTRACT_SCHEMA" '.success == true and .toolFabric.version == $fabric and .toolFabric.contractSchema == $contract and .toolFabric.toolCount == 10 and .toolFabric.blockedToolCount == 3 and .toolFabric.enabledToolCount >= 2 and ([.toolFabric.tools[].id] | index("github.repository_evaluate")) != null and ([.toolFabric.tools[].id] | index("text.inspect")) != null and ([.toolFabric.tools[].id] | index("data.csv_profile")) != null and ([.toolFabric.tools[] | select(.provider == "disabled") | .id] | length) == 3' <<<"$TOOLS" >/dev/null 2>&1 \
               && jq -e --arg backend "$BACKEND_VERSION" --arg control "$CONTROL_PLANE_VERSION" '.ok == true and .version == $backend and .controlPlane == $control and .state == "live"' <<<"$V73_LIVE" >/dev/null 2>&1 \
               && jq -e --arg backend "$BACKEND_VERSION" --arg control "$CONTROL_PLANE_VERSION" '.ok == true and .version == $backend and .controlPlane == $control and .state == "ready" and .runtime.ready == true' <<<"$V73_READY" >/dev/null 2>&1 \
@@ -49,15 +50,15 @@ jobs:
               && grep -Fq 'v38-tool-fabric' <<<"$BOOT" \
               && grep -Fq 'enabledToolCount' <<<"$CLIENT" \
               && grep -Fq 'WAE_TOOL_FABRIC' <<<"$CLIENT"; then
-              echo "Universal Core v65 runtime + v74 control-plane invariants detected in Render"
+              echo "Universal Core v65 runtime + v75 durable audit invariants detected in Render"
               jq '{version,ready,generativeReady,continuity}' <<<"$HEALTH"
-              jq '{capabilityKernel:{version:.capabilityKernel.version,domainCount:.capabilityKernel.domainCount,abilityCount:.capabilityKernel.abilityCount},executionPlane:{version:.executionPlane.version,configuredAdapterCount:.executionPlane.configuredAdapterCount,policy:.executionPlane.policy},toolFabric:{version:.toolFabric.version,toolCount:.toolFabric.toolCount,enabledToolCount:.toolFabric.enabledToolCount,blockedToolCount:.toolFabric.blockedToolCount}}' <<<"$CAPS"
+              jq '{capabilityKernel:{version:.capabilityKernel.version,domainCount:.capabilityKernel.domainCount,abilityCount:.capabilityKernel.abilityCount},executionPlane:{version:.executionPlane.version,auditLedger:.executionPlane.auditLedger,configuredAdapterCount:.executionPlane.configuredAdapterCount,policy:.executionPlane.policy},toolFabric:{version:.toolFabric.version,toolCount:.toolFabric.toolCount,enabledToolCount:.toolFabric.enabledToolCount,blockedToolCount:.toolFabric.blockedToolCount}}' <<<"$CAPS"
               jq '{backend:.backend.version,controlPlane:.controlPlane.version,tenantTrust:.controlPlane.tenantTrust,leastPrivilegeReady:.controlPlane.internalRpc.leastPrivilegeReady}' <<<"$V73_STATUS"
               exit 0
             fi
             sleep 10
           done
-          echo "Render did not expose Universal Core v65 + v74 invariants" >&2
+          echo "Render did not expose Universal Core v65 + v75 invariants" >&2
           exit 1
 
       - name: Prove unsupported actions fail closed and persist receipt
@@ -68,11 +69,11 @@ jobs:
           HTTP=$(curl -sS --max-time 30 -o "$BODY" -w '%{http_code}' "$APP_URL/api/execute" \
             -H 'content-type: application/json' \
             -H "origin: $APP_URL" \
-            --data '{"capability":"computer_use","action":"click","task":"Production certification: unsupported action must remain blocked.","sessionId":"v65-production-certification"}')
+            --data '{"capability":"computer_use","action":"click","task":"Production certification: unsupported action must remain blocked.","sessionId":"v75-production-certification"}')
           test "$HTTP" = "422"
-          jq -e --arg exec "$EXECUTION_VERSION" --arg receipt "$RECEIPT_SCHEMA" '.success == false and .status == "blocked" and .error == "capability_not_executable" and .executionPlane == $exec and .receipt.schema == $receipt and .receipt.status == "blocked" and .receipt.error_code == "capability_not_executable" and .receipt.side_effect == "none" and .audit.persisted == true' "$BODY" >/dev/null
+          jq -e --arg exec "$EXECUTION_VERSION" --arg receipt "$RECEIPT_SCHEMA" --arg audit "$AUDIT_LEDGER_VERSION" '.success == false and .status == "blocked" and .error == "capability_not_executable" and .executionPlane == $exec and .receipt.schema == $receipt and .receipt.status == "blocked" and .receipt.error_code == "capability_not_executable" and .receipt.side_effect == "none" and .audit.persisted == true and .audit.version == $audit and (.audit.mode == "service_role" or .audit.mode == "token_guarded_rls")' "$BODY" >/dev/null
 
-      - name: Prove safe local primitive executes without mutation
+      - name: Prove safe local primitive executes without mutation and persists receipt
         shell: bash
         run: |
           set -euo pipefail
@@ -80,9 +81,9 @@ jobs:
           HTTP=$(curl -sS --max-time 30 -o "$BODY" -w '%{http_code}' "$APP_URL/api/execute" \
             -H 'content-type: application/json' \
             -H "origin: $APP_URL" \
-            --data '{"capability":"file_analysis","action":"inspect_text","task":"Inspect supplied text only","input":{"name":"certification.txt","content":"Universal Core v65 Control Plane"},"sessionId":"v65-local-certification"}')
+            --data '{"capability":"file_analysis","action":"inspect_text","task":"Inspect supplied text only","input":{"name":"certification.txt","content":"Universal Core v75 Audit Ledger"},"sessionId":"v75-local-certification"}')
           test "$HTTP" = "200"
-          jq -e '.success == true and .status == "completed" and .tool.id == "text.inspect" and (.tool.contractHash | length) == 64 and .receipt.side_effect == "none" and .receipt.risk_level == "low" and .result.words == 5' "$BODY" >/dev/null
+          jq -e --arg audit "$AUDIT_LEDGER_VERSION" '.success == true and .status == "completed" and .tool.id == "text.inspect" and (.tool.contractHash | length) == 64 and .receipt.side_effect == "none" and .receipt.risk_level == "low" and .result.words == 5 and .audit.persisted == true and .audit.version == $audit and (.audit.mode == "service_role" or .audit.mode == "token_guarded_rls")' "$BODY" >/dev/null
 
       - name: Verify mission capability planning contract
         shell: bash
@@ -93,9 +94,10 @@ jobs:
 
       - name: Certify production release
         run: |
-          echo 'Universal Core v65 + v74 Production Certification: PASS' >> "$GITHUB_STEP_SUMMARY"
+          echo 'Universal Core v65 + v75 Production Certification: PASS' >> "$GITHUB_STEP_SUMMARY"
           echo '- Capability Kernel v36: 38 domains / 302 mapped abilities' >> "$GITHUB_STEP_SUMMARY"
           echo '- Execution Plane v65: GitHub Intelligence / fail-closed / mutations disabled' >> "$GITHUB_STEP_SUMMARY"
+          echo '- Audit Ledger v75: durable receipt persistence verified without raw prompt/response storage' >> "$GITHUB_STEP_SUMMARY"
           echo '- Tool Fabric v65: 10 registered contracts / 3 sensitive tools blocked / >=2 safe tools enabled' >> "$GITHUB_STEP_SUMMARY"
           echo '- Backend v73: liveness/readiness/status verified' >> "$GITHUB_STEP_SUMMARY"
           echo '- Control Plane v74: identity + tenant trust + internal RPC posture verified' >> "$GITHUB_STEP_SUMMARY"
