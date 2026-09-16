@@ -24,8 +24,8 @@ test('server exposes premium mobile route with v47 backpressure, v46 voice and v
   assert.match(server, /speech-lifecycle-v46\.js\?v=46/);
   assert.match(server, /mobile-voice-v46\.js\?v=46/);
   assert.match(server, /learning-client-v29\.js\?v=34/);
-  assert.match(server, /mobile-response-lifecycle\/v97/);
-  assert.match(server, /universal-core-mobile-v97-response-lifecycle/);
+  assert.match(server, /X-WAE-Mobile-Release','universal-core-mobile-v80-visible-chat'/);
+  assert.match(server, /X-WAE-Mobile-Response-Lifecycle','mobile-response-lifecycle\/v97'/);
   assert.match(server, /universal-core-mobile-v47-long-session/);
   assert.match(server, /long-session-backpressure-v47/);
   assert.match(server, /desktop.*=== '1'/s);
