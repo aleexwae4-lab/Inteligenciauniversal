@@ -31,13 +31,25 @@ function request(url, method = 'GET', headers = {}) {
   return { url, method, headers: { host: 'localhost', ...headers }, socket: { remoteAddress: '127.0.0.1' } };
 }
 
+function restoreEnv(name, value) {
+  if (value === undefined) delete process.env[name];
+  else process.env[name] = value;
+}
+
 test('public config never exposes secrets', () => {
-  process.env.WAE_ADMIN_API_KEY = 'super-secret-value';
-  process.env.OPENAI_API_KEY = 'provider-secret';
-  const output = JSON.stringify(publicBackendConfig());
-  assert.equal(output.includes('super-secret-value'), false);
-  assert.equal(output.includes('provider-secret'), false);
-  assert.equal(backendConfig().version, BACKEND_VERSION);
+  const originalAdmin = process.env.WAE_ADMIN_API_KEY;
+  const originalProvider = process.env.OPENAI_API_KEY;
+  try {
+    process.env.WAE_ADMIN_API_KEY = 'super-secret-value';
+    process.env.OPENAI_API_KEY = 'provider-secret';
+    const output = JSON.stringify(publicBackendConfig());
+    assert.equal(output.includes('super-secret-value'), false);
+    assert.equal(output.includes('provider-secret'), false);
+    assert.equal(backendConfig().version, BACKEND_VERSION);
+  } finally {
+    restoreEnv('WAE_ADMIN_API_KEY', originalAdmin);
+    restoreEnv('OPENAI_API_KEY', originalProvider);
+  }
 });
 
 test('security headers establish an API perimeter', () => {
@@ -82,11 +94,14 @@ test('liveness endpoint responds with backend identity', async () => {
 
 test('admin telemetry is fail-closed without a valid key', async () => {
   const original = process.env.WAE_ADMIN_API_KEY;
-  process.env.WAE_ADMIN_API_KEY = 'expected-key';
-  const req = request('/api/v73/admin/metrics');
-  const res = new MockResponse();
-  await handlePremiumBackend(req, res);
-  assert.equal(res.statusCode, 403);
-  assert.equal(JSON.parse(res.body).error, 'admin_auth_required');
-  if (original === undefined) delete process.env.WAE_ADMIN_API_KEY; else process.env.WAE_ADMIN_API_KEY = original;
+  try {
+    process.env.WAE_ADMIN_API_KEY = 'expected-key';
+    const req = request('/api/v73/admin/metrics');
+    const res = new MockResponse();
+    await handlePremiumBackend(req, res);
+    assert.equal(res.statusCode, 403);
+    assert.equal(JSON.parse(res.body).error, 'admin_auth_required');
+  } finally {
+    restoreEnv('WAE_ADMIN_API_KEY', original);
+  }
 });
