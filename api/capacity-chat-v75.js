@@ -4,6 +4,7 @@ import {modernizePayload,MODERN_RESPONSE_VERSION} from '../lib/modern-response-v
 import {applyAnswerIntelligence,ANSWER_INTELLIGENCE_VERSION} from '../lib/answer-intelligence-v60.js';
 import {applyQualityReliability,QUALITY_RELIABILITY_VERSION} from '../lib/quality-reliability-v61.js';
 import {isSafeAssistantOutput,publicContextFallback,CONTEXT_OUTPUT_FIREWALL_VERSION} from '../lib/context-output-firewall-v55.js';
+import {applyHeaders,originAllowed,allowRequest} from '../lib/security.js';
 
 function bufferedResponse(real){
   let code=200,payload,hasJson=false;
@@ -42,22 +43,34 @@ function sensitiveRequest(body={}){
   if(Array.isArray(body.attachments)&&body.attachments.length>0&&String(process.env.WAE_GPU_ALLOW_ATTACHMENTS||'0')!=='1')return true;
   return false;
 }
+function requiresGroundedData(body={}){
+  if(String(process.env.WAE_GPU_ALLOW_UNGROUNDED_RESEARCH||'0')==='1')return false;
+  const mode=String(body.mode||body.agent||'general').toLowerCase();
+  const q=String(body.message||body.task||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase();
+  return body.web_enabled===true||mode==='research'||/\b(hoy|today|actual|currently|current|latest|reciente|noticias|news|precio|cotizacion|ley vigente|jurisprudencia reciente)\b/.test(q);
+}
 function explicitGpu(body={}){return String(body.provider||'').toLowerCase()==='gpu_fabric'}
 function gpuRecoveryAllowed(body={}){
-  if(!gpuFabricConfigured()||sensitiveRequest(body))return false;
+  if(!gpuFabricConfigured()||sensitiveRequest(body)||requiresGroundedData(body))return false;
   if(body.disable_gpu_fabric===true)return false;
   return true;
 }
+function gpuBlockReason(body={}){
+  if(!gpuFabricConfigured())return'not_configured';
+  if(sensitiveRequest(body))return'sensitive_or_attachment';
+  if(requiresGroundedData(body))return'grounded_research_required';
+  if(body.disable_gpu_fabric===true)return'disabled_for_request';
+  return null;
+}
 function gpuSystem(body={}){
   const mode=String(body.mode||body.agent||'general').toLowerCase();
-  return `Eres Universal Core, núcleo de inteligencia de WAE OS Enterprise. Estás operando en el carril de resiliencia GPU ${GPU_FABRIC_VERSION}. Responde únicamente a la solicitud del usuario. No menciones infraestructura interna, proveedores ni fallos previos salvo que el usuario lo pregunte. No inventes fuentes, acciones ejecutadas ni datos actuales. Si el usuario pide datos actuales sin evidencia viva, indica la limitación con precisión. Modo: ${mode}. Usa Markdown claro cuando ayude y no expongas razonamiento interno.`;
+  return `Eres Universal Core, núcleo de inteligencia de WAE OS Enterprise. Estás operando en el carril de resiliencia GPU ${GPU_FABRIC_VERSION}. Responde únicamente a la solicitud del usuario. No menciones infraestructura interna, proveedores ni fallos previos salvo que el usuario lo pregunte. No inventes fuentes, acciones ejecutadas ni datos actuales. Modo: ${mode}. Usa Markdown claro cuando ayude y no expongas razonamiento interno.`;
 }
 function gpuHistory(body={}){return Array.isArray(body.history)?body.history.slice(-10):[]}
 
 function safeGpuPayload(result,body,previous={}){
   const raw=String(result?.text||'').trim();
-  const text=isSafeAssistantOutput(raw)?raw:publicContextFallback();
-  const degraded=!isSafeAssistantOutput(raw);
+  const safe=isSafeAssistantOutput(raw),text=safe?raw:publicContextFallback(),degraded=!safe;
   let payload={
     success:true,
     reply:text,
@@ -85,7 +98,11 @@ export default async function capacityChatV75(req,res){
   res.setHeader('X-WAE-GPU-Lanes',String(fabric.configuredLanes));
 
   if(explicitGpu(body)){
-    if(!gpuRecoveryAllowed(body))return res.status(503).json({error:'GPU_FABRIC_UNAVAILABLE',message:sensitiveRequest(body)?'GPU Fabric externo está bloqueado para este turno por política de sensibilidad.':'GPU Fabric no tiene carriles disponibles.',recoverable:true,gpu_fabric:{version:GPU_FABRIC_VERSION,configured:fabric.configured,configured_lanes:fabric.configuredLanes}});
+    applyHeaders(res);
+    if(req.method!=='POST')return res.status(405).json({error:'method_not_allowed'});
+    if(!originAllowed(req))return res.status(403).json({error:'origin_not_allowed'});
+    if(!allowRequest(req,Number(process.env.WAE_GPU_RATE_LIMIT_PER_MINUTE||12)))return res.status(429).json({error:'gpu_rate_limited'});
+    if(!gpuRecoveryAllowed(body))return res.status(503).json({error:'GPU_FABRIC_UNAVAILABLE',message:'GPU Fabric está bloqueado o no configurado para este turno.',recoverable:true,gpu_fabric:{version:GPU_FABRIC_VERSION,configured:fabric.configured,configured_lanes:fabric.configuredLanes,reason:gpuBlockReason(body)}});
     try{
       const payload=await recoverWithGpu(body,{code:null,degraded:false});
       res.setHeader('X-WAE-Cognitive-Path',GPU_FABRIC_VERSION);
@@ -121,6 +138,6 @@ export default async function capacityChatV75(req,res){
     }
   }
 
-  if(payload&&typeof payload==='object')payload.gpu_fabric={...(payload.gpu_fabric||{}),version:GPU_FABRIC_VERSION,configured:fabric.configured,configured_lanes:fabric.configuredLanes,recovery_eligible:gpuRecoveryAllowed(body),recovery_attempted:false};
+  if(payload&&typeof payload==='object')payload.gpu_fabric={...(payload.gpu_fabric||{}),version:GPU_FABRIC_VERSION,configured:fabric.configured,configured_lanes:fabric.configuredLanes,recovery_eligible:gpuRecoveryAllowed(body),recovery_block_reason:gpuBlockReason(body),recovery_attempted:false};
   return res.status(buffered.code).json(payload);
 }
