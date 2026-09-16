@@ -30,6 +30,13 @@ function attachmentLooksSensitive(attachments:any[]=[]){
   });
 }
 
+function tuneModel(m:any){
+  if(m?.provider!=='google_gemma'||m?.model_name!=='gemma-4-26b-a4b-it')return m;
+  const capabilities={...(m?.capabilities||{})};
+  capabilities.timeout_ms=Math.max(24000,Number(capabilities.timeout_ms)||0);
+  return {...m,capabilities};
+}
+
 // A file is evidence, not automatically sensitive data. The previous router marked every
 // attachment as sensitive, which excluded governed external generative models and pushed
 // ordinary document analysis into the deterministic rescue path. Preserve fail-closed
@@ -41,13 +48,30 @@ export function classifyTask(q:string,mode='general',attachments:any[]=[]){
 }
 
 export async function invoke(m:any,msgs:any[],opts:any={}){
-  if(!isTransportProbe(msgs,opts))return base.invoke(m,msgs,opts);
+  const tuned=tuneModel(m);
+  if(!isTransportProbe(msgs,opts))return base.invoke(tuned,msgs,opts);
   let deltas=0;
   const userOnDelta=opts.onDelta;
   const probeMsgs=[{role:'system',content:LONG_PROBE_SYSTEM},{role:'user',content:LONG_PROBE_USER}];
-  const result=await base.invoke(m,probeMsgs,{...opts,onDelta:(d:string,t:number)=>{deltas++;userOnDelta?.(d,t)}});
+  const result=await base.invoke(tuned,probeMsgs,{...opts,onDelta:(d:string,t:number)=>{deltas++;userOnDelta?.(d,t)}});
   if(deltas<2)throw progressiveError(deltas);
   return{...result,delta_count:deltas};
+}
+
+// The base router uses a 10 minute blackout after the first 429. On shared free tiers that
+// turns a normal minute-level quota reset into a long artificial outage. Keep exponential
+// backoff, but cap the first rate-limit blackout to a short recovery window.
+export async function markFailure(db:any,m:any,e:any){
+  const cls=await base.markFailure(db,m,e);
+  if(cls!=='rate_limit')return cls;
+  const failures=Math.max(1,Number(m?.consecutive_failures||0)+1);
+  const cooldownSeconds=Math.min(180,75+failures*15);
+  const openUntil=new Date(Date.now()+cooldownSeconds*1000).toISOString();
+  await Promise.allSettled([
+    db.from('wae_ai_models').update({circuit_open_until:openUntil}).eq('provider',m.provider).eq('model_name',m.model_name).is('organization_id',null),
+    db.from('wae_provider_reliability_ledger_v1').update({open_until:openUntil,updated_at:new Date().toISOString()}).eq('provider',m.provider).eq('model',m.model_name)
+  ]);
+  return cls;
 }
 
 function debt(row:any){const n=Number(row?.consecutive_failures||row?.failure_debt||0);return Number.isFinite(n)?n:0}
