@@ -65,6 +65,54 @@ jobs:
           grep -Fq "¿En qué trabajamos?" <<<"$PAGE"
           grep -Fq "Pregunta lo que quieras" <<<"$PAGE"
 
+      - name: Verify screenshot GPU question never collapses to incomplete-response UI
+        shell: bash
+        run: |
+          set -euo pipefail
+          ANSWER=''
+          for attempt in $(seq 1 4); do
+            ANSWER=$(curl -fsS --max-time 90 "$APP_URL/api/chat" \
+              -H 'content-type: application/json' \
+              -H "origin: $APP_URL" \
+              --data '{"message":"Hola para que sirven los GPUs?","mode":"general","sessionId":"mobile-production-v83-gpu-screenshot"}' || true)
+            if jq -e '(.reply | type == "string") and (.reply | length) >= 70 and .response.schema == "assistant-response/v1" and ((.degraded == false) or (.recovery.path == "focused-factual-v83"))' <<<"$ANSWER" >/dev/null 2>&1 \
+              && grep -Eqi 'GPU|procesamiento gr[aá]fico|gr[aá]fic|c[oó]mputo paralelo' <<<"$(jq -r '.reply // ""' <<<"$ANSWER")" \
+              && ! grep -Eqi 'respuesta no lleg[oó] completa|continuity_pass_through|all_models_unavailable|no pude completar|rutas generativas.*(saturad|no estuv)' <<<"$ANSWER"; then
+              echo "Screenshot GPU question returned a useful visible answer"
+              echo "$ANSWER" | jq '{degraded,reply,provider,model,recovery}'
+              exit 0
+            fi
+            sleep 4
+          done
+          echo "Screenshot GPU question still collapses to an unusable response" >&2
+          echo "$ANSWER" | jq '{degraded,reply,error,provider,model,recovery,response_schema:.response.schema}' >&2 || true
+          exit 1
+
+      - name: Verify Rayleigh recovery is concept-relevant and rejects Blue Sky title noise
+        shell: bash
+        run: |
+          set -euo pipefail
+          ANSWER=''
+          for attempt in $(seq 1 4); do
+            ANSWER=$(curl -fsS --max-time 90 "$APP_URL/api/chat" \
+              -H 'content-type: application/json' \
+              -H "origin: $APP_URL" \
+              --data '{"message":"Explica en dos oraciones qué es la dispersión de Rayleigh y por qué hace que el cielo se vea azul.","mode":"general","sessionId":"mobile-production-v83-rayleigh-relevance"}' || true)
+            REPLY=$(jq -r '.reply // ""' <<<"$ANSWER" 2>/dev/null || true)
+            if jq -e '(.reply | type == "string") and (.reply | length) >= 70 and .response.schema == "assistant-response/v1" and ((.degraded == false) or (.recovery.path == "focused-factual-v83"))' <<<"$ANSWER" >/dev/null 2>&1 \
+              && grep -Eqi 'Rayleigh' <<<"$REPLY" \
+              && grep -Eqi 'dispers|luz|light|scattering|longitud de onda' <<<"$REPLY" \
+              && ! grep -Eqi 'EL PUÑO DEL CIELO AZUL|Blue Sky \(Cielo Azul\)|metadatos por sí solos' <<<"$REPLY"; then
+              echo "Rayleigh relevance recovery passed"
+              echo "$ANSWER" | jq '{degraded,reply,provider,model,recovery}'
+              exit 0
+            fi
+            sleep 4
+          done
+          echo "Rayleigh answer remained irrelevant or unusable" >&2
+          echo "$ANSWER" | jq '{degraded,reply,error,provider,model,recovery,response_schema:.response.schema}' >&2 || true
+          exit 1
+
       - name: Verify visible chat answers a real generative question
         shell: bash
         run: |
@@ -77,11 +125,11 @@ jobs:
               --data '{"message":"Explica en dos oraciones qué es la dispersión de Rayleigh y por qué hace que el cielo se vea azul.","mode":"general","sessionId":"mobile-production-v81-real-answer"}' || true)
             if jq -e '.degraded == false and (.reply | type == "string") and (.reply | length) >= 80 and .response.schema == "assistant-response/v1"' <<<"$ANSWER" >/dev/null 2>&1 \
               && ! grep -Eqi 'continuity_pass_through|all_models_unavailable|no pude completar|rutas generativas.*(saturad|no estuv)|respuesta con evidencia recuperada' <<<"$ANSWER"; then
-              echo "Real visible-chat generation passed on v81"
+              echo "Real visible-chat generation passed"
               exit 0
             fi
             sleep 5
           done
-          echo "Visible chat did not produce a real non-degraded v81 answer" >&2
+          echo "Visible chat did not produce a real non-degraded answer" >&2
           echo "$ANSWER" | jq '{degraded,reply,error,provider,model,response_schema:.response.schema}' >&2 || true
           exit 1

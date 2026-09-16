@@ -60,9 +60,10 @@ test('database migration is private, sharded and lease-based',async()=>{
   assert.match(sql,/contains_prompt_content|stores_prompt_content|never prompt/i);
 });
 
-test('v82 compatibility chain preserves v81 health, v77 GPU, v63 distributed admission and local governor underneath',async()=>{
+test('v83 live chain preserves v81 health, v77 GPU and v63 distributed admission while v82 remains compatible',async()=>{
   const wrapper=await readFile(new URL('../api/capacity-chat-v63.js',import.meta.url),'utf8');
   const compatibility=await readFile(new URL('../api/capacity-chat-v60.js',import.meta.url),'utf8');
+  const factualWrapper=await readFile(new URL('../api/capacity-chat-v83.js',import.meta.url),'utf8');
   const recoveryWrapper=await readFile(new URL('../api/capacity-chat-v82.js',import.meta.url),'utf8');
   const healthWrapper=await readFile(new URL('../api/capacity-chat-v81.js',import.meta.url),'utf8');
   const gpuWrapper=await readFile(new URL('../api/capacity-chat-v77.js',import.meta.url),'utf8');
@@ -71,7 +72,10 @@ test('v82 compatibility chain preserves v81 health, v77 GPU, v63 distributed adm
   assert.match(wrapper,/capacityChatV62/);
   assert.match(wrapper,/finally/);
   assert.match(wrapper,/Retry-After/);
-  assert.match(compatibility,/capacity-chat-v82\.js/);
+  assert.match(compatibility,/capacity-chat-v83\.js/);
+  assert.match(factualWrapper,/capacity-chat-v81\.js/);
+  assert.match(factualWrapper,/runFocusedFactualAnswer/);
+  assert.match(factualWrapper,/runKnowledgeAnswer/);
   assert.match(recoveryWrapper,/capacity-chat-v81\.js/);
   assert.match(recoveryWrapper,/runKnowledgeAnswer/);
   assert.match(healthWrapper,/capacity-chat-v77\.js/);
