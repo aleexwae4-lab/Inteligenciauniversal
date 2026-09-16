@@ -8,6 +8,7 @@ import { shouldUseLibraryAnswer, runLibraryAnswer, LIBRARY_ANSWER_VERSION } from
 import { shouldUseExecutiveOrchestrator, runExecutiveOrchestration, EXECUTIVE_ORCHESTRATION_VERSION } from '../lib/executive-orchestration-v52.js';
 import { runWithRequestSignal } from '../lib/network-deadlines-v46.js';
 import { isSafeAssistantOutput, publicContextFallback, CONTEXT_OUTPUT_FIREWALL_VERSION } from '../lib/context-output-firewall-v55.js';
+import { classifySelfAwarenessV99, buildSelfAwarenessReplyV99, selfAwarenessSnapshotV99, SELF_AWARENESS_V99 } from '../lib/self-awareness-v99.js';
 
 function bufferedResponse(real){
   let code=200,payload,hasJson=false;
@@ -102,6 +103,33 @@ async function bounded(ms,task){
   return runWithRequestSignal(signal,task);
 }
 
+async function selfAwarenessFastPath(req,res,body){
+  const intent=classifySelfAwarenessV99(body);
+  if(!intent.eligible)return false;
+  if(!authorizeIntercept(req,res))return true;
+  let stats=null;
+  try{stats=await bounded(2200,()=>getUniversalSelfDescription())}catch{}
+  const snapshot=selfAwarenessSnapshotV99(stats||{});
+  const reply=buildSelfAwarenessReplyV99({kind:intent.kind,stats:stats||{}});
+  res.setHeader('X-WAE-Cognitive-Path','self-awareness-v99');
+  res.setHeader('X-WAE-Self-Awareness',SELF_AWARENESS_V99);
+  res.setHeader('X-WAE-Context-Output-Firewall',CONTEXT_OUTPUT_FIREWALL_VERSION);
+  res.status(200).json(safePayload({
+    success:true,
+    reply,
+    speech_text:reply,
+    response:{content:reply,speechText:reply,components:[],metadata:{fastLane:true,selfAwareness:true,selfAwarenessVersion:SELF_AWARENESS_V99,selfAwarenessKind:intent.kind}},
+    provider:'universal_core',
+    model:'universal-core-self-awareness-v99',
+    fast_lane:true,
+    fast_lane_version:SELF_AWARENESS_V99,
+    self_awareness:snapshot,
+    comparative_claim:{status:'UNVERIFIED',certificationEndpoint:'/api/premium-gate/v98'},
+    web_sources:[]
+  }));
+  return true;
+}
+
 async function libraryCapabilityFastPath(req,res,body){
   if(!libraryCapabilityIntent(body))return false;
   if(!authorizeIntercept(req,res))return true;
@@ -153,6 +181,7 @@ async function emergencyAfterPathFailure({body,key,error,res,path}){
 
 export default async function capacityChatHandler(req,res){
   const body=req.body||{};
+  if(await selfAwarenessFastPath(req,res,body))return;
   if(modernFastPath(req,res,body))return;
   if(await libraryCapabilityFastPath(req,res,body))return;
   if(await identityFastPath(req,res,body))return;
