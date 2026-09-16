@@ -5,8 +5,7 @@ import { observeRequest } from './metrics.js';
 import { allowGatewayRequest, applyCors, applySecurityHeaders, authorizeAdmin } from './security.js';
 import { resolveBackendRoute } from './routes.js';
 import { IDENTITY_VERSION, resolveRequestIdentity } from '../lib/identity-v74.js';
-
-export const CONTROL_PLANE_VERSION = 'universal-core-control-plane/v74';
+import { CONTROL_PLANE_VERSION } from '../lib/control-plane-v74.js';
 
 export function isPremiumBackendPath(pathname = '') {
   return String(pathname).startsWith('/api/v73/');
