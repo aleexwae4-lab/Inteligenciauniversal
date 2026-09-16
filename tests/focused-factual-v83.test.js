@@ -70,10 +70,13 @@ test('domain recognizer covers GPU and optical scattering explicitly',()=>{
   assert.equal(detectFactualDomain('Rayleigh scattering optical light wavelength'),'physics');
 });
 
-test('v60 live path promotes v83 directly over v81, focused factual and generic knowledge recovery',()=>{
+test('v60 live path promotes v84 resilience over v83 factual recovery and v81 provider health',()=>{
   const v60=fs.readFileSync(new URL('../api/capacity-chat-v60.js',import.meta.url),'utf8');
+  const v84=fs.readFileSync(new URL('../api/capacity-chat-v84.js',import.meta.url),'utf8');
   const v83=fs.readFileSync(new URL('../api/capacity-chat-v83.js',import.meta.url),'utf8');
-  assert.match(v60,/capacity-chat-v83\.js/);
+  assert.match(v60,/capacity-chat-v84\.js/);
+  assert.match(v84,/capacity-chat-v83\.js/);
+  assert.match(v84,/callIaGratisChat/);
   assert.match(v83,/capacity-chat-v81\.js/);
   assert.match(v83,/runFocusedFactualAnswer/);
   assert.match(v83,/runKnowledgeAnswer/);
