@@ -39,6 +39,7 @@ export default async function performanceHandler(req,res) {
       supremacy_claim_allowed:selfImprovement?.supremacy_gate?.claim_allowed===true,
       globally_ready:gate.routing_state==='PROMOTE'&&cognitive.state==='PASS'&&reliabilityReady&&learningReady
     },
-    public_contract:'universal-performance+quality+reliability+streaming+learning+latency-v7'
+    public_contract:'universal-performance+quality+reliability+streaming+learning/v6',
+    latency_contract:'universal-performance+quality+reliability+streaming+learning+latency/v7'
   });
 }
