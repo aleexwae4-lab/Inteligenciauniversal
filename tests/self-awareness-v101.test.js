@@ -9,6 +9,8 @@ test('v101 exposes grounded self-awareness contract',()=>{
   assert.equal(caps.groundedSelfKnowledge,true);
   assert.equal(caps.dynamicOperationalStatus,true);
   assert.equal(caps.falseSuperiorityClaimsBlocked,true);
+  assert.equal(caps.recognizesCurrentFrontierFamilies,true);
+  assert.equal(caps.naturalLanguageComparisonVariants,true);
 });
 
 test('healthy eligible generation is reported available',()=>{
@@ -63,6 +65,10 @@ test('comparison reply requires signed certification and blocks global number on
 test('capability and competitor intents are recognized through v101',()=>{
   assert.equal(classifySelfAwarenessV101({message:'¿Cuáles son tus capacidades?'}).kind,'capability');
   assert.equal(classifySelfAwarenessV101({message:'¿Superas a GPT-6 Astra?'}).kind,'comparison');
+  assert.equal(classifySelfAwarenessV101({message:'¿Eres mejor que Claude Fable 5.1?'}).kind,'comparison');
+  assert.equal(classifySelfAwarenessV101({message:'¿Cómo te comparas con Gemini 3.8 Flash?'}).kind,'comparison');
+  assert.equal(classifySelfAwarenessV101({message:'¿Ganas a Grok 4.6?'}).kind,'comparison');
+  assert.equal(classifySelfAwarenessV101({message:'¿Compites contra GitHub Copilot?'}).kind,'comparison');
   assert.equal(classifySelfAwarenessV101({message:'Escribe un poema sobre Jalisco'}).eligible,false);
 });
 
@@ -74,6 +80,23 @@ test('clip regression: GPT Astra factual lookup is forced into live research',()
   assert.equal(guarded.freshness_required,true);
   assert.equal(guarded.frontier_entity_query,true);
   assert.equal(guarded.freshness_guard,FRONTIER_FRESHNESS_V101);
+});
+
+test('current frontier families are forced into live evidence when facts are requested',()=>{
+  const prompts=[
+    '¿Qué capacidades tiene Claude Fable 5.1?',
+    '¿Qué es Gemini 3.8 Flash?',
+    '¿Qué capacidades tiene Grok 4.6?',
+    '¿Qué modelos usa GitHub Copilot?',
+  ];
+  for(const message of prompts){
+    const guarded=applyFrontierFreshnessGuardV101({message});
+    assert.equal(guarded.mode,'research',message);
+    assert.equal(guarded.research_mode,true,message);
+    assert.equal(guarded.web_enabled,true,message);
+    assert.equal(guarded.freshness_required,true,message);
+    assert.equal(guarded.frontier_entity_query,true,message);
+  }
 });
 
 test('frontier freshness respects explicit web disable but still marks verification required',()=>{
