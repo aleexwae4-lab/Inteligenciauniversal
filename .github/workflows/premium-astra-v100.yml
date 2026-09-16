@@ -1,0 +1,147 @@
+name: Premium Astra Arena v100
+
+on:
+  push:
+    branches:
+      - benchmark/premium-astra-v100
+    paths:
+      - 'scripts/premium-astra-v100.mjs'
+      - '.github/workflows/premium-astra-v100.yml'
+      - 'lib/adversarial-evidence-v72.js'
+      - 'lib/verified-gpt-arena-v93.js'
+      - 'lib/premium-superiority-gate-v98.js'
+  workflow_dispatch:
+    inputs:
+      require_certification:
+        description: Fail the run unless Premium Gate v98 returns CERTIFIED
+        required: true
+        default: false
+        type: boolean
+
+permissions:
+  contents: read
+
+concurrency:
+  group: premium-astra-v100
+  cancel-in-progress: false
+
+jobs:
+  production-readiness:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      UNIVERSAL_CORE_URL: https://wae-inteligencia-universal.onrender.com
+    steps:
+      - name: Checkout benchmark harness
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Verify v99 and premium contracts
+        run: |
+          node --check scripts/premium-astra-v100.mjs
+          node --test tests/self-awareness-v99.test.js tests/premium-superiority-gate-v98.test.js tests/verified-gpt-arena-v93.test.js
+
+      - name: Probe production readiness without exposing secrets
+        run: |
+          node <<'NODE'
+          const base=process.env.UNIVERSAL_CORE_URL;
+          const endpoints=['/api/capabilities','/api/benchmark/v93','/api/benchmark/v98'];
+          const rows={};
+          for(const endpoint of endpoints){
+            const r=await fetch(base+endpoint,{headers:{Accept:'application/json','User-Agent':'wae-premium-readiness-v100/1.0'}});
+            const text=await r.text();
+            if(!r.ok)throw new Error(`${endpoint}:http_${r.status}:${text.slice(0,180)}`);
+            rows[endpoint]=JSON.parse(text);
+          }
+          const caps=rows['/api/capabilities'];
+          const v93=rows['/api/benchmark/v93'];
+          const v98=rows['/api/benchmark/v98'];
+          const proof={
+            selfAwarenessVersion:caps?.selfAwareness?.version||null,
+            comparator:v93?.comparator?{configured:v93.comparator.configured,executable:v93.comparator.executable,model:v93.comparator.model,referenceId:v93.comparator.referenceId,reason:v93.comparator.reason}:null,
+            attestation:v93?.attestation?{configured:v93.attestation.configured,algorithm:v93.attestation.algorithm}:null,
+            premiumReadiness:v98?.readiness||null,
+            premiumRegressionStatus:v98?.regressionStatus||null,
+          };
+          console.log(JSON.stringify(proof,null,2));
+          if(proof.selfAwarenessVersion!=='self-awareness/v99')throw new Error('production_self_awareness_v99_not_live');
+          NODE
+
+  signed-arena:
+    needs: production-readiness
+    runs-on: ubuntu-latest
+    timeout-minutes: 180
+    env:
+      UNIVERSAL_CORE_URL: https://wae-inteligencia-universal.onrender.com
+      WAE_RUNTIME_BRIDGE_TOKEN: ${{ secrets.WAE_RUNTIME_BRIDGE_TOKEN }}
+      PREMIUM_REFERENCE_ID: openai:gpt-6-astra
+      BENCHMARK_ARTIFACT_DIR: artifacts
+      BENCHMARK_INTER_CASE_MS: '1200'
+      BENCHMARK_REQUEST_TIMEOUT_MS: '180000'
+      BENCHMARK_REQUIRE_CERTIFICATION: ${{ github.event_name == 'workflow_dispatch' && inputs.require_certification && '1' || '0' }}
+    steps:
+      - name: Checkout benchmark harness
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Require trusted runtime credential
+        shell: bash
+        run: |
+          if [ ${#WAE_RUNTIME_BRIDGE_TOKEN} -lt 24 ]; then
+            echo 'WAE_RUNTIME_BRIDGE_TOKEN is not configured in GitHub Actions. The signed arena is blocked rather than simulated.'
+            exit 1
+          fi
+
+      - name: Execute signed 64-case Universal Core v99 vs GPT-6 Astra arena
+        run: node scripts/premium-astra-v100.mjs
+
+      - name: Publish premium summary
+        if: always()
+        shell: bash
+        run: |
+          latest=$(ls -1t artifacts/premium-astra-v100-*.json 2>/dev/null | head -n 1 || true)
+          echo '## Premium Astra Arena v100' >> "$GITHUB_STEP_SUMMARY"
+          if [ -z "$latest" ]; then
+            echo 'No signed benchmark artifact was produced. Check production readiness and trusted worker credentials.' >> "$GITHUB_STEP_SUMMARY"
+            exit 0
+          fi
+          node - "$latest" <<'NODE'
+          const fs=require('fs');
+          const r=JSON.parse(fs.readFileSync(process.argv[2],'utf8'));
+          const p=r.premiumGate?.premiumCertification||{};
+          const q=p.quality||{};
+          const perf=p.performance||{};
+          const lines=[
+            `- Target release: **${r.targetRelease||'unknown'}**`,
+            `- Reference: **${r.referenceId||'unknown'}**`,
+            `- Cases: **${r.cases?.length||0}/64**`,
+            `- Premium gate: **${p.state||'NO_RESULT'}**`,
+            `- Failed gates: **${(p.failed||[]).join(', ')||'none'}**`,
+            `- Target quality: **${q.targetMeanScore??'n/a'}**`,
+            `- Astra quality: **${q.referenceMeanScore??'n/a'}**`,
+            `- Target P95: **${perf.target?.p95_ms??'n/a'} ms**`,
+            `- Astra P95: **${perf.reference?.p95_ms??'n/a'} ms**`,
+            `- Target P99: **${perf.target?.p99_ms??'n/a'} ms**`,
+            `- Astra P99: **${perf.reference?.p99_ms??'n/a'} ms**`,
+            '',
+            p.certified===true?'Benchmark-scoped premium advantage is certified by v98.':'No superiority claim is authorized by this run.'
+          ];
+          fs.appendFileSync(process.env.GITHUB_STEP_SUMMARY,lines.join('\n')+'\n');
+          NODE
+
+      - name: Upload sanitized signed evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: premium-astra-v100-${{ github.run_id }}
+          path: artifacts/premium-astra-v100-*.json
+          if-no-files-found: warn
+          retention-days: 30
