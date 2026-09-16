@@ -1,4 +1,6 @@
-import capacityChatV82 from './capacity-chat-v82.js';
+import capacityChatV81 from './capacity-chat-v81.js';
+import { runKnowledgeAnswer } from '../lib/knowledge/knowledge-answer-v1.js';
+import { sameOriginKnowledgeEligible } from '../lib/recovery-policy-v82.js';
 import { runFocusedFactualAnswer, focusedFactualEligible, FOCUSED_FACTUAL_VERSION } from '../lib/knowledge/focused-factual-v83.js';
 
 export const CAPACITY_CHAT_V83='capacity-chat/v83-focused-factual-answer';
@@ -27,48 +29,86 @@ function terminalControlFailure(code,payload={}){
     'CAPACITY_BUSY','RATE_LIMITED','ORIGIN_NOT_ALLOWED','METHOD_NOT_ALLOWED','GPU_RATE_LIMITED','LIVE_RATE_LIMITED','KNOWLEDGE_RATE_LIMITED'
   ].includes(error);
 }
-function needsFocusedRecovery(code,payload={}){
-  if(terminalControlFailure(code,payload))return false;
-  if(code>=500||!replyOf(payload))return true;
-  if(payload?.degraded===true)return true;
+function upstreamUsable(code,payload={}){
   const reply=replyOf(payload).toLowerCase();
-  return /respuesta no lleg[oó] completa|no pude completar|recuper[eé] evidencia verificable|metadatos por s[ií] solos|all_models_unavailable|continuity_pass_through/i.test(reply);
+  return code<500&&!!reply&&payload?.degraded!==true
+    &&!/respuesta no lleg[oó] completa|no pude completar|all_models_unavailable|continuity_pass_through/i.test(reply);
 }
-async function boundedFocused(body){
-  const timeoutMs=Math.max(2500,Math.min(12000,Number(process.env.WAE_V83_FACTUAL_TIMEOUT_MS||7500)));
+function knowledgeUsable(result){
+  const reply=replyOf(result);
+  return !!reply&&result?.quality?.critical!==true&&!/all_models_unavailable|continuity_pass_through|no pude completar/i.test(reply);
+}
+async function withTimeout(work,timeoutMs){
   let timer;
   const timeout=new Promise(resolve=>{timer=setTimeout(()=>resolve(null),timeoutMs)});
-  try{return await Promise.race([runFocusedFactualAnswer({body}),timeout])}
+  try{return await Promise.race([work,timeout])}
   finally{if(timer)clearTimeout(timer)}
+}
+async function boundedFocused(body){
+  const timeoutMs=Math.max(2500,Math.min(12000,Number(process.env.WAE_V83_FACTUAL_TIMEOUT_MS||6500)));
+  return withTimeout(runFocusedFactualAnswer({body}),timeoutMs);
+}
+async function boundedGenericKnowledge(body,userKey){
+  const timeoutMs=Math.max(4000,Math.min(18000,Number(process.env.WAE_V83_KNOWLEDGE_TIMEOUT_MS||10000)));
+  return withTimeout(runKnowledgeAnswer({body:{...body,mode:'research',web_enabled:false,knowledge:true,provider:'auto'},userKey}),timeoutMs);
 }
 
 export default async function capacityChatV83(req,res){
-  res.setHeader('X-WAE-Chat-Release',CAPACITY_CHAT_V83);
-  res.setHeader('X-WAE-Factual-Recovery',FOCUSED_FACTUAL_VERSION);
   const body=req.body&&typeof req.body==='object'?req.body:{};
   const first=bufferedResponse(res);
-  await capacityChatV82(req,first.proxy);
+  await capacityChatV81(req,first.proxy);
   if(res.writableEnded||!first.hasJson)return;
-  if(!needsFocusedRecovery(first.code,first.payload)||!focusedFactualEligible(body)){
+
+  res.setHeader('X-WAE-Chat-Release',CAPACITY_CHAT_V83);
+  res.setHeader('X-WAE-Factual-Recovery',FOCUSED_FACTUAL_VERSION);
+
+  if(upstreamUsable(first.code,first.payload)||terminalControlFailure(first.code,first.payload)){
     return res.status(first.code).json(first.payload);
   }
-  try{
-    const recovered=await boundedFocused(body);
-    if(recovered?.success===true&&replyOf(recovered)){
-      const payload={
-        ...recovered,
-        recovery:{
-          ...(recovered.recovery||{}),
-          active:true,
-          path:'focused-factual-v83',
-          upstream_status:first.code,
-          upstream_degraded:first.payload?.degraded===true,
-          upstream_model:first.payload?.model||null
-        }
-      };
-      res.setHeader('X-WAE-Operational-Recovery','focused-factual-v83');
-      return res.status(200).json(payload);
-    }
-  }catch{}
-  return res.status(first.code||503).json(first.payload||{error:'FACTUAL_RECOVERY_EXHAUSTED',recoverable:true});
+
+  if(focusedFactualEligible(body)){
+    try{
+      const recovered=await boundedFocused(body);
+      if(recovered?.success===true&&replyOf(recovered)){
+        const payload={
+          ...recovered,
+          recovery:{
+            ...(recovered.recovery||{}),
+            active:true,
+            path:'focused-factual-v83',
+            upstream_status:first.code,
+            upstream_degraded:first.payload?.degraded===true,
+            upstream_model:first.payload?.model||null
+          }
+        };
+        res.setHeader('X-WAE-Operational-Recovery','focused-factual-v83');
+        return res.status(200).json(payload);
+      }
+    }catch{}
+  }
+
+  const message=String(body.message||body.task||'').trim();
+  if(sameOriginKnowledgeEligible(message,body.mode||'general')){
+    try{
+      const userKey=String(body.userKey||body.sessionId||body.session_id||'anonymous').slice(0,160);
+      const recovered=await boundedGenericKnowledge(body,userKey);
+      if(knowledgeUsable(recovered)){
+        const payload={
+          ...recovered,
+          recovery:{
+            ...(recovered?.recovery||{}),
+            active:true,
+            path:'same-origin-knowledge-v83',
+            upstream_status:first.code,
+            upstream_degraded:first.payload?.degraded===true,
+            upstream_model:first.payload?.model||null
+          }
+        };
+        res.setHeader('X-WAE-Operational-Recovery','same-origin-knowledge-v83');
+        return res.status(200).json(payload);
+      }
+    }catch{}
+  }
+
+  return res.status(first.code||503).json(first.payload||{error:'RECOVERY_PATHS_EXHAUSTED',recoverable:true});
 }
