@@ -1,8 +1,13 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
+import premiumGateV98Handler from '../api/premium-gate-v98.js';
 
 const read=name=>readFile(new URL(`../${name}`,import.meta.url),'utf8');
+
+test('v98 handler loads as an executable Node module',()=>{
+  assert.equal(typeof premiumGateV98Handler,'function');
+});
 
 test('public runtime exposes the v98 premium benchmark endpoint',async()=>{
   const server=await read('server.js');
