@@ -1,6 +1,6 @@
 import {createClient as createSupabaseClient} from 'npm:@supabase/supabase-js@2.57.4';
 
-export const EDGE_DB_TRANSPORT_VERSION='wae-edge-db-transport/v84.1-session-retry-http500';
+export const EDGE_DB_TRANSPORT_VERSION='wae-edge-db-transport/v84.2-session-fast-fail';
 
 const SESSION_INSERT_ATTEMPTS=3;
 const RETRYABLE_STATUS=new Set([500,502,503,504]);
@@ -10,8 +10,13 @@ function deadlineMs(){
   return Number.isFinite(raw)?Math.max(1500,Math.min(12000,Math.round(raw))):5000;
 }
 
-function mergedSignal(existing?:AbortSignal|null){
-  const timeout=AbortSignal.timeout(deadlineMs());
+function sessionAttemptMs(){
+  const raw=Number(Deno.env.get('WAE_EDGE_SESSION_ATTEMPT_MS')||1600);
+  return Number.isFinite(raw)?Math.max(1000,Math.min(3000,Math.round(raw))):1600;
+}
+
+function mergedSignal(existing?:AbortSignal|null,timeoutMs=deadlineMs()){
+  const timeout=AbortSignal.timeout(timeoutMs);
   if(!existing)return timeout;
   if(existing.aborted)return existing;
   return AbortSignal.any([existing,timeout]);
@@ -61,14 +66,15 @@ async function boundedFetch(input:RequestInfo|URL,init:RequestInit={}){
   const requestInput=sessionInsert?.input||input;
   const requestInit=sessionInsert?.init||init;
   const attempts=sessionInsert?SESSION_INSERT_ATTEMPTS:1;
+  const timeoutMs=sessionInsert?sessionAttemptMs():deadlineMs();
   let lastError:any=null;
 
   for(let attempt=0;attempt<attempts;attempt++){
     const started=Date.now();
     try{
-      const response=await fetch(requestInput,{...requestInit,signal:mergedSignal(init.signal)});
+      const response=await fetch(requestInput,{...requestInit,signal:mergedSignal(init.signal,timeoutMs)});
       if(sessionInsert&&RETRYABLE_STATUS.has(response.status)&&attempt<attempts-1){
-        console.warn('[Edge DB transport v84.1] retry session bootstrap response',{attempt:attempt+1,status:response.status});
+        console.warn('[Edge DB transport v84.2] retry session bootstrap response',{attempt:attempt+1,status:response.status,timeout_ms:timeoutMs});
         await sleep(120*(attempt+1));
         continue;
       }
@@ -77,7 +83,7 @@ async function boundedFetch(input:RequestInfo|URL,init:RequestInit={}){
       lastError=error;
       const elapsed=Date.now()-started;
       if(sessionInsert&&retryableTransportError(error,init.signal)&&attempt<attempts-1){
-        console.warn('[Edge DB transport v84.1] retry session bootstrap transport',{attempt:attempt+1,elapsed_ms:elapsed,error:String(error?.name||'transport').slice(0,60)});
+        console.warn('[Edge DB transport v84.2] retry session bootstrap transport',{attempt:attempt+1,elapsed_ms:elapsed,timeout_ms:timeoutMs,error:String(error?.name||'transport').slice(0,60)});
         await sleep(120*(attempt+1));
         continue;
       }
