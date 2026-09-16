@@ -27,17 +27,19 @@ function withEnv(patch, fn) {
   });
 }
 
-test('v93 exact OpenAI reference execution is disabled when OpenAI is not configured', async () => {
-  await withEnv({ OPENAI_API_KEY: undefined, OPENAI_MODEL: 'gpt-5.6-sol' }, async () => {
+test('v96 exact OpenAI frontier reference is disabled when OpenAI is not configured', async () => {
+  await withEnv({ OPENAI_API_KEY: undefined, OPENAI_MODEL: 'gpt-5.6-sol', OPENAI_BENCHMARK_MODEL: undefined }, async () => {
     const state = exactOpenAIReferenceState();
     assert.equal(state.configured, false);
+    assert.equal(state.model,'gpt-6-astra');
+    assert.equal(state.ordinaryProviderModel,'gpt-5.6-sol');
     assert.equal(state.fallbackAllowed, false);
     await assert.rejects(() => executeExactOpenAIReference({ prompt: 'test' }), /openai_provider_not_configured/);
   });
 });
 
-test('v93 exact OpenAI reference calls OpenAI directly and requires a real response receipt', async () => {
-  await withEnv({ OPENAI_API_KEY: 'test-key', OPENAI_MODEL: 'gpt-5.6-sol' }, async () => {
+test('v96 exact OpenAI reference calls Astra directly and requires a real response receipt', async () => {
+  await withEnv({ OPENAI_API_KEY: 'test-key', OPENAI_MODEL: 'gpt-5.6-sol', OPENAI_BENCHMARK_MODEL: 'gpt-6-astra' }, async () => {
     let calls = 0;
     const transport = async (url, options) => {
       calls++;
@@ -45,22 +47,22 @@ test('v93 exact OpenAI reference calls OpenAI directly and requires a real respo
       assert.equal(options.method, 'POST');
       assert.match(String(options.headers.Authorization), /^Bearer test-key$/);
       const body = JSON.parse(options.body);
-      assert.equal(body.model, 'gpt-5.6-sol');
+      assert.equal(body.model, 'gpt-6-astra');
       assert.equal(body.metadata.benchmark, VERIFIED_PROVIDER_EXECUTION_VERSION);
       return fakeResponse({ id: 'resp_verified_123', output_text: 'Respuesta GPT ejecutada realmente.' });
     };
     const result = await executeExactOpenAIReference({ prompt: 'Responde el caso.', mode: 'analysis', transport });
     assert.equal(calls, 1);
     assert.equal(result.provider, 'openai');
-    assert.equal(result.model, 'gpt-5.6-sol');
+    assert.equal(result.model, 'gpt-6-astra');
     assert.equal(result.responseId, 'resp_verified_123');
     assert.equal(result.execution, 'server_direct_no_fallback');
     assert.match(result.answer, /ejecutada realmente/);
   });
 });
 
-test('v93 exact OpenAI reference refuses a successful-looking payload without provider receipt', async () => {
-  await withEnv({ OPENAI_API_KEY: 'test-key', OPENAI_MODEL: 'gpt-5.6-sol' }, async () => {
+test('v96 exact OpenAI reference refuses a successful-looking payload without provider receipt', async () => {
+  await withEnv({ OPENAI_API_KEY: 'test-key', OPENAI_BENCHMARK_MODEL: 'gpt-6-astra' }, async () => {
     const transport = async () => fakeResponse({ output_text: 'Texto sin receipt.' });
     await assert.rejects(() => executeExactOpenAIReference({ prompt: 'test', transport }), /openai_runtime_receipt_missing/);
   });
@@ -86,6 +88,6 @@ test('v93 target execution goes through canonical Universal Core chat and verifi
 });
 
 test('v93 target execution rejects a non-WAE provider even if it returns a polished answer', async () => {
-  const transport = async () => fakeResponse({ reply: 'Respuesta bonita.', provider: 'openai', model: 'gpt-5.6-sol' });
+  const transport = async () => fakeResponse({ reply: 'Respuesta bonita.', provider: 'openai', model: 'gpt-6-astra' });
   await assert.rejects(() => executeExactUniversalCoreTarget({ prompt: 'Caso', baseUrl: 'https://universal-core.test', transport }), /target_provider_unverified/);
 });
