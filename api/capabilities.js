@@ -15,6 +15,7 @@ import { latencyGovernorCapabilitiesV90 } from '../lib/latency-governor-v90.js';
 import { specialistCopilotCapabilitiesV91 } from '../lib/specialist-copilot-arsenal-v91.js';
 import { benchmarkSuiteManifest } from '../lib/supremacy-benchmark-v62.js';
 import { continuousImprovementCapabilities, getContinuousImprovementStatus } from '../lib/continuous-improvement-v54.js';
+import { evalTrainingCapabilitiesV95 } from '../lib/eval-training-loop-v95.js';
 import { answerIntelligenceCapabilities } from '../lib/answer-intelligence-v60.js';
 import { qualityReliabilityCapabilities } from '../lib/quality-reliability-v61.js';
 import { performanceRouterCapabilities, providerMeshSnapshot } from '../lib/provider-mesh-v63.js';
@@ -90,6 +91,7 @@ export default async function handler(req,res){
     evaluationPlane:{...evaluationPlaneCapabilities(),endpoint:'/api/evals'},
     benchmarkArena:arena,
     supremacyBenchmark:arena,
+    evalTraining:evalTrainingCapabilitiesV95(),
     continuousImprovement:continuousImprovementCapabilities(improvementStatus||undefined),
     executionPlane:{...executionPlane,endpoint:'/api/execute'},
     toolFabric,
