@@ -12,12 +12,15 @@ function fixtureRecord(source,id,{doi,title='Shared paper',author='Ada Lovelace'
   return{id:`${source}:${id}`,type:'paper',title,authors:[{name:author}],identifiers:{doi},topics:['computing'],source:{id,canonical_url:`https://example.org/${id}`,retrieved_at:new Date().toISOString()},license:metadataOnlyLicense(),quality:{source_authority:.9,citation_count:10,retraction_status:'unknown',author_identity:'partial',primary_vs_secondary_source:'bibliographic_index'},provenance:{source,source_record_id:id}};
 }
 
-test('v70 registry exposes 13 foundation/scientific sources and nine candidate-integrated connectors',()=>{
+test('v89 registry preserves nine foundation connectors and adds governed universal source coverage',()=>{
   const sources=listKnowledgeSources();
-  assert.equal(sources.length,13);
+  assert.equal(sources.length,16);
   const candidates=sources.filter(x=>x.certification==='candidate_integrated');
   assert.deepEqual(candidates.map(x=>x.source_id),['openalex','crossref','wikidata','wikipedia','pubmed','europe_pmc','arxiv','open_library','zenodo']);
   assert.equal(getKnowledgeSource('europe_pmc').trust_score,0.97);
+  assert.equal(getKnowledgeSource('world_bank').certification,'candidate_integrated_v89');
+  assert.equal(getKnowledgeSource('npm_registry').certification,'candidate_integrated_v89');
+  assert.equal(getKnowledgeSource('pypi').certification,'candidate_integrated_v89');
   assert.equal(getKnowledgeSource('core').health,'disabled');
   assert.equal(getKnowledgeSource('project_gutenberg').certification,'pending_bulk_connector_certification');
 });
