@@ -45,13 +45,13 @@ function mobilePremiumHandler(req,res) {
       if (!chunk.includes('learning-client-v29.js')) scripts.push('<script src="/learning-client-v29.js?v=34" defer></script>');
       if (!chunk.includes('premium-v5.js')) scripts.push('<script src="/premium-v5.js?v=43" defer></script>');
       if (!chunk.includes('productivity-v59.js')) scripts.push('<script src="/productivity-v59.js?v=59" defer></script>');
-      if (!chunk.includes('mobile-canonical-chat-v79.js')) scripts.push('<script src="/mobile-canonical-chat-v79.js?v=79" defer></script>');
+      if (!chunk.includes('mobile-canonical-chat-v80.js')) scripts.push('<script src="/mobile-canonical-chat-v80.js?v=80" defer></script>');
       if (scripts.length) chunk = chunk.replace('</body>', `${scripts.join('')}</body>`);
       res.setHeader('Cache-Control','no-store, max-age=0, must-revalidate');
       res.setHeader('Pragma','no-cache');
       res.setHeader('Expires','0');
-      res.setHeader('X-WAE-Mobile-Release','universal-core-mobile-v79-canonical-chat');
-      res.setHeader('X-WAE-Mobile-Chat-Route','same-origin-first');
+      res.setHeader('X-WAE-Mobile-Release','universal-core-mobile-v80-visible-chat');
+      res.setHeader('X-WAE-Mobile-Chat-Route','same-origin-json-and-sse-first');
       res.setHeader('X-WAE-Mobile-Fix','context-history-projects-v59');
       res.setHeader('X-WAE-Mobile-Compatible','universal-core-mobile-v47-long-session');
       res.setHeader('X-WAE-Mobile-Compatible-Fix','long-session-backpressure-v47');
