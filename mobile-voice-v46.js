@@ -50,7 +50,7 @@
   function getContext(){if(context)return context;const AC=window.AudioContext||window.webkitAudioContext;if(AC)context=new AC({latencyHint:'interactive'});return context}
   async function unlock(){try{const c=getContext();if(c?.state==='suspended')await c.resume();if(browserSupported())void synth().getVoices();return true}catch{return false}}
 
-  function diag(event,error=''){try{fetch('/api/ui-diagnostics',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({event,at:new Date().toISOString(),release:'mobile-voice-v46',page:location.pathname,displayMode:matchMedia('(display-mode: standalone)').matches?'standalone':'browser',viewport:{width:innerWidth,height:innerHeight},activeElement:'',target:'',topAtPoint:'',valueLength:0,writable:true,error:String(error||'').slice(0,220)}),keepalive:true}).catch(()=>{})}catch{}}
+  function diag(event,error=''){try{fetch('/api/ui-diagnostics',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({event,at:new Date().toISOString(),release:'mobile-voice-v46.1',page:location.pathname,displayMode:matchMedia('(display-mode: standalone)').matches?'standalone':'browser',viewport:{width:innerWidth,height:innerHeight},activeElement:'',target:'',topAtPoint:'',valueLength:0,writable:true,error:String(error||'').slice(0,220)}),keepalive:true}).catch(()=>{})}catch{}}
   function emit(state,engine=lastEngine,error=null){lastEngine=engine||lastEngine;document.documentElement.dataset.voiceEnabled=String(enabled);document.documentElement.dataset.voiceState=state;document.documentElement.dataset.voiceEngine=lastEngine;window.dispatchEvent(new CustomEvent('wae:voice-state',{detail:{enabled,state,engine:lastEngine,error}}));syncUI(state)}
   function syncUI(state){const label=document.getElementById('voiceState'),quick=document.getElementById('voiceQuick');if(label)label.textContent=!enabled?'Desactivada':state==='playing'?'Hablando':'Activada';if(quick){quick.setAttribute('aria-pressed',String(enabled));quick.title=enabled?(state==='playing'?'Universal Core está hablando':'Voz automática activa'):'Activar voz automática';quick.style.color=enabled?'#79e8a4':'#aab2bd';quick.style.background=enabled?'#1b2924':'transparent';quick.textContent=state==='playing'?'■':'♪'}}
 
@@ -60,12 +60,12 @@
 
   async function fetchCloud(text,myRun){
     if(Date.now()<cloudBackoffUntil)throw new Error('cloud_backoff');
-    const sid=localStorage.getItem(SID)||'',secret=localStorage.getItem(SECRET)||'';
-    if(!UUID_RX.test(sid)||secret.length<40)throw new Error('voice_session_not_cloud_eligible');
+    const sid=localStorage.getItem(SID)||'',secret=localStorage.getItem(SECRET)||'',origin=localStorage.getItem('iu.sessionOrigin')||'';
+    if(origin!=='edge'||!UUID_RX.test(sid)||secret.length<40)throw new Error('voice_session_not_cloud_eligible');
     const controller=new AbortController();
     const timer=setTimeout(()=>controller.abort(new DOMException('voice_deadline','TimeoutError')),CLOUD_BUDGET_MS);
     try{
-      const r=await fetch(VOICE_ENDPOINT,{method:'POST',headers:{'content-type':'application/json','apikey':SUPABASE_KEY,'x-client-info':'wae-universal-mobile-voice/46'},body:JSON.stringify({action:'speak',session_id:sid,session_secret:secret,text,voice}),cache:'no-store',signal:controller.signal});
+      const r=await fetch(VOICE_ENDPOINT,{method:'POST',headers:{'content-type':'application/json','apikey':SUPABASE_KEY,'x-client-info':'wae-universal-mobile-voice/46.1'},body:JSON.stringify({action:'speak',session_id:sid,session_secret:secret,text,voice}),cache:'no-store',signal:controller.signal});
       if(myRun!==run)throw new Error('voice_cancelled');
       if(!r.ok)throw new Error(`voice_${r.status}`);
       return await r.arrayBuffer();
@@ -96,6 +96,12 @@
     if(!enabled||myRun!==run)return false;
     const t=clean(text);if(!t)return false;
     diag('voice_request',`chars:${t.length}`);
+
+    if(browserSupported()){
+      const localOk=await browserSpeak(t,myRun);
+      if(localOk||myRun!==run)return localOk;
+    }
+
     try{
       const audio=await fetchCloud(t,myRun);
       if(myRun!==run)return false;
@@ -103,9 +109,9 @@
       await playBuffer(audio,myRun);diag('voice_end','cloud');return true;
     }catch(e){
       const reason=String(e?.name||e?.message||e);
-      if(reason!=='voice_cancelled')cloudBackoffUntil=Date.now()+CLOUD_BACKOFF_MS;
-      emit('fallback','browser',reason);diag('voice_fallback',reason);
-      return browserSpeak(t,myRun);
+      if(reason!=='voice_cancelled'&&reason!=='voice_session_not_cloud_eligible')cloudBackoffUntil=Date.now()+CLOUD_BACKOFF_MS;
+      emit('ready','idle',reason);diag('voice_local_only',reason);
+      return false;
     }
   }
 
@@ -144,7 +150,7 @@
     void setEnabled(enabled);scan();
   }
 
-  window.__waeMobileVoice={toggle,setEnabled,speak:speakFinal,stop,unlock,setVoice(name){voice=String(name||'Kore');try{localStorage.setItem(VOICE_KEY,voice)}catch{}return voice},get enabled(){return enabled},get engine(){return lastEngine},version:'v46-deadline-first'};
-  window.__WAE_MOBILE_VOICE_V46__={version:'46.0.0',cloudBudgetMs:CLOUD_BUDGET_MS,browserFallback:true};
+  window.__waeMobileVoice={toggle,setEnabled,speak:speakFinal,stop,unlock,setVoice(name){voice=String(name||'Kore');try{localStorage.setItem(VOICE_KEY,voice)}catch{}return voice},get enabled(){return enabled},get engine(){return lastEngine},version:'v46.1-browser-first'};
+  window.__WAE_MOBILE_VOICE_V46__={version:'46.1.0',cloudBudgetMs:CLOUD_BUDGET_MS,browserFirst:true,cloudRequiresEdgeSession:true};
   document.readyState==='loading'?document.addEventListener('DOMContentLoaded',install,{once:true}):install();
 })();
