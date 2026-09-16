@@ -3,6 +3,16 @@ import { applyHeaders } from '../lib/security.js';
 import { operationalProviderSnapshot, PROVIDER_HEALTH_VERSION } from '../lib/provider-health-v81.js';
 
 export const HEALTH_READINESS_POLICY_V90='service-readiness-separated-from-generative-health/v90';
+export const HEALTH_RELEASE_IDENTITY_V100='render-release-identity/v100.2';
+
+const publicReleaseIdentity=()=>({
+  version:HEALTH_RELEASE_IDENTITY_V100,
+  platform:process.env.RENDER==='true'?'render':'unknown',
+  commit:String(process.env.RENDER_GIT_COMMIT||'').trim()||null,
+  branch:String(process.env.RENDER_GIT_BRANCH||'').trim()||null,
+  serviceId:String(process.env.RENDER_SERVICE_ID||'').trim()||null,
+  serviceName:String(process.env.RENDER_SERVICE_NAME||'').trim()||null,
+});
 
 export default async function handler(req,res){
   applyHeaders(res);
@@ -16,6 +26,7 @@ export default async function handler(req,res){
     ready:serviceReady,
     serviceReady,
     readinessPolicy:HEALTH_READINESS_POLICY_V90,
+    release:publicReleaseIdentity(),
     configuredGenerativeReady:base.generativeReady===true,
     generativeReady:generativeEligible,
     generativeDegraded:generativeEligible!==true,
@@ -32,5 +43,7 @@ export default async function handler(req,res){
   };
   res.setHeader('X-WAE-Provider-Health',PROVIDER_HEALTH_VERSION);
   res.setHeader('X-WAE-Readiness-Policy',HEALTH_READINESS_POLICY_V90);
+  res.setHeader('X-WAE-Release-Identity',HEALTH_RELEASE_IDENTITY_V100);
+  if(health.release.commit)res.setHeader('X-WAE-Release-Commit',health.release.commit);
   return res.status(serviceReady?200:503).json(health);
 }
