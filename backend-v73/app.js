@@ -4,6 +4,8 @@ import { augmentResponse, readJsonBody, safeErrorPayload } from './http.js';
 import { observeRequest } from './metrics.js';
 import { allowGatewayRequest, applyCors, applySecurityHeaders, authorizeAdmin } from './security.js';
 import { resolveBackendRoute } from './routes.js';
+import { IDENTITY_VERSION, resolveRequestIdentity } from '../lib/identity-v74.js';
+import { CONTROL_PLANE_VERSION } from '../lib/control-plane-v74.js';
 
 export function isPremiumBackendPath(pathname = '') {
   return String(pathname).startsWith('/api/v73/');
@@ -13,6 +15,8 @@ export async function handlePremiumBackend(req, res) {
   augmentResponse(res);
   applySecurityHeaders(res);
   res.setHeader('X-WAE-Backend', BACKEND_VERSION);
+  res.setHeader('X-WAE-Control-Plane', CONTROL_PLANE_VERSION);
+  res.setHeader('X-WAE-Identity', IDENTITY_VERSION);
 
   const url = new URL(req.url || '/', `http://${req.headers?.host || 'localhost'}`);
   const pathname = url.pathname;
@@ -69,8 +73,28 @@ export async function handlePremiumBackend(req, res) {
 
   try {
     req.body = await readJsonBody(req);
+
+    let identity = null;
+    if (route.access !== 'admin') {
+      identity = await resolveRequestIdentity(req, req.body && typeof req.body === 'object' ? req.body : {});
+      req.waeIdentity = identity;
+      if (!identity.allowed) {
+        const status = identity.authPresent && identity.authenticated ? 403 : 401;
+        return res.status(status).json({
+          error: identity.authenticated ? 'tenant_access_denied' : 'authentication_failed',
+          reason: identity.reason,
+          request_id: requestId,
+        });
+      }
+    }
+
     const context = createRequestContext(req, pathname);
     context.requestId = requestId;
+    context.identity = identity;
+    if (identity?.tenantTrusted) {
+      context.tenantId = identity.tenantId;
+      context.principalId = identity.userId;
+    }
     await runWithRequestContext(context, () => route.handler(req, res));
     if (!res.writableEnded && !res.headersSent) {
       res.status(204).end();
