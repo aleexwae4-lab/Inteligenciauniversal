@@ -9,7 +9,30 @@ import { capabilitySnapshot } from '../lib/capability-kernel.js';
 import { classifySelfAwarenessV101, buildSelfAwarenessSnapshotV101, buildSelfAwarenessReplyV101, SELF_AWARENESS_V101 } from '../lib/self-awareness-v101.js';
 import { answerIsUsableV101, shouldRecoverAnswerV101, continuityEnvelopeV101, ANSWER_CONTINUITY_V101 } from '../lib/answer-continuity-v101.js';
 
-export const CAPACITY_CHAT_V101='capacity-chat/v101-grounded-self-model-continuity';
+export const CAPACITY_CHAT_V101='capacity-chat/v101.1-grounded-self-model-frontier-freshness';
+export const FRONTIER_FRESHNESS_V101='frontier-freshness/v101.1';
+
+const normalize=value=>String(value??'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/\s+/g,' ').trim();
+const FRONTIER_ENTITY_RX=/\b(gpt[\s-]?(?:6|astra)|gpt\s*astra|openai\s+astra|claude\s*(?:4|opus|sonnet)|gemini\s*(?:3|2\.5)|grok\s*(?:4|5)|llama\s*(?:4|5)|deepseek\s*(?:v4|r2))\b/i;
+const FACTUAL_LOOKUP_RX=/\b(que es|quien es|cual es|sabes que es|sabes quien|existe|modelo|version|lanzamiento|release|released|fecha|precio|capacidades|caracteristicas|disponible|available|api)\b/i;
+
+export function applyFrontierFreshnessGuardV101(body={}){
+  const message=normalize(body?.message||body?.task||body?.prompt||'');
+  const frontier=FRONTIER_ENTITY_RX.test(message);
+  const factual=FACTUAL_LOOKUP_RX.test(message);
+  if(!frontier||!factual)return{...body};
+  const explicitWebDisabled=body.web_enabled===false;
+  return{
+    ...body,
+    mode:'research',
+    research_mode:true,
+    ...(explicitWebDisabled?{}:{web_enabled:true}),
+    freshness_required:true,
+    frontier_entity_query:true,
+    freshness_policy:'live-evidence-required',
+    freshness_guard:FRONTIER_FRESHNESS_V101,
+  };
+}
 
 function bufferedResponse(real){
   let code=200,payload,hasJson=false;
@@ -99,7 +122,18 @@ function decorate(payload={},path='primary'){
   };
 }
 
+function frontierFreshnessHold({res,body,primary}){
+  const reply='Universal Core detectó que esta consulta depende de información frontier reciente, pero no obtuvo evidencia viva suficiente para verificarla en este turno. **No usaré memoria estática para afirmar datos actuales.** La consulta queda protegida por el control de frescura y debe responderse únicamente con fuentes verificables.';
+  const fallback=continuityEnvelopeV101({body,reply,reason:'frontier_freshness_evidence_unavailable',failure:primary?.payload});
+  res.setHeader('X-WAE-Chat-Release',CAPACITY_CHAT_V101);
+  res.setHeader('X-WAE-Answer-Continuity',`${ANSWER_CONTINUITY_V101}:frontier-freshness-hold`);
+  res.setHeader('X-WAE-Freshness-Guard',FRONTIER_FRESHNESS_V101);
+  return res.status(200).json(decorate({...fallback,freshness_verified:false,freshness_guard:{version:FRONTIER_FRESHNESS_V101,status:'HOLD',fail_closed:true}},'frontier-freshness-hold'));
+}
+
 async function recoverAnswer({req,res,body,primary}){
+  if(body?.freshness_required===true)return frontierFreshnessHold({res,body,primary});
+
   const base=await callBuffered(baseCapacityChat,req,res,body);
   if(base.hasJson&&answerIsUsableV101(base.code,base.payload)){
     res.setHeader('X-WAE-Chat-Release',CAPACITY_CHAT_V101);
@@ -131,13 +165,15 @@ async function recoverAnswer({req,res,body,primary}){
 }
 
 export default async function capacityChatV101(req,res){
-  const body=req.body&&typeof req.body==='object'?{...req.body}:{};
-  if(await selfAwarenessFastPath(req,res,body))return;
+  const rawBody=req.body&&typeof req.body==='object'?{...req.body}:{};
+  if(await selfAwarenessFastPath(req,res,rawBody))return;
+  const body=applyFrontierFreshnessGuardV101(rawBody);
 
   const primary=await callBuffered(capacityChatV91,req,res,body);
   if(res.writableEnded)return;
   res.setHeader('X-WAE-Chat-Release',CAPACITY_CHAT_V101);
   res.setHeader('X-WAE-Answer-Continuity',ANSWER_CONTINUITY_V101);
+  if(body.freshness_required===true)res.setHeader('X-WAE-Freshness-Guard',FRONTIER_FRESHNESS_V101);
 
   if(primary.hasJson&&answerIsUsableV101(primary.code,primary.payload)){
     return res.status(primary.code).json(decorate(primary.payload,'primary-v91'));
@@ -153,6 +189,7 @@ export function capacityChatV101Capabilities(){
     release:CAPACITY_CHAT_V101,
     selfAwareness:SELF_AWARENESS_V101,
     answerContinuity:ANSWER_CONTINUITY_V101,
+    frontierFreshness:FRONTIER_FRESHNESS_V101,
     policy:{
       capabilityClaimsGroundedInRuntime:true,
       noEmptyTerminalAnswer:true,
@@ -161,6 +198,8 @@ export function capacityChatV101Capabilities(){
       finalLocalSafeContinuity:true,
       authorizationAndSecurityFailuresRemainFailClosed:true,
       currentFactsNeverFabricatedDuringDegradation:true,
+      frontierEntityFactsRequireLiveEvidence:true,
+      staticMemoryFallbackForFrontierFacts:false,
       superiorityRequiresSignedBenchmark:true,
     }
   };
