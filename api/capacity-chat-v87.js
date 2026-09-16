@@ -12,6 +12,7 @@ export const CAPACITY_CHAT_V87='capacity-chat/v87-universal-intelligence-planner
 const SIMPLE_CONCEPT_RX=/\b(?:qu[eé]|what)\s+(?:es|son|is|are)\b|\b(?:define|definici[oó]n|explica|expl[ií]came|explain|para\s+qu[eé]\s+sirve|c[oó]mo\s+funciona|how\s+does)\b/i;
 const CURRENT_OR_HIGH_STAKES_RX=/\b(?:hoy|ahora|actual(?:es|mente|idad)?|vigente|reciente|[uú]ltim[oa]s?|latest|today|current|news|noticias|precio|cotizaci[oó]n|clima|tiempo|weather|elecci[oó]n|presidente|ceo|legal|jur[ií]dic|delito|m[eé]dic|salud|dosis|tratamiento|farmacol|inversi[oó]n|cr[eé]dito|fraude)\b/i;
 const COMPLEX_ACTION_RX=/\b(?:construye|desarrolla|implementa|programa|c[oó]digo|arquitectura|audita|analiza\s+este|compara|planifica|estrategia|investiga|fuentes?|paper|estudio|benchmark|deploy|despliega|integra|crea\s+una\s+app)\b/i;
+const META_OR_IDENTITY_RX=/\b(?:qui[eé]n\s+eres|qu[eé]\s+eres|c[oó]mo\s+te\s+llamas|cu[aá]l\s+es\s+tu\s+(?:nombre|identidad)|tu\s+identidad|qu[eé]\s+modelo\s+eres|modelo\s+eres|eres\s+(?:una?\s+)?(?:ia|ai|inteligencia\s+artificial)|qu[eé]\s+puedes\s+hacer|cu[aá]les\s+son\s+tus\s+capacidades|prompt\s+del\s+sistema|system\s+prompt|who\s+are\s+you|what\s+are\s+you|what\s+model\s+are\s+you|what\s+can\s+you\s+do|your\s+identity|your\s+name)\b/i;
 
 function bufferedResponse(real){
   let code=200,payload,hasJson=false;
@@ -79,6 +80,7 @@ export function fastConceptEligible(body={},plan={}){
   if(!['general','analysis'].includes(mode))return false;
   if(body?.web_enabled===true||body?.explicit_research===true||attachments.length)return false;
   if(plan?.needs?.live===true||plan?.needs?.multiagent===true)return false;
+  if(META_OR_IDENTITY_RX.test(message))return false;
   if(CURRENT_OR_HIGH_STAKES_RX.test(message)||COMPLEX_ACTION_RX.test(message))return false;
   return SIMPLE_CONCEPT_RX.test(message)&&focusedFactualEligible(body);
 }
