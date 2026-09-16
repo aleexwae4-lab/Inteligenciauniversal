@@ -64,4 +64,4 @@ test('forbidden diagnostic tokens stay out of ordinary coherent fallback',()=>{
   for(const forbidden of [/\[K\d+\]/i,/\bunclassified\b/i,/capa generativa no completó/i,/registros utilizables/i]){
     assert.doesNotMatch(fallback.reply,forbidden);
   }
-}
+});
