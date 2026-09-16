@@ -134,10 +134,10 @@ test('mobile v47 bridges Edge chat to Render with single-attempt backpressure', 
   assert.doesNotMatch(bridge,/RETRYABLE_STATUS/);
 });
 
-test('mobile boot loads telemetry and v47 backpressure before bootstrap and voice layers', () => {
+test('mobile boot loads v97 lifecycle, telemetry and v47 backpressure before bootstrap and voice layers', () => {
   const source=readFileSync(new URL('../server.js',import.meta.url),'utf8');
   const fast=source.indexOf("fast-lane-v23.js?v=34");
-  const cognitive=source.indexOf("mobile-v26.js?v=34");
+  const cognitive=source.indexOf("mobile-v26.js?v=97");
   const telemetry=source.indexOf("telemetry-throttle-v47.js?v=47");
   const bridge=source.indexOf("mobile-runtime-v47.js?v=47");
   const bootstrap=source.indexOf("mobile-bootstrap-v45.js?v=45");
@@ -146,6 +146,7 @@ test('mobile boot loads telemetry and v47 backpressure before bootstrap and voic
   const voice=source.indexOf("mobile-voice-v46.js?v=46");
   assert.ok(fast>=0 && cognitive>=0 && telemetry>=0 && bridge>=0 && bootstrap>=0 && semantic>=0 && lifecycle>=0 && voice>=0);
   assert.ok(fast<cognitive && cognitive<telemetry && telemetry<bridge && bridge<bootstrap && bootstrap<semantic && semantic<lifecycle && lifecycle<voice);
+  assert.match(source,/mobile-response-lifecycle\/v97/);
   assert.match(source,/universal-core-mobile-v47-long-session/);
   assert.match(source,/long-session-backpressure-v47/);
   assert.doesNotMatch(source,/mobile-runtime-v34\.js\?v=44/);
