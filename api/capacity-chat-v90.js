@@ -4,7 +4,7 @@ import { runFocusedFactualAnswer } from '../lib/knowledge/focused-factual-v83.js
 import { applyAnswerIntelligence } from '../lib/answer-intelligence-v60.js';
 import { applyQualityReliability } from '../lib/quality-reliability-v61.js';
 import { factualityDecision, FACTUALITY_GATE_VERSION } from '../lib/factuality-gate-v86.js';
-import { planLatencyV90, publicLatencyPlanV90, shouldAttemptFastFactualV90, withinLatencyBudget, latencyGovernorCapabilitiesV90, LATENCY_GOVERNOR_VERSION } from '../lib/latency-governor-v90.js';
+import { planLatencyV90, publicLatencyPlanV90, shouldAttemptFastFactualV90, withinLatencyBudget, fetchWithParentSignal, latencyGovernorCapabilitiesV90, LATENCY_GOVERNOR_VERSION } from '../lib/latency-governor-v90.js';
 import { runKnowledgeFusionV90, KNOWLEDGE_FUSION_V90 } from '../lib/knowledge-fusion-v90.js';
 import { knowledgeExpansionCapabilitiesV90, KNOWLEDGE_EXPANSION_VERSION } from '../lib/knowledge-expansion-v90.js';
 import { applyHeaders, originAllowed, getClientIp } from '../lib/security.js';
@@ -38,7 +38,7 @@ function userKey(req,body={}){
 }
 
 async function tryFastFactual(body,latencyPlan){
-  const result=await withinLatencyBudget(latencyPlan.budgets.focused_timeout_ms,()=>runFocusedFactualAnswer({body}));
+  const result=await withinLatencyBudget(latencyPlan.budgets.focused_timeout_ms,signal=>runFocusedFactualAnswer({body,fetchImpl:fetchWithParentSignal(signal)}));
   if(!result)return null;
   let payload=applyAnswerIntelligence({...result,degraded:false});
   payload=applyQualityReliability(payload,{prompt:String(body.message||body.task||body.prompt||'')});
@@ -99,6 +99,6 @@ export function capacityChatV90Capabilities(){
     latency:latencyGovernorCapabilitiesV90(),
     knowledgeExpansion:knowledgeExpansionCapabilitiesV90(),
     knowledgeFusion:KNOWLEDGE_FUSION_V90,
-    policy:{fastVerifiedFacts:true,parallelEvidence:true,parallelMultiagent:true,verifyBeforeAcceptPreserved:true,externalBenchmarkRequiredForSuperiorityClaim:true,superiorityClaim:false}
+    policy:{fastVerifiedFacts:true,parallelEvidence:true,parallelMultiagent:true,abortExpiredFocusedRetrieval:true,verifyBeforeAcceptPreserved:true,externalBenchmarkRequiredForSuperiorityClaim:true,superiorityClaim:false}
   };
 }
