@@ -12,6 +12,7 @@ import { universalKnowledgeCapabilities } from '../lib/universal-knowledge-mesh-
 import { sourceRegistryHealth } from '../lib/knowledge/source-registry-v1.js';
 import { knowledgeExpansionCapabilitiesV90 } from '../lib/knowledge-expansion-v90.js';
 import { latencyGovernorCapabilitiesV90 } from '../lib/latency-governor-v90.js';
+import { specialistCopilotCapabilitiesV91 } from '../lib/specialist-copilot-arsenal-v91.js';
 import { benchmarkSuiteManifest } from '../lib/supremacy-benchmark-v62.js';
 import { continuousImprovementCapabilities, getContinuousImprovementStatus } from '../lib/continuous-improvement-v54.js';
 import { answerIntelligenceCapabilities } from '../lib/answer-intelligence-v60.js';
@@ -56,6 +57,7 @@ export default async function handler(req,res){
     answerIntelligence:answerIntelligenceCapabilities(),
     qualityReliability:qualityReliabilityCapabilities(),
     latencyGovernor:latencyGovernorCapabilitiesV90(),
+    specialistCopilots:specialistCopilotCapabilitiesV91(),
     knowledgeExpansion:{...knowledgeExpansionCapabilitiesV90(),endpoint:'/api/knowledge/expansion'},
     universalKnowledge:{...universalKnowledgeCapabilities(),registry:sourceRegistryHealth(),endpoint:'/api/knowledge/universal',searchEndpoint:'/api/knowledge/search',researchEndpoint:'/api/knowledge/research',expansionEndpoint:'/api/knowledge/expansion'},
     gpuFabric:gpuFabricSnapshot(),
