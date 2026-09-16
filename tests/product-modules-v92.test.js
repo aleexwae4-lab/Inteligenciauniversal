@@ -1,0 +1,105 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import { readFile } from 'node:fs/promises';
+import {
+  USER_CONTEXT_V92,
+  normalizeUserPreferencesV92,
+  userContextStateV92,
+  userContextSystemInstructionV92,
+  applyUserContextToBodyV92,
+  publicUserContextV92
+} from '../lib/user-context-v92.js';
+
+const read=path=>readFile(new URL(`../${path}`,import.meta.url),'utf8');
+
+test('v92 user context has a stable privacy-aware contract',()=>{
+  assert.equal(USER_CONTEXT_V92,'user-context/v92');
+  const prefs=normalizeUserPreferencesV92({
+    customInstructions:' Responde como CTO senior. ',
+    projectName:'Universal Core',
+    projectInstructions:'Prioriza pruebas reproducibles.',
+    responseDepth:'deep'
+  });
+  assert.equal(prefs.globalInstructions,'Responde como CTO senior.');
+  assert.equal(prefs.projectInstructions,'Prioriza pruebas reproducibles.');
+  assert.equal(prefs.projectName,'Universal Core');
+  assert.equal(prefs.responseDepth,'deep');
+});
+
+test('project instructions override global instructions inside private system context',()=>{
+  const instruction=userContextSystemInstructionV92({
+    customInstructions:'Usa tono global.',
+    projectName:'Proyecto Atlas',
+    projectInstructions:'Usa reglas del proyecto.',
+    responseDepth:'concise'
+  });
+  assert.match(instruction,/INSTRUCCIONES PERSONALIZADAS GLOBALES/);
+  assert.match(instruction,/INSTRUCCIONES DEL PROYECTO “Proyecto Atlas”/);
+  assert.match(instruction,/tienen prioridad sobre las instrucciones globales/);
+  assert.match(instruction,/Mantén la respuesta compacta/);
+  assert.ok(instruction.indexOf('Usa tono global.')<instruction.indexOf('Usa reglas del proyecto.'));
+});
+
+test('public context never exposes raw private instructions and body message is not rewritten',()=>{
+  const body={message:'Audita este sistema',preferences:{customInstructions:'SECRETO_GLOBAL_92',projectInstructions:'SECRETO_PROYECTO_92',projectName:'Omega'}};
+  const state=userContextStateV92(body),applied=applyUserContextToBodyV92(body),publicState=publicUserContextV92(state);
+  assert.equal(applied.body.message,'Audita este sistema');
+  assert.equal(applied.body,body);
+  assert.equal(publicState.global_instructions_applied,true);
+  assert.equal(publicState.project_instructions_applied,true);
+  assert.equal(publicState.project_name,'Omega');
+  assert.doesNotMatch(JSON.stringify(publicState),/SECRETO_/);
+});
+
+test('v92 bounds instruction size before model context',()=>{
+  const prefs=normalizeUserPreferencesV92({customInstructions:'a'.repeat(9000),projectInstructions:'b'.repeat(9000),projectName:'x'.repeat(200)});
+  assert.equal(prefs.globalInstructions.length,8000);
+  assert.equal(prefs.projectInstructions.length,8000);
+  assert.equal(prefs.projectName.length,120);
+});
+
+test('runtime and council consume private instructions without rewriting saved user message',async()=>{
+  const [runtime,council,specialist,chat]=await Promise.all([read('lib/runtime.js'),read('lib/deliberation-plane.js'),read('lib/specialist-copilot-runtime-v91.js'),read('api/chat.js')]);
+  assert.match(runtime,/userContextSystemInstructionV92\(payload\.preferences/);
+  assert.match(runtime,/const quick=userContextState\.affectsGeneration\?null/);
+  assert.match(runtime,/const cacheEligible=!userContextState\.affectsGeneration/);
+  assert.match(runtime,/saveTurn\(userKey,sessionId,message,/);
+  assert.match(council,/userContextSystemInstructionV92\(preferences/);
+  assert.match(specialist,/userContextSystemInstructionV92\(body\.preferences/);
+  assert.match(chat,/!userContext\.affectsGeneration && protocolFastPathEligible/);
+  assert.match(chat,/userContext\.affectsGeneration\?null:conversationalHelpReply/);
+});
+
+test('frontend module connects settings, projects, real attachments and device voices',async()=>{
+  const source=await read('product-modules-v92.js');
+  assert.doesNotThrow(()=>new Function(source));
+  assert.match(source,/MAX_PROJECT_FILES=5/);
+  assert.match(source,/MAX_FILE_BYTES=2_000_000/);
+  assert.match(source,/indexedDB\.open\(DB_NAME,1\)/);
+  assert.match(source,/speechSynthesis\.getVoices\(\)/);
+  assert.match(source,/voiceRate/);
+  assert.match(source,/voicePitch/);
+  assert.match(source,/min="0\.60" max="1\.60"/);
+  assert.match(source,/min="0\.50" max="1\.50"/);
+  assert.match(source,/localStorage\.getItem\('wae\.autoVoice'\)!=='false'/);
+  assert.match(source,/customInstructions/);
+  assert.match(source,/projectInstructions/);
+  assert.match(source,/attachments:dedupeAttachments/);
+  assert.match(source,/url\.pathname==='\/api\/chat'/);
+});
+
+test('premium shell loads v92 JS and CSS without replacing the existing interface',async()=>{
+  const source=await read('premium-v5.js');
+  assert.match(source,/product-modules-v92\.css\?v=92/);
+  assert.match(source,/product-modules-v92\.js\?v=92/);
+  assert.match(source,/loadGptExperience\(\);loadProductModules\(\);observe\(\)/);
+});
+
+test('parallel specialist council has a v92 private-context path',async()=>{
+  const [handler,council]=await Promise.all([read('api/capacity-chat-v91.js'),read('lib/specialist-council-v92.js')]);
+  assert.match(handler,/runSpecialistCouncilV92/);
+  assert.match(handler,/parallel-specialist-council-v92-context/);
+  assert.match(council,/userContextSystemInstructionV92/);
+  assert.match(council,/EVIDENCIA SUMINISTRADA POR EL USUARIO/);
+  assert.match(council,/slice\(0,5\)/);
+});
