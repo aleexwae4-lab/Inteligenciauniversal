@@ -2,6 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { extractFactualFocus, deterministicFocusedReply } from '../lib/knowledge/focused-factual-v83.js';
 import { explicitResearchIntent, knowledgeUsable } from '../api/capacity-chat-v83.js';
+import { fastConceptEligible } from '../api/capacity-chat-v87.js';
 import { deterministicKnowledgeFallback } from '../lib/knowledge/knowledge-answer-v1.js';
 
 function encyclopedicRecord({title='Biosfera',abstract,score=.9,url='https://es.wikipedia.org/wiki/Biosfera'}={}){
@@ -20,6 +21,16 @@ test('v88 extracts the exact concepts seen in the mobile recordings',()=>{
   const metaphysics=extractFactualFocus('¿Qué es universo en la metafísica?');
   assert.ok(metaphysics.coreTokens.includes('universo'));
   assert.ok(metaphysics.coreTokens.includes('metafisica'));
+});
+
+test('v89 sends stable conceptual questions to the fast factual lane',()=>{
+  const plan={needs:{live:false,multiagent:false}};
+  assert.equal(fastConceptEligible({message:'¿Qué es la biosfera?',mode:'general'},plan),true);
+  assert.equal(fastConceptEligible({message:'¿Qué es la atmósfera?',mode:'general'},plan),true);
+  assert.equal(fastConceptEligible({message:'¿Qué es universo en la metafísica?',mode:'general'},plan),true);
+  assert.equal(fastConceptEligible({message:'¿Cuál es el precio actual del dólar?',mode:'general'},plan),false);
+  assert.equal(fastConceptEligible({message:'Investiga papers sobre la biosfera',mode:'research',web_enabled:true},plan),false);
+  assert.equal(fastConceptEligible({message:'¿Qué es la biosfera?',mode:'general',attachments:[{name:'a.pdf'}]},plan),false);
 });
 
 test('v88 focused fallback is coherent, single-source and never exposes internal K markers',()=>{
