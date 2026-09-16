@@ -5,7 +5,8 @@
   const EDGE_MARK='/functions/v1/wae-local-voice-demo-v61';
   const SID_KEY='iu.sessionId';
   const SECRET_KEY='iu.sessionSecret';
-  const RELEASE='v45-render-first-bootstrap';
+  const ORIGIN_KEY='iu.sessionOrigin';
+  const RELEASE='v45.1-render-authoritative-bootstrap';
 
   function parseJsonBody(init={}){
     try{return typeof init.body==='string'?JSON.parse(init.body):{}}catch{return{}}
@@ -39,11 +40,17 @@
     try{
       sessionId=localStorage.getItem(SID_KEY)||'';
       sessionSecret=localStorage.getItem(SECRET_KEY)||'';
-      if(!sessionId){sessionId=randomToken('render');localStorage.setItem(SID_KEY,sessionId)}
-      if(!sessionSecret){sessionSecret=randomToken('local');localStorage.setItem(SECRET_KEY,sessionSecret)}
+      const renderOwned=sessionId.startsWith('render-')&&sessionSecret.startsWith('local-');
+      if(!renderOwned){
+        sessionId=randomToken('render');
+        sessionSecret=randomToken('local');
+        localStorage.setItem(SID_KEY,sessionId);
+        localStorage.setItem(SECRET_KEY,sessionSecret);
+      }
+      localStorage.setItem(ORIGIN_KEY,'render');
     }catch{
-      sessionId=sessionId||randomToken('render');
-      sessionSecret=sessionSecret||randomToken('local');
+      sessionId=randomToken('render');
+      sessionSecret=randomToken('local');
     }
     return {session_id:sessionId,session_secret:sessionSecret};
   }
@@ -55,7 +62,8 @@
       ...session,
       runtime:'render_primary',
       bootstrap:'local_nonblocking',
-      release:RELEASE
+      release:RELEASE,
+      edge_session:false
     }),{
       status:200,
       headers:{
@@ -71,6 +79,6 @@
     return previousFetch(input,init);
   };
 
-  window.__WAE_MOBILE_BOOTSTRAP__={release:RELEASE,renderPrimary:true,edgeBlocking:false};
-  document.documentElement.dataset.mobileBootstrap='v45-render-first';
+  window.__WAE_MOBILE_BOOTSTRAP__={release:RELEASE,renderPrimary:true,edgeBlocking:false,rotatesStaleEdgeSessions:true};
+  document.documentElement.dataset.mobileBootstrap='v45.1-render-authoritative';
 })();
