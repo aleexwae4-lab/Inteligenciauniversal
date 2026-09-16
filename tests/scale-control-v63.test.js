@@ -1,20 +1,27 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFile} from 'node:fs/promises';
-import {hashScalePrincipal,localAdmissionShard,SCALE_CONTROL_VERSION,SUBSCRIBER_TARGET,ADMISSION_SHARDS,isCheapConversationalFastPath} from '../lib/scale-control-v63.js';
+import {
+  hashScalePrincipal,
+  admissionShardForHash,
+  SCALE_CONTROL_VERSION,
+  SCALE_TARGET_SUBSCRIBERS,
+  SCALE_ADMISSION_SHARDS,
+  scaleAdmissionNeeded
+} from '../lib/scale-control-v63.js';
 
 const migration=new URL('../supabase/migrations/20260914003900_wae_scale_control_v63.sql',import.meta.url);
 
 test('v63 declares a 20k subscriber software target without claiming current infrastructure load certification',()=>{
-  assert.equal(SCALE_CONTROL_VERSION,'scale-control/v63');
-  assert.equal(SUBSCRIBER_TARGET,20000);
-  assert.equal(ADMISSION_SHARDS,64);
+  assert.equal(SCALE_CONTROL_VERSION,'universal-runtime-control/v63');
+  assert.equal(SCALE_TARGET_SUBSCRIBERS,20000);
+  assert.equal(SCALE_ADMISSION_SHARDS,64);
 });
 
 test('20k deterministic principals distribute across all 64 admission shards without pathological concentration',()=>{
-  const counts=Array.from({length:ADMISSION_SHARDS},()=>0);
-  for(let i=0;i<SUBSCRIBER_TARGET;i++)counts[localAdmissionShard(`principal-${i}`)]++;
-  assert.equal(counts.filter(Boolean).length,ADMISSION_SHARDS);
+  const counts=Array.from({length:SCALE_ADMISSION_SHARDS},()=>0);
+  for(let i=0;i<SCALE_TARGET_SUBSCRIBERS;i++)counts[admissionShardForHash(hashScalePrincipal(`principal-${i}`))]++;
+  assert.equal(counts.filter(Boolean).length,SCALE_ADMISSION_SHARDS);
   assert.ok(Math.max(...counts)-Math.min(...counts)<100);
 });
 
@@ -27,9 +34,9 @@ test('scale hashes are deterministic fixed-width SHA-256 and never echo the raw 
 });
 
 test('cheap conversational fast paths bypass distributed admission while expensive work is governed',()=>{
-  assert.equal(isCheapConversationalFastPath({message:'hola',mode:'general'}),true);
-  assert.equal(isCheapConversationalFastPath({message:'gracias',mode:'general'}),true);
-  assert.equal(isCheapConversationalFastPath({message:'diseña arquitectura multi tenant y analiza riesgos',mode:'analysis'}),false);
+  assert.equal(scaleAdmissionNeeded({message:'hola',mode:'general'}),false);
+  assert.equal(scaleAdmissionNeeded({message:'gracias',mode:'general'}),false);
+  assert.equal(scaleAdmissionNeeded({message:'diseña arquitectura multi tenant y analiza riesgos',mode:'analysis'}),true);
 });
 
 test('database migration is private, sharded and lease-based',async()=>{
