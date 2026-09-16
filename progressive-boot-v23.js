@@ -11,16 +11,17 @@
   const start=async()=>{
     if(started)return;started=true;
     document.documentElement.dataset.enhancement='loading';
-    const [polish,premium,learning,semanticUx,capabilities]=await Promise.all([
+    const [polish,premium,learning,semanticUx,capabilities,canonicalChat]=await Promise.all([
       loadScript('./polish-v2.js'),
       loadScript('./gpt-experience-v1.js?v=1'),
       loadScript('./learning-client-v29.js?v=1'),
       loadScript('./semantic-ux-v32.js?v=33'),
-      loadScript('./capability-client-v36.js?v=38')
+      loadScript('./capability-client-v36.js?v=38'),
+      loadScript('./canonical-chat-v78.js?v=78')
     ]);
-    const ok=polish&&premium&&learning&&semanticUx&&capabilities;
+    const ok=polish&&premium&&learning&&semanticUx&&capabilities&&canonicalChat;
     document.documentElement.dataset.enhancement=ok?'ready':'degraded';
-    window.dispatchEvent(new CustomEvent('wae:enhancement-ready',{detail:{ok,polish,premium,learning,semanticUx,capabilities}}));
+    window.dispatchEvent(new CustomEvent('wae:enhancement-ready',{detail:{ok,polish,premium,learning,semanticUx,capabilities,canonicalChat}}));
   };
 
   const schedule=()=>{
@@ -33,5 +34,5 @@
 
   document.addEventListener('pointerdown',()=>start(),{once:true,passive:true});
   document.addEventListener('keydown',()=>start(),{once:true});
-  window.__waeProgressiveBoot={version:'v38-tool-fabric',start};
+  window.__waeProgressiveBoot={version:'v38-tool-fabric+v78-canonical-chat',start};
 })();
