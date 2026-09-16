@@ -1,5 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
 import {
   VERIFIED_GPT_ARENA_VERSION,
   benchmarkAttestationState,
@@ -141,4 +142,10 @@ test('one forged reference provider invalidates the entire v93 provenance gate',
   assert.equal(certification.gates.referenceProviderOpenAI, false);
   assert.equal(certification.gates.provenance, false);
   assert.equal(certification.claimAllowed, false);
+});
+
+test('public Node runtime wires the v93 benchmark status endpoint', () => {
+  const source = readFileSync(new URL('../server.js', import.meta.url), 'utf8');
+  assert.match(source, /import benchmarkV93Handler from ['"]\.\/api\/benchmark-v93\.js['"]/);
+  assert.match(source, /\['\/api\/benchmark\/v93',\s*benchmarkV93Handler\]/);
 });
