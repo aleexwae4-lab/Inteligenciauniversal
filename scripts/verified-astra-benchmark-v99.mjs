@@ -9,6 +9,10 @@ import {
   validateAttestedEntriesV99,
   validateSuiteV99,
 } from '../lib/verified-benchmark-runner-v99.js';
+import {
+  frontierCertificationV100,
+  sealFrontierEvidenceV100,
+} from '../lib/frontier-quality-training-v100.js';
 
 const BASE_URL=String(process.env.UNIVERSAL_CORE_URL||'https://wae-inteligencia-universal.onrender.com').replace(/\/+$/,'');
 const TOKEN=String(process.env.WAE_RUNTIME_BRIDGE_TOKEN||'');
@@ -109,7 +113,7 @@ async function mapConcurrent(items,limit,worker){
   return results;
 }
 
-console.log(`Universal Core v99 verified arena: ${suite.length} paired cases; target=${TARGET_ID}; expectedReference=${EXPECTED_REFERENCE_ID}`);
+console.log(`Universal Core v100 frontier arena: ${suite.length} paired cases; target=${TARGET_ID}; expectedReference=${EXPECTED_REFERENCE_ID}`);
 const [arenaStatus,premiumStatus]=await Promise.all([
   requestJson('/api/benchmark/v93'),
   requestJson('/api/benchmark/v98'),
@@ -143,7 +147,7 @@ for(const entry of entries){
 }
 const commitSha=entries[0]?.candidates?.find(candidate=>String(candidate?.id||'').toLowerCase()===TARGET_ID)?.attestation?.commitSha||'';
 const completedAt=new Date().toISOString();
-const publicEvidence=buildPublicEvidenceV99({
+const baseEvidence=buildPublicEvidenceV99({
   suiteHash:adversarialSuiteHash(),
   targetId:TARGET_ID,
   referenceId,
@@ -161,14 +165,24 @@ const publicEvidence=buildPublicEvidenceV99({
     referenceLatencyMs:latencySummary(referenceLatencies),
   },
 });
+const frontier=frontierCertificationV100({
+  certification:arenaResult?.certification||{},
+  training:arenaResult?.training||{},
+  premiumCertification:premiumResult?.premiumCertification||{},
+  entries,
+  referenceId,
+  expectedReferenceId:EXPECTED_REFERENCE_ID,
+});
+const publicEvidence=sealFrontierEvidenceV100({baseEvidence,frontier});
 if(!publicEvidenceIsSanitizedV99(publicEvidence))throw new Error('public_evidence_sanitization_failed');
 
 await mkdir(ARTIFACT_DIR,{recursive:true});
 const stamp=completedAt.replace(/[:.]/g,'-');
-const artifact=resolve(ARTIFACT_DIR,`verified-astra-benchmark-v99-${stamp}.json`);
+const artifact=resolve(ARTIFACT_DIR,`verified-astra-benchmark-v100-${stamp}.json`);
 await writeFile(artifact,`${JSON.stringify(publicEvidence,null,2)}\n`,'utf8');
 console.log(`sanitized evidence: ${artifact}`);
-console.log(`premium verdict: ${publicEvidence.premium.verdict}; claimAllowed=${publicEvidence.claimAuthorization.allowed}`);
+console.log(`premium verdict: ${publicEvidence.premium.verdict}; frontier=${frontier.state}; claimAllowed=${publicEvidence.claimAuthorization.allowed}`);
+console.log(`v100 significance: decisive=${frontier.significance.decisiveCases}; p=${frontier.significance.oneSidedBinomialP}`);
 console.log(`evidence digest: ${publicEvidence.evidenceDigest}`);
 
 if(REQUIRE_CERTIFICATION&&publicEvidence.claimAuthorization.allowed!==true){
