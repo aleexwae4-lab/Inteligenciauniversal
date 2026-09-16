@@ -19,6 +19,7 @@ import mobileHandler from './api/mobile.js';
 import uiDiagnosticsHandler from './api/ui-diagnostics.js';
 import liveDataHandler from './api/live-data.js';
 import knowledgeHandler from './api/knowledge.js';
+import { handlePremiumBackend, isPremiumBackendPath } from './backend-v73/app.js';
 
 const ROOT = fileURLToPath(new URL('.', import.meta.url));
 const PORT = Number(process.env.PORT || 10000);
@@ -210,8 +211,9 @@ function isMobileRequest(req, url) {
 
 const server = createServer(async (req, res) => {
   const url = new URL(req.url || '/', `http://${req.headers.host || 'localhost'}`);
-  const handler = apiRoutes.get(url.pathname) || (url.pathname.startsWith('/api/knowledge/source/') ? knowledgeHandler : null);
+  if (isPremiumBackendPath(url.pathname)) return handlePremiumBackend(req, res);
 
+  const handler = apiRoutes.get(url.pathname) || (url.pathname.startsWith('/api/knowledge/source/') ? knowledgeHandler : null);
   if (handler) return runApi(req, res, handler);
 
   if (!['GET', 'HEAD'].includes(req.method || '')) {
