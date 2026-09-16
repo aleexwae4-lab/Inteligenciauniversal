@@ -2,6 +2,7 @@ import { timingSafeEqual } from 'node:crypto';
 import { applyHeaders } from '../lib/security.js';
 import { callInternalSupabaseRpc } from '../lib/internal-supabase-rpc-v74.js';
 import { adversarialEvidenceSuite } from '../lib/adversarial-evidence-v72.js';
+import { buildRegressionCurriculumV95, verifiedTrainingReadinessV95 } from '../lib/eval-training-loop-v95.js';
 import {
   VERIFIED_GPT_ARENA_VERSION,
   benchmarkAttestationState,
@@ -60,6 +61,50 @@ function normalizeEntries(value) {
 
 function immutableCase(caseId) {
   return suiteById.get(text(caseId, 120)) || null;
+}
+
+function sanitizeRegression(reg = {}) {
+  const tags = Array.isArray(reg?.failureTags) ? reg.failureTags : Array.isArray(reg?.requiredRegression) ? reg.requiredRegression : [];
+  return {
+    caseId: text(reg?.caseId, 120),
+    targetScore: Number.isFinite(Number(reg?.targetScore)) ? Number(reg.targetScore) : null,
+    referenceScore: Number.isFinite(Number(reg?.referenceScore)) ? Number(reg.referenceScore) : null,
+    failureTags: tags.map(tag => text(tag, 180)).filter(Boolean).slice(0, 24),
+    requiredRegression: tags.map(tag => text(tag, 180)).filter(Boolean).slice(0, 24),
+  };
+}
+
+function recorderCertificationV95(certification = {}) {
+  const base = certification?.baseCertification && typeof certification.baseCertification === 'object' ? certification.baseCertification : {};
+  return {
+    schema: text(certification?.schema, 120),
+    version: text(certification?.version, 80),
+    targetId: text(certification?.targetId, 160),
+    referenceId: text(certification?.referenceId, 160).toLowerCase(),
+    evaluatedCases: Number(certification?.evaluatedCases) || 0,
+    claimAllowed: certification?.claimAllowed === true,
+    verdict: text(certification?.verdict || 'NOT_PROVEN', 120),
+    gates: certification?.gates && typeof certification.gates === 'object' ? certification.gates : {},
+    provenance: certification?.provenance && typeof certification.provenance === 'object' ? certification.provenance : {},
+    invalid: [],
+    baseCertification: {
+      schema: text(base?.schema, 120),
+      version: text(base?.version, 120),
+      evaluatedCases: Number(base?.evaluatedCases) || 0,
+      aggregate: base?.aggregate && typeof base.aggregate === 'object' ? base.aggregate : {},
+      metrics: base?.metrics && typeof base.metrics === 'object' ? base.metrics : {},
+      thresholds: base?.thresholds && typeof base.thresholds === 'object' ? base.thresholds : {},
+      gates: base?.gates && typeof base.gates === 'object' ? base.gates : {},
+      invalid: [],
+      claimAllowed: base?.claimAllowed === true,
+      verdict: text(base?.verdict || 'NOT_PROVEN', 120),
+      regressions: (Array.isArray(base?.regressions) ? base.regressions : []).map(sanitizeRegression),
+    },
+  };
+}
+
+function hashEntriesOnly(entries = []) {
+  return entries.map(entry => ({ caseId: text(entry?.caseId, 120), promptHash: text(entry?.promptHash, 128).toLowerCase() }));
 }
 
 async function databaseGate() {
@@ -126,6 +171,8 @@ async function statusPayload() {
       unversionedGptForbidden: true,
       genericAttestationEndpointEnabled: false,
       candidateExecutionMustOccurInsideTrustedRuntime: true,
+      benchmarkLossesBecomeRegressionTraining: true,
+      rawBenchmarkAnswersPersisted: false,
     },
   };
 }
@@ -231,20 +278,77 @@ export default async function handler(req, res) {
     }
   }
 
-  if (action === 'certify_attested') {
+  if (action === 'certify_attested' || action === 'certify_attested_and_record') {
     const entries = normalizeEntries(body.entries);
     if (entries.length !== MAX_ENTRIES) return res.status(422).json({ success: false, error: 'complete_64_case_suite_required', received: entries.length });
-    const certification = certifyVerifiedGptRun({
-      entries,
-      targetId: text(body.targetId || 'universal_core', 160),
-      referenceId: text(body.referenceId || '', 160).toLowerCase(),
+    const targetId = text(body.targetId || 'universal_core', 160);
+    const referenceId = text(body.referenceId || '', 160).toLowerCase();
+    const certification = certifyVerifiedGptRun({ entries, targetId, referenceId });
+
+    if (action === 'certify_attested') {
+      return res.status(200).json({
+        success: true,
+        certification,
+        claimAuthorization: {
+          allowed: certification.claimAllowed === true,
+          scope: certification.claimAllowed ? certification.claim : 'No superiority claim authorized.',
+        },
+      });
+    }
+
+    const readiness = verifiedTrainingReadinessV95(certification);
+    const curriculum = buildRegressionCurriculumV95({ certification, entries });
+    if (!readiness.ready || !curriculum.ready) {
+      return res.status(422).json({
+        success: false,
+        error: 'verified_training_readiness_failed',
+        readiness,
+        claimAuthorization: { allowed: false, scope: 'No superiority claim authorized.' },
+      });
+    }
+
+    const workerToken = String(process.env.WAE_RUNTIME_BRIDGE_TOKEN || '');
+    const commitSha = text(certification?.provenance?.commitShas?.[0] || '', 80);
+    const record = await callInternalSupabaseRpc({
+      functionName: 'wae_record_verified_gpt_arena_v95',
+      body: {
+        p_worker_token: workerToken,
+        p_certification: recorderCertificationV95(certification),
+        p_entries: hashEntriesOnly(entries),
+        p_target_id: targetId,
+        p_reference_id: referenceId,
+        p_commit_sha: commitSha,
+      },
+      timeoutMs: 5_000,
+      clientInfo: 'wae-eval-training-v95',
     });
+    if (!record.ok) {
+      return res.status(503).json({
+        success: false,
+        error: 'verified_training_record_failed',
+        detail: text(record.detail || record.error || '', 180),
+        readiness,
+        claimAuthorization: { allowed: false, scope: 'No superiority claim authorized.' },
+      });
+    }
+
+    const receipt = Array.isArray(record.payload) ? (record.payload[0] || {}) : (record.payload || {});
+    const claimAllowed = certification.claimAllowed === true && receipt?.superiority_claim_gate === 'CERTIFIED';
     return res.status(200).json({
       success: true,
-      certification,
+      certification: recorderCertificationV95(certification),
+      training: {
+        version: curriculum.version,
+        mode: curriculum.mode,
+        counts: curriculum.counts,
+        promotionBlocked: curriculum.promotionBlocked,
+        privacy: curriculum.privacy,
+        baseModelWeightsChanged: false,
+      },
+      recorder: receipt,
       claimAuthorization: {
-        allowed: certification.claimAllowed === true,
-        scope: certification.claimAllowed ? certification.claim : 'No superiority claim authorized.',
+        allowed: claimAllowed,
+        scope: claimAllowed ? certification.claim : 'No superiority claim authorized.',
       },
     });
   }
