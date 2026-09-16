@@ -7,11 +7,11 @@ import { KNOWLEDGE_EXPANSION_VERSION, knowledgeExpansionCandidatesV90, auditKnow
 import { KNOWLEDGE_FUSION_V90 } from '../lib/knowledge-fusion-v90.js';
 import capacityChatV90, { CAPACITY_CHAT_V90 } from '../api/capacity-chat-v90.js';
 
-test('v90.1 exposes stable latency-first contracts without claiming benchmark superiority',()=>{
+test('v90.2 exposes stable latency-first contracts without claiming benchmark superiority',()=>{
   assert.equal(LATENCY_GOVERNOR_VERSION,'latency-governor/v90');
   assert.equal(KNOWLEDGE_EXPANSION_VERSION,'autonomous-knowledge-expansion/v90');
   assert.equal(KNOWLEDGE_FUSION_V90,'universal-knowledge-fusion/v90');
-  assert.equal(CAPACITY_CHAT_V90,'capacity-chat/v90.1-latency-autonomous-knowledge');
+  assert.equal(CAPACITY_CHAT_V90,'capacity-chat/v90.2-latency-autonomous-knowledge');
   assert.equal(typeof capacityChatV90,'function');
   const caps=latencyGovernorCapabilitiesV90();
   assert.equal(caps.measuredProductionAdvantage,false);
@@ -113,11 +113,12 @@ test('explicit provider selection bypasses automatic research admission before a
   assert.match(source,/provider&&provider!==['"]auto['"]/);
 });
 
-test('public v60 alias advances to v90 while documenting v89 as downstream fallback',async()=>{
+test('public v60 alias advances through v91 to v90 while v89 remains downstream',async()=>{
   const alias=await readFile(new URL('../api/capacity-chat-v60.js',import.meta.url),'utf8');
+  const v91=await readFile(new URL('../api/capacity-chat-v91.js',import.meta.url),'utf8');
   const v90=await readFile(new URL('../api/capacity-chat-v90.js',import.meta.url),'utf8');
-  assert.match(alias,/capacity-chat-v90\.js/);
-  assert.match(alias,/capacity-chat-v89\.js/);
+  assert.match(alias,/capacity-chat-v91\.js/);
+  assert.match(v91,/capacity-chat-v90\.js/);
   assert.match(v90,/capacity-chat-v89\.js/);
   assert.match(v90,/runFocusedFactualAnswer/);
   assert.match(v90,/runKnowledgeFusionV90/);
