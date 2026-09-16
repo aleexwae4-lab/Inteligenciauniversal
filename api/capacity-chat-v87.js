@@ -7,7 +7,7 @@ import {
 } from '../lib/universal-intelligence-planner-v87.js';
 import { runFocusedFactualAnswer, focusedFactualEligible, FOCUSED_FACTUAL_VERSION } from '../lib/knowledge/focused-factual-v83.js';
 
-export const CAPACITY_CHAT_V87='capacity-chat/v89-fast-factual-lane';
+export const CAPACITY_CHAT_V87='capacity-chat/v87-universal-intelligence-planner';
 
 const SIMPLE_CONCEPT_RX=/\b(?:qu[eé]|what)\s+(?:es|son|is|are)\b|\b(?:define|definici[oó]n|explica|expl[ií]came|explain|para\s+qu[eé]\s+sirve|c[oó]mo\s+funciona|how\s+does)\b/i;
 const CURRENT_OR_HIGH_STAKES_RX=/\b(?:hoy|ahora|actual(?:es|mente|idad)?|vigente|reciente|[uú]ltim[oa]s?|latest|today|current|news|noticias|precio|cotizaci[oó]n|clima|tiempo|weather|elecci[oó]n|presidente|ceo|legal|jur[ií]dic|delito|m[eé]dic|salud|dosis|tratamiento|farmacol|inversi[oó]n|cr[eé]dito|fraude)\b/i;
