@@ -1,4 +1,4 @@
-import { getToolDefinition, toolFabricSnapshot } from '../lib/tool-fabric.js';
+import { getToolDefinition, toolFabricSnapshot } from '../lib/tool-fabric-v88.js';
 import { applyHeaders } from '../lib/security.js';
 
 export default function handler(req,res){
