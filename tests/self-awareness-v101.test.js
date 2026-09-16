@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { buildSelfAwarenessSnapshotV101, buildSelfAwarenessReplyV101, classifySelfAwarenessV101, selfAwarenessCapabilitiesV101, SELF_AWARENESS_V101 } from '../lib/self-awareness-v101.js';
+import { applyFrontierFreshnessGuardV101, FRONTIER_FRESHNESS_V101 } from '../api/capacity-chat-v101.js';
 
 test('v101 exposes grounded self-awareness contract',()=>{
   const caps=selfAwarenessCapabilitiesV101();
@@ -63,4 +64,27 @@ test('capability and competitor intents are recognized through v101',()=>{
   assert.equal(classifySelfAwarenessV101({message:'¿Cuáles son tus capacidades?'}).kind,'capability');
   assert.equal(classifySelfAwarenessV101({message:'¿Superas a GPT-6 Astra?'}).kind,'comparison');
   assert.equal(classifySelfAwarenessV101({message:'Escribe un poema sobre Jalisco'}).eligible,false);
+});
+
+test('clip regression: GPT Astra factual lookup is forced into live research',()=>{
+  const guarded=applyFrontierFreshnessGuardV101({message:'Hola sabes que es gpt Astra?'});
+  assert.equal(guarded.mode,'research');
+  assert.equal(guarded.research_mode,true);
+  assert.equal(guarded.web_enabled,true);
+  assert.equal(guarded.freshness_required,true);
+  assert.equal(guarded.frontier_entity_query,true);
+  assert.equal(guarded.freshness_guard,FRONTIER_FRESHNESS_V101);
+});
+
+test('frontier freshness respects explicit web disable but still marks verification required',()=>{
+  const guarded=applyFrontierFreshnessGuardV101({message:'¿Qué es GPT-6 Astra y cuándo salió?',web_enabled:false});
+  assert.equal(guarded.web_enabled,false);
+  assert.equal(guarded.mode,'research');
+  assert.equal(guarded.freshness_required,true);
+});
+
+test('stable non-frontier questions are not unnecessarily forced into web research',()=>{
+  const guarded=applyFrontierFreshnessGuardV101({message:'¿Qué es la fotosíntesis?'});
+  assert.equal(guarded.freshness_required,undefined);
+  assert.equal(guarded.web_enabled,undefined);
 });
