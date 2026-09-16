@@ -16,7 +16,9 @@ import { specialistCopilotCapabilitiesV91 } from '../lib/specialist-copilot-arse
 import { benchmarkSuiteManifest } from '../lib/supremacy-benchmark-v62.js';
 import { continuousImprovementCapabilities, getContinuousImprovementStatus } from '../lib/continuous-improvement-v54.js';
 import { evalTrainingCapabilitiesV95 } from '../lib/eval-training-loop-v95.js';
-import { selfAwarenessCapabilitiesV99, selfAwarenessSnapshotV99 } from '../lib/self-awareness-v99.js';
+import { selfAwarenessCapabilitiesV101, buildSelfAwarenessSnapshotV101 } from '../lib/self-awareness-v101.js';
+import { answerContinuityCapabilitiesV101 } from '../lib/answer-continuity-v101.js';
+import { operationalProviderSnapshot } from '../lib/provider-health-v81.js';
 import { answerIntelligenceCapabilities } from '../lib/answer-intelligence-v60.js';
 import { qualityReliabilityCapabilities } from '../lib/quality-reliability-v61.js';
 import { performanceRouterCapabilities, providerMeshSnapshot } from '../lib/provider-mesh-v63.js';
@@ -24,6 +26,12 @@ import { scaleControlCapabilities, scaleControlSnapshot } from '../lib/scale-con
 import { capacityCertificationCapabilities } from '../lib/capacity-certification-v66.js';
 import { gpuFabricSnapshot } from '../lib/gpu-fabric-v77.js';
 import { applyHeaders } from '../lib/security.js';
+
+function domainCount(kernel={}){
+  if(Array.isArray(kernel?.domains))return kernel.domains.length;
+  if(kernel?.domains&&typeof kernel.domains==='object')return Object.keys(kernel.domains).length;
+  return 0;
+}
 
 export default async function handler(req,res){
   applyHeaders(res);
@@ -47,16 +55,24 @@ export default async function handler(req,res){
 
   let coreContext=null;
   let improvementStatus=null;
-  try{[coreContext,improvementStatus]=await Promise.all([getUniversalSelfDescription(),getContinuousImprovementStatus()])}catch{}
+  let operational=null;
+  try{[coreContext,improvementStatus,operational]=await Promise.all([getUniversalSelfDescription(),getContinuousImprovementStatus(),operationalProviderSnapshot().catch(()=>null)])}catch{}
   const executive=coreContext?.executiveOrchestration||{};
   const library=coreContext?.library||{};
   const arena={...benchmarkSuiteManifest(),endpoint:'/api/evals',actions:['suite','certify','certify_and_record']};
+  const groundedSelf=buildSelfAwarenessSnapshotV101({
+    stats:coreContext||{},
+    operational,
+    toolCount:Array.isArray(toolFabric?.tools)?toolFabric.tools.length:0,
+    capabilityDomains:domainCount(kernel),
+  });
 
   return res.status(200).json({
     ...health,
     interface:'experience-v8-living-core',
     reasoningProfiles:['auto','deep'],
-    selfAwareness:{...selfAwarenessCapabilitiesV99(),snapshot:selfAwarenessSnapshotV99(coreContext||{})},
+    selfAwareness:{...selfAwarenessCapabilitiesV101(),snapshot:groundedSelf},
+    answerContinuity:answerContinuityCapabilitiesV101(),
     answerIntelligence:answerIntelligenceCapabilities(),
     qualityReliability:qualityReliabilityCapabilities(),
     latencyGovernor:latencyGovernorCapabilitiesV90(),
