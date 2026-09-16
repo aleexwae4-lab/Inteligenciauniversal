@@ -62,7 +62,7 @@ function metricsHandler(req, res) {
 }
 
 function configHandler(req, res) {
-  return res.status(200).json({ backend: publicBackendConfig(), controlPlane: controlPlaneState(), security: securityState() });
+  return res.status(200).json({ backend: publicBackendConfig(), controlPlane: controlPlaneState({ includeTransportMode:true }), security: securityState() });
 }
 
 const registry = new Map([
