@@ -104,8 +104,8 @@ test('health readiness no longer reports the whole service down when only genera
 test('explicit provider selection bypasses automatic research admission before any v90 slot or fusion work',async()=>{
   const source=await readFile(new URL('../api/capacity-chat-v90.js',import.meta.url),'utf8');
   const explicitIndex=source.indexOf("if(hasExplicitProvider(body))");
-  const slotIndex=source.indexOf('tryAcquireChatSlot');
-  const fusionIndex=source.indexOf('runKnowledgeFusionV90({body:v90Body');
+  const slotIndex=source.indexOf('const slot=tryAcquireChatSlot',explicitIndex);
+  const fusionIndex=source.indexOf('runKnowledgeFusionV90({body:v90Body',slotIndex);
   assert.ok(explicitIndex>0);
   assert.ok(slotIndex>explicitIndex);
   assert.ok(fusionIndex>slotIndex);
