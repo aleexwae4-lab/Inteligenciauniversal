@@ -34,5 +34,5 @@
 
   document.addEventListener('pointerdown',()=>start(),{once:true,passive:true});
   document.addEventListener('keydown',()=>start(),{once:true});
-  window.__waeProgressiveBoot={version:'v78-canonical-chat',start};
+  window.__waeProgressiveBoot={version:'v38-tool-fabric+v78-canonical-chat',start};
 })();
