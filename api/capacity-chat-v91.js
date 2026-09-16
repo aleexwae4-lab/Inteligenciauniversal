@@ -53,17 +53,22 @@ function authorize(req,res){
   return true;
 }
 
-async function delegate(req,res,plan){
+async function delegate(req,res,plan,path='evidence-or-runtime-delegated'){
   const buffered=bufferedResponse(res);
   await capacityChatV90(req,buffered.proxy);
   if(res.writableEnded||!buffered.hasJson)return;
-  setHeaders(res,plan,'evidence-or-runtime-delegated');
-  return res.status(buffered.code).json(decorate(buffered.payload,plan,false,'evidence-or-runtime-delegated'));
+  setHeaders(res,plan,path);
+  return res.status(buffered.code).json(decorate(buffered.payload,plan,false,path));
 }
 
 export default async function capacityChatV91(req,res){
   const body=req.body&&typeof req.body==='object'?req.body:{};
   const plan=planSpecialistCopilots(body);
+
+  // High-impact topics stay on the evidence/verification stack. The specialist
+  // planner is still surfaced as routing context, but an ungrounded direct
+  // council is never allowed to replace verified medical/legal/security/finance evidence.
+  if(plan.highImpact===true)return delegate(req,res,plan,'high-impact-verified-delegation');
 
   const council=shouldRunSpecialistCouncilV91(plan,body);
   const single=shouldRunSpecialistSinglePassV91(plan,body);
@@ -97,6 +102,6 @@ export function capacityChatV91Capabilities(){
   return{
     release:CAPACITY_CHAT_V91,
     specialists:SPECIALIST_COPILOT_VERSION,
-    policy:{minimumNecessarySpecialists:true,singlePassByDefault:true,parallelCouncilOnlyWhenExplicit:true,currentFactsDelegateToVerifiedEvidencePipeline:true,explicitProviderContractPreserved:true,noUniversalSuperiorityClaimWithoutBenchmark:true}
+    policy:{minimumNecessarySpecialists:true,singlePassByDefault:true,parallelCouncilOnlyWhenExplicit:true,currentFactsDelegateToVerifiedEvidencePipeline:true,highImpactDelegatesToVerifiedEvidencePipeline:true,explicitProviderContractPreserved:true,noUniversalSuperiorityClaimWithoutBenchmark:true}
   };
 }
