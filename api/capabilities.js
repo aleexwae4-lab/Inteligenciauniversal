@@ -16,6 +16,7 @@ import { performanceRouterCapabilities, providerMeshSnapshot } from '../lib/prov
 import { scaleControlCapabilities, scaleControlSnapshot } from '../lib/scale-control-v63.js';
 import { capacityCertificationCapabilities } from '../lib/capacity-certification-v66.js';
 import { gpuFabricSnapshot } from '../lib/gpu-fabric-v77.js';
+import { enterpriseFabricSnapshot } from '../lib/enterprise-intelligence-fabric-v90.js';
 import { applyHeaders } from '../lib/security.js';
 
 export default async function handler(req,res){
@@ -51,6 +52,7 @@ export default async function handler(req,res){
     reasoningProfiles:['auto','deep'],
     answerIntelligence:answerIntelligenceCapabilities(),
     qualityReliability:qualityReliabilityCapabilities(),
+    enterpriseIntelligence:enterpriseFabricSnapshot(),
     gpuFabric:gpuFabricSnapshot(),
     scaleControl:{...scaleControlCapabilities(),snapshot:scaleControlSnapshot()},
     capacityCertification:{...capacityCertificationCapabilities(),endpoint:'/api/capacity-certification',actions:['evaluate','certify_and_record']},
