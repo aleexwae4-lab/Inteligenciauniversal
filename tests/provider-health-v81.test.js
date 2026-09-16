@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { classifyOperationalProvider, rankOperationalProviders, PROVIDER_HEALTH_VERSION } from '../lib/provider-health-v81.js';
+import { classifyOperationalProvider, rankOperationalProviders, directFallbackProvider, PROVIDER_HEALTH_VERSION } from '../lib/provider-health-v81.js';
 import capacityChatV81, { CAPACITY_CHAT_V81 } from '../api/capacity-chat-v81.js';
 
 test('v81 modules expose stable contracts',()=>{
@@ -40,4 +40,22 @@ test('proven healthy provider outranks an unknown provider',()=>{
   const ranked=rankOperationalProviders({registry,runtime,now:Date.parse('2026-09-16T02:00:00Z')});
   assert.equal(ranked[0].id,'wae_edge');
   assert.equal(ranked[0].healthy,true);
+});
+
+test('control-plane outage prefers a configured direct provider over Supabase-dependent routes',()=>{
+  const providers=rankOperationalProviders({registry:[
+    {id:'wae_edge',model:'edge',configured:true},
+    {id:'wae_supabase',model:'gateway',configured:true},
+    {id:'gemini',model:'gemini-test',configured:true},
+    {id:'openrouter',model:'router-test',configured:true}
+  ],runtime:[],now:Date.parse('2026-09-16T02:00:00Z')});
+  assert.equal(directFallbackProvider(providers),'gemini');
+});
+
+test('control-plane outage does not invent a direct provider when none is configured',()=>{
+  const providers=rankOperationalProviders({registry:[
+    {id:'wae_edge',model:'edge',configured:true},
+    {id:'wae_supabase',model:'gateway',configured:true}
+  ],runtime:[],now:Date.parse('2026-09-16T02:00:00Z')});
+  assert.equal(directFallbackProvider(providers),null);
 });
