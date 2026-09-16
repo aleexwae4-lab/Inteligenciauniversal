@@ -1,6 +1,11 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import capacityChatV86 from '../api/capacity-chat-v86.js';
 import { classifyFactualityRequest, factualityDecision, factualityGateCapabilities } from '../lib/factuality-gate-v86.js';
+
+test('v86 live chat handler loads',()=>{
+  assert.equal(typeof capacityChatV86,'function');
+});
 
 test('v86 requires verification for current information',()=>{
   const profile=classifyFactualityRequest({message:'¿Quién es el presidente actual de esta organización?'});
