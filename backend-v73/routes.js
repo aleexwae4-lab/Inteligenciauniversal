@@ -6,6 +6,7 @@ import tasksHandler from '../api/tasks.js';
 import toolsHandler from '../api/tools.js';
 import evalsHandler from '../api/evals.js';
 import { runtimeHealth } from '../lib/runtime.js';
+import { controlPlaneState, CONTROL_PLANE_VERSION } from '../lib/control-plane-v74.js';
 import { BACKEND_VERSION, publicBackendConfig } from './config.js';
 import { metricsSnapshot } from './metrics.js';
 import { securityState } from './security.js';
@@ -15,6 +16,7 @@ function liveHandler(req, res) {
     ok: true,
     service: 'wae-universal-core-backend',
     version: BACKEND_VERSION,
+    controlPlane: CONTROL_PLANE_VERSION,
     state: 'live',
     now: new Date().toISOString(),
   });
@@ -27,6 +29,7 @@ function readyHandler(req, res) {
     ok: ready,
     service: 'wae-universal-core-backend',
     version: BACKEND_VERSION,
+    controlPlane: CONTROL_PLANE_VERSION,
     state: ready ? 'ready' : 'not_ready',
     runtime,
   });
@@ -36,8 +39,9 @@ function statusHandler(req, res) {
   const runtime = runtimeHealth();
   return res.status(200).json({
     ok: true,
-    schema: 'wae-backend-status/v1',
+    schema: 'wae-backend-status/v2',
     backend: publicBackendConfig(),
+    controlPlane: controlPlaneState(),
     security: securityState(),
     runtime: {
       service: runtime.service,
@@ -58,7 +62,7 @@ function metricsHandler(req, res) {
 }
 
 function configHandler(req, res) {
-  return res.status(200).json({ backend: publicBackendConfig(), security: securityState() });
+  return res.status(200).json({ backend: publicBackendConfig(), controlPlane: controlPlaneState(), security: securityState() });
 }
 
 const registry = new Map([
