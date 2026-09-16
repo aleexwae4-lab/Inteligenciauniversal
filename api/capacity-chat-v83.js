@@ -6,6 +6,9 @@ export { CAPACITY_CHAT_V82 } from './capacity-chat-v82.js';
 
 export const CAPACITY_CHAT_V83='capacity-chat/v83-focused-factual-answer';
 
+const EXPLICIT_RESEARCH=/\b(?:investiga|investigación|investigacion|fuentes?|evidencia|paper|papers|estudio|estudios|cient[ií]fic|acad[eé]mic|bibliograf[ií]a|doi|pubmed|openalex|crossref|arxiv|meta.?an[aá]lisis|revisi[oó]n sistem[aá]tica)\b/i;
+const INTERNAL_METADATA_FALLBACK=/recuper[eé] evidencia verificable|capa generativa no complet[oó]|registros utilizables|\bunclassified\b|\[K\d+\]/i;
+
 function bufferedResponse(real){
   let code=200,payload,hasJson=false;
   const proxy=new Proxy(real,{
@@ -35,9 +38,16 @@ function upstreamUsable(code,payload={}){
   return code<500&&!!reply&&payload?.degraded!==true
     &&!/respuesta no lleg[oó] completa|no pude completar|all_models_unavailable|continuity_pass_through/i.test(reply);
 }
-function knowledgeUsable(result){
+export function explicitResearchIntent(body={}){
+  const mode=String(body.mode||body.agent||'general').toLowerCase();
+  const message=String(body.message||body.task||body.prompt||'');
+  return ['research','academic','science'].includes(mode)||body.explicit_research===true||EXPLICIT_RESEARCH.test(message);
+}
+export function knowledgeUsable(result,body={}){
   const reply=replyOf(result);
-  return !!reply&&result?.quality?.critical!==true&&!/all_models_unavailable|continuity_pass_through|no pude completar/i.test(reply);
+  if(!reply||result?.quality?.critical===true||/all_models_unavailable|continuity_pass_through|no pude completar/i.test(reply))return false;
+  if(!explicitResearchIntent(body)&&(result?.citation_gate_fallback===true||INTERNAL_METADATA_FALLBACK.test(reply)))return false;
+  return true;
 }
 async function withTimeout(work,timeoutMs){
   let timer;
@@ -51,7 +61,8 @@ async function boundedFocused(body){
 }
 async function boundedGenericKnowledge(body,userKey){
   const timeoutMs=Math.max(4000,Math.min(18000,Number(process.env.WAE_V83_KNOWLEDGE_TIMEOUT_MS||10000)));
-  return withTimeout(runKnowledgeAnswer({body:{...body,mode:'research',web_enabled:false,knowledge:true,provider:'auto'},userKey}),timeoutMs);
+  const recoveryContext=explicitResearchIntent(body)?'explicit_research':'general_concept';
+  return withTimeout(runKnowledgeAnswer({body:{...body,mode:'research',web_enabled:false,knowledge:true,provider:'auto',recovery_context:recoveryContext,original_mode:String(body.mode||body.agent||'general')},userKey}),timeoutMs);
 }
 
 export default async function capacityChatV83(req,res){
@@ -93,7 +104,7 @@ export default async function capacityChatV83(req,res){
     try{
       const userKey=String(body.userKey||body.sessionId||body.session_id||'anonymous').slice(0,160);
       const recovered=await boundedGenericKnowledge(body,userKey);
-      if(knowledgeUsable(recovered)){
+      if(knowledgeUsable(recovered,body)){
         const payload={
           ...recovered,
           recovery:{
