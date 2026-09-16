@@ -57,8 +57,10 @@ jobs:
         run: |
           node --check lib/verified-benchmark-runner-v99.js
           node --check lib/frontier-quality-training-v100.js
+          node --check lib/premium-response-repair-v100.js
+          node --check api/capacity-chat-v86.js
           node --check scripts/verified-astra-benchmark-v99.mjs
-          node --test tests/verified-benchmark-runner-v99.test.js tests/frontier-quality-training-v100.test.js
+          node --test tests/verified-benchmark-runner-v99.test.js tests/frontier-quality-training-v100.test.js tests/premium-response-repair-v100.test.js
 
       - name: Require trusted runtime credential
         shell: bash
