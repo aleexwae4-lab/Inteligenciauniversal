@@ -44,9 +44,10 @@ test('ranked failover moves from a rate-limited lane to the next healthy GPU lan
   }finally{global.fetch=originalFetch;restore()}
 });
 
-test('v76 wrapper preserves v63 control and hardens external GPU recovery',async()=>{
+test('v76 remains directly callable while the live compatibility alias advances through v77 and preserves v63 control',async()=>{
   assert.equal(typeof capacityChatV76,'function');
   const alias=await readFile(new URL('../api/capacity-chat-v60.js',import.meta.url),'utf8');
-  const wrapper=await readFile(new URL('../api/capacity-chat-v76.js',import.meta.url),'utf8');
-  assert.match(alias,/capacity-chat-v76\.js/);assert.match(wrapper,/capacityChatV63/);assert.match(wrapper,/GPU_FABRIC_VERSION/);assert.match(wrapper,/sensitiveRequest/);assert.match(wrapper,/requiresGroundedData/);assert.match(wrapper,/originAllowed/);assert.match(wrapper,/allowRequest/);assert.match(wrapper,/WAE_GPU_ALLOW_ATTACHMENTS/);assert.match(wrapper,/WAE_GPU_ALLOW_UNGROUNDED_RESEARCH/);
+  const legacyWrapper=await readFile(new URL('../api/capacity-chat-v76.js',import.meta.url),'utf8');
+  const liveWrapper=await readFile(new URL('../api/capacity-chat-v77.js',import.meta.url),'utf8');
+  assert.match(alias,/capacity-chat-v77\.js/);assert.match(legacyWrapper,/capacityChatV63/);assert.match(legacyWrapper,/GPU_FABRIC_VERSION/);assert.match(liveWrapper,/capacityChatV63/);assert.match(liveWrapper,/GPU_SCHEDULER_VERSION/);assert.match(liveWrapper,/sensitiveRequest/);assert.match(liveWrapper,/requiresGroundedData/);assert.match(liveWrapper,/originAllowed/);assert.match(liveWrapper,/allowRequest/);assert.match(liveWrapper,/WAE_GPU_ALLOW_ATTACHMENTS/);assert.match(liveWrapper,/WAE_GPU_ALLOW_UNGROUNDED_RESEARCH/);
 });
