@@ -1,4 +1,4 @@
-import { BACKEND_VERSION } from './config.js';
+import { BACKEND_VERSION, backendConfig } from './config.js';
 import { createRequestContext, requestIdFor, runWithRequestContext } from './context.js';
 import { augmentResponse, readJsonBody, safeErrorPayload } from './http.js';
 import { observeRequest } from './metrics.js';
@@ -18,6 +18,17 @@ export async function handlePremiumBackend(req, res) {
   const pathname = url.pathname;
   const requestId = requestIdFor(req);
   res.setHeader('X-Request-Id', requestId);
+
+  if (typeof res.setTimeout === 'function') {
+    res.setTimeout(backendConfig().requestTimeoutMs, () => {
+      if (res.writableEnded) return;
+      if (!res.headersSent) {
+        res.statusCode = 504;
+        res.setHeader('Content-Type', 'application/json; charset=utf-8');
+      }
+      res.end(JSON.stringify({ error: 'request_timeout', request_id: requestId, recoverable: true }));
+    });
+  }
 
   if (!applyCors(req, res)) {
     return res.status(403).json({ error: 'origin_not_allowed', request_id: requestId });
