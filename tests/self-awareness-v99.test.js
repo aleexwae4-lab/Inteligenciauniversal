@@ -18,9 +18,9 @@ test('v99 answers competitive intent confidently without fabricating superiority
   assert.match(reply,/64 casos emparejados/i);
   assert.match(reply,/CERTIFIED/);
   assert.match(reply,/tengo arquitectura y mecanismos para competir/i);
+  assert.match(reply,/No debo afirmar que ya superé a Astra/i);
   assert.doesNotMatch(reply,/No puedo competir directamente/i);
   assert.doesNotMatch(reply,/No dispongo de datos comparativos públicos/i);
-  assert.doesNotMatch(reply,/ya super[eé] a Astra/i);
 });
 
 test('v99 capability answer describes measurable system capabilities rather than invented IQ',()=>{
@@ -44,8 +44,8 @@ test('v99 frontier model facts route to current evidence and benchmark research 
 test('v99 is wired before generic chat protocol and exposed in public capabilities',async()=>{
   const chat=await read('api/capacity-chat.js');
   const caps=await read('api/capabilities.js');
-  const selfIndex=chat.indexOf('selfAwarenessFastPath(req,res,body)');
-  const modernIndex=chat.indexOf('modernFastPath(req,res,body)');
+  const selfIndex=chat.indexOf('if(await selfAwarenessFastPath(req,res,body))return;');
+  const modernIndex=chat.indexOf('if(modernFastPath(req,res,body))return;');
   assert.ok(selfIndex>=0&&modernIndex>selfIndex);
   assert.match(chat,/X-WAE-Self-Awareness/);
   assert.match(chat,/self-awareness-v99/);
