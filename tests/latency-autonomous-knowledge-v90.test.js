@@ -7,11 +7,11 @@ import { KNOWLEDGE_EXPANSION_VERSION, knowledgeExpansionCandidatesV90, auditKnow
 import { KNOWLEDGE_FUSION_V90 } from '../lib/knowledge-fusion-v90.js';
 import capacityChatV90, { CAPACITY_CHAT_V90 } from '../api/capacity-chat-v90.js';
 
-test('v90 exposes stable latency-first contracts without claiming benchmark superiority',()=>{
+test('v90.1 exposes stable latency-first contracts without claiming benchmark superiority',()=>{
   assert.equal(LATENCY_GOVERNOR_VERSION,'latency-governor/v90');
   assert.equal(KNOWLEDGE_EXPANSION_VERSION,'autonomous-knowledge-expansion/v90');
   assert.equal(KNOWLEDGE_FUSION_V90,'universal-knowledge-fusion/v90');
-  assert.equal(CAPACITY_CHAT_V90,'capacity-chat/v90-latency-autonomous-knowledge');
+  assert.equal(CAPACITY_CHAT_V90,'capacity-chat/v90.1-latency-autonomous-knowledge');
   assert.equal(typeof capacityChatV90,'function');
   const caps=latencyGovernorCapabilitiesV90();
   assert.equal(caps.measuredProductionAdvantage,false);
@@ -49,7 +49,6 @@ test('deep research and factual executive work receive bounded wider budgets',()
   const researchPlan=planLatencyV90(research,planUniversalIntelligence(research));
   assert.equal(researchPlan.profile,'live_current');
   assert.ok(researchPlan.budgets.knowledge_timeout_ms<=6800);
-
   const executive={message:'Investiga evidencia y audita arquitectura, seguridad, costos y estrategia de escalamiento de la empresa.',mode:'executive'};
   const executivePlan=planLatencyV90(executive,{needs:{multiagent:true}});
   assert.equal(executivePlan.profile,'executive');
@@ -100,6 +99,18 @@ test('health readiness no longer reports the whole service down when only genera
   assert.match(source,/generativeDegraded:generativeEligible!==true/);
   assert.match(source,/service-readiness-separated-from-generative-health\/v90/);
   assert.doesNotMatch(source,/ready:base\.ready===true&&generativeEligible/);
+});
+
+test('explicit provider selection bypasses automatic research admission before any v90 slot or fusion work',async()=>{
+  const source=await readFile(new URL('../api/capacity-chat-v90.js',import.meta.url),'utf8');
+  const explicitIndex=source.indexOf("if(hasExplicitProvider(body))");
+  const slotIndex=source.indexOf('tryAcquireChatSlot');
+  const fusionIndex=source.indexOf('runKnowledgeFusionV90({body:v90Body');
+  assert.ok(explicitIndex>0);
+  assert.ok(slotIndex>explicitIndex);
+  assert.ok(fusionIndex>slotIndex);
+  assert.match(source,/explicit-provider-v89/);
+  assert.match(source,/provider&&provider!==['"]auto['"]/);
 });
 
 test('public v60 alias advances to v90 while documenting v89 as downstream fallback',async()=>{
