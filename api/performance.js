@@ -1,5 +1,6 @@
 import { applyHeaders } from '../lib/security.js';
 import { fetchPerformanceGate, fetchCognitiveScorecard, fetchReliabilityPlane, fetchSelfImprovement } from '../lib/performance.js';
+import { latencySnapshotV94 } from '../lib/latency-metrics-v94.js';
 
 export default async function performanceHandler(req,res) {
   applyHeaders(res);
@@ -10,6 +11,7 @@ export default async function performanceHandler(req,res) {
     fetchReliabilityPlane({windowMinutes:30}),
     fetchSelfImprovement({windowHours:24})
   ]);
+  const liveLatency=latencySnapshotV94({windowMs:60*60*1000});
   const reliabilityReady=reliability.available===true&&reliability.runtime.requests>=5&&reliability.runtime.success_pct>=99&&reliability.models.healthy>=1;
   const instantResponseReady=gate.stream_ready===true&&gate.best_stream_ttft_ms>0&&gate.best_stream_ttft_ms<=Number(gate?.policy?.stream_ttft_ceiling_ms||2500);
   const learningReady=selfImprovement.available===true&&selfImprovement.router_learning_active===true&&selfImprovement.signals.total>=100&&selfImprovement.signals.learned_routes>=1;
@@ -17,6 +19,7 @@ export default async function performanceHandler(req,res) {
     success:true,
     core:'Universal Core',
     performance:gate,
+    live_latency:liveLatency,
     cognitive,
     reliability,
     self_improvement:selfImprovement,
@@ -36,6 +39,6 @@ export default async function performanceHandler(req,res) {
       supremacy_claim_allowed:selfImprovement?.supremacy_gate?.claim_allowed===true,
       globally_ready:gate.routing_state==='PROMOTE'&&cognitive.state==='PASS'&&reliabilityReady&&learningReady
     },
-    public_contract:'universal-performance+quality+reliability+streaming+learning/v6'
+    public_contract:'universal-performance+quality+reliability+streaming+learning+latency-v7'
   });
 }
