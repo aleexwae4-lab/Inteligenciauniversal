@@ -1,6 +1,7 @@
 import { applyHeaders, originAllowed, allowRequest } from '../lib/security.js';
 import { knowledgeSources, knowledgeHealth, existingKnowledgeArchitecture } from '../lib/knowledge/fabric-v1.js';
 import { searchUniversalKnowledge, universalKnowledgeCapabilities, UNIVERSAL_KNOWLEDGE_MESH_VERSION } from '../lib/universal-knowledge-mesh-v89.js';
+import { auditKnowledgeExpansionV90, knowledgeExpansionCapabilitiesV90, KNOWLEDGE_EXPANSION_VERSION } from '../lib/knowledge-expansion-v90.js';
 import { getKnowledgeSource } from '../lib/knowledge/source-registry-v1.js';
 
 const int=(value,fallback,min,max)=>Math.max(min,Math.min(max,Number(value)||fallback));
@@ -13,19 +14,31 @@ export default async function knowledgeHandler(req,res){
   const url=new URL(req.url||'/api/knowledge/health','http://localhost');
   const path=url.pathname;
   res.setHeader('X-WAE-Knowledge-Fabric',UNIVERSAL_KNOWLEDGE_MESH_VERSION);
+  res.setHeader('X-WAE-Knowledge-Expansion',KNOWLEDGE_EXPANSION_VERSION);
 
   if(path==='/api/knowledge/sources'){
     if(req.method!=='GET')return res.status(405).json({error:'method_not_allowed'});
     const live=url.searchParams.get('live')==='1';
     const sources=await knowledgeSources({live});
-    return res.status(200).json({success:true,version:UNIVERSAL_KNOWLEDGE_MESH_VERSION,live_checked:live,capabilities:universalKnowledgeCapabilities(),sources});
+    return res.status(200).json({success:true,version:UNIVERSAL_KNOWLEDGE_MESH_VERSION,live_checked:live,capabilities:universalKnowledgeCapabilities(),expansion:knowledgeExpansionCapabilitiesV90(),sources});
   }
 
   if(path==='/api/knowledge/health'){
     if(req.method!=='GET')return res.status(405).json({error:'method_not_allowed'});
     const live=url.searchParams.get('live')==='1';
     const health=await knowledgeHealth({live});
-    return res.status(200).json({success:true,version:UNIVERSAL_KNOWLEDGE_MESH_VERSION,...health,universal:universalKnowledgeCapabilities(),architecture:existingKnowledgeArchitecture()});
+    return res.status(200).json({success:true,version:UNIVERSAL_KNOWLEDGE_MESH_VERSION,...health,universal:universalKnowledgeCapabilities(),expansion:knowledgeExpansionCapabilitiesV90(),architecture:existingKnowledgeArchitecture()});
+  }
+
+  if(path==='/api/knowledge/expansion'){
+    if(!['GET','POST'].includes(req.method))return res.status(405).json({error:'method_not_allowed'});
+    const body=req.body&&typeof req.body==='object'?req.body:{};
+    const query=String(req.method==='GET'?url.searchParams.get('q')||'':body.query||body.message||'').trim();
+    const candidateId=String(req.method==='GET'?url.searchParams.get('candidate')||'':body.candidate_id||'').trim()||null;
+    const live=req.method==='GET'?url.searchParams.get('live')==='1':body.live!==false;
+    const timeoutMs=int(req.method==='GET'?url.searchParams.get('timeout_ms'):body.timeout_ms,2200,500,5000);
+    const result=await auditKnowledgeExpansionV90({query,candidateId,live,timeoutMs});
+    return res.status(200).json({success:true,...result});
   }
 
   if(path.startsWith('/api/knowledge/source/')){
@@ -42,7 +55,7 @@ export default async function knowledgeHandler(req,res){
     const research=path.endsWith('/research')||path.endsWith('/universal');
     try{
       const result=await searchUniversalKnowledge(query,{mode:research?'research':'search',language:body.language,sources:parseSources(body.sources),maxSources:int(body.max_sources,research?7:5,1,8),perSource:int(body.per_source,5,1,8),limit:int(body.limit,research?20:14,1,30),organizationId:null,requestId:undefined});
-      return res.status(200).json({success:true,...result});
+      return res.status(200).json({success:true,...result,expansion:knowledgeExpansionCapabilitiesV90()});
     }catch(error){
       return res.status(Number(error?.status)||503).json({success:false,error:'knowledge_retrieval_failed',message:String(error?.message||error).slice(0,180),version:UNIVERSAL_KNOWLEDGE_MESH_VERSION});
     }
