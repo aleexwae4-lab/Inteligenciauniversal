@@ -51,7 +51,7 @@ function mobilePremiumHandler(req,res) {
       res.setHeader('Cache-Control','no-store, max-age=0, must-revalidate');
       res.setHeader('Pragma','no-cache');
       res.setHeader('Expires','0');
-      res.setHeader('X-WAE-Mobile-Release','universal-core-mobile-v97-response-lifecycle');
+      res.setHeader('X-WAE-Mobile-Release','universal-core-mobile-v80-visible-chat');
       res.setHeader('X-WAE-Mobile-Chat-Route','same-origin-json-and-sse-first');
       res.setHeader('X-WAE-Mobile-Fix','context-history-projects-v59');
       res.setHeader('X-WAE-Mobile-Response-Lifecycle','mobile-response-lifecycle/v97');
