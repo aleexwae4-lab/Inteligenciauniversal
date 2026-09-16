@@ -43,7 +43,7 @@ test('database migration is private, sharded and lease-based',async()=>{
   assert.match(sql,/contains_prompt_content|stores_prompt_content|never prompt/i);
 });
 
-test('v64 chat wrapper preserves the v63 distributed admission pipeline before cognitive fallthrough',async()=>{
+test('v64 chat wrapper preserves v63 admission and makes deterministic rescue explicitly degraded',async()=>{
   const wrapper=await readFile(new URL('../api/capacity-chat-v63.js',import.meta.url),'utf8');
   const compatibility=await readFile(new URL('../api/capacity-chat-v60.js',import.meta.url),'utf8');
   const resilience=await readFile(new URL('../api/capacity-chat-v64.js',import.meta.url),'utf8');
@@ -56,4 +56,8 @@ test('v64 chat wrapper preserves the v63 distributed admission pipeline before c
   assert.match(resilience,/capacity-chat-v63\.js/);
   assert.match(resilience,/COGNITIVE_PATH_UNAVAILABLE/);
   assert.match(resilience,/direct-generative-core-v64/);
+  assert.match(resilience,/emergencyGenerate/);
+  assert.match(resilience,/continuityOnly:true/);
+  assert.match(resilience,/evidenceRelevanceGate/);
+  assert.match(resilience,/pass:false/);
 });
