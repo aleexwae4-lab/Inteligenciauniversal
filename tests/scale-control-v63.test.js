@@ -60,9 +60,10 @@ test('database migration is private, sharded and lease-based',async()=>{
   assert.match(sql,/contains_prompt_content|stores_prompt_content|never prompt/i);
 });
 
-test('v86 factuality gate wraps v84 while preserving the v83 -> v81 -> v77 -> v63 live chain and v82 compatibility',async()=>{
+test('v87 planner wraps v86 factuality while preserving the v84 -> v83 -> v81 -> v77 -> v63 chain and v82 compatibility',async()=>{
   const wrapper=await readFile(new URL('../api/capacity-chat-v63.js',import.meta.url),'utf8');
   const compatibility=await readFile(new URL('../api/capacity-chat-v60.js',import.meta.url),'utf8');
+  const plannerWrapper=await readFile(new URL('../api/capacity-chat-v87.js',import.meta.url),'utf8');
   const factualityWrapper=await readFile(new URL('../api/capacity-chat-v86.js',import.meta.url),'utf8');
   const resilienceWrapper=await readFile(new URL('../api/capacity-chat-v84.js',import.meta.url),'utf8');
   const factualWrapper=await readFile(new URL('../api/capacity-chat-v83.js',import.meta.url),'utf8');
@@ -74,7 +75,9 @@ test('v86 factuality gate wraps v84 while preserving the v83 -> v81 -> v77 -> v6
   assert.match(wrapper,/capacityChatV62/);
   assert.match(wrapper,/finally/);
   assert.match(wrapper,/Retry-After/);
-  assert.match(compatibility,/capacity-chat-v86\.js/);
+  assert.match(compatibility,/capacity-chat-v87\.js/);
+  assert.match(plannerWrapper,/capacity-chat-v86\.js/);
+  assert.match(plannerWrapper,/planUniversalIntelligence/);
   assert.match(factualityWrapper,/capacity-chat-v84\.js/);
   assert.match(factualityWrapper,/factualityDecision/);
   assert.match(factualityWrapper,/applyAnswerIntelligence/);
