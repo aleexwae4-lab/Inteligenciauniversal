@@ -36,7 +36,7 @@ function mobilePremiumHandler(req,res) {
       if (!chunk.includes('productivity-v59.css')) chunk = chunk.replace('</head>', '<link rel="stylesheet" href="/productivity-v59.css?v=59"></head>');
       const scripts = [];
       if (!chunk.includes('fast-lane-v23.js')) scripts.push('<script src="/fast-lane-v23.js?v=34" defer></script>');
-      if (!chunk.includes('mobile-v26.js')) scripts.push('<script src="/mobile-v26.js?v=34" defer></script>');
+      if (!chunk.includes('mobile-v26.js')) scripts.push('<script src="/mobile-v26.js?v=97" defer></script>');
       if (!chunk.includes('telemetry-throttle-v47.js')) scripts.push('<script src="/telemetry-throttle-v47.js?v=47" defer></script>');
       if (!chunk.includes('mobile-runtime-v47.js')) scripts.push('<script src="/mobile-runtime-v47.js?v=47&rev=60" defer></script>');
       if (!chunk.includes('mobile-bootstrap-v45.js')) scripts.push('<script src="/mobile-bootstrap-v45.js?v=45" defer></script>');
@@ -54,6 +54,7 @@ function mobilePremiumHandler(req,res) {
       res.setHeader('X-WAE-Mobile-Release','universal-core-mobile-v80-visible-chat');
       res.setHeader('X-WAE-Mobile-Chat-Route','same-origin-json-and-sse-first');
       res.setHeader('X-WAE-Mobile-Fix','context-history-projects-v59');
+      res.setHeader('X-WAE-Mobile-Response-Lifecycle','mobile-response-lifecycle/v97');
       res.setHeader('X-WAE-Mobile-Compatible','universal-core-mobile-v47-long-session');
       res.setHeader('X-WAE-Mobile-Compatible-Fix','long-session-backpressure-v47');
       res.setHeader('X-WAE-Capacity-Release','capacity-governor-v48');

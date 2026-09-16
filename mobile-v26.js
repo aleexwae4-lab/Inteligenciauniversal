@@ -3,7 +3,9 @@
   const nativeFetch=window.fetch.bind(window);
   const EDGE_MARK='/functions/v1/wae-local-voice-demo-v61';
   const html=document.documentElement;
+  const RESPONSE_LIFECYCLE_VERSION='mobile-response-lifecycle/v97';
   html.dataset.mobileRelease='v31-relevance-guard';
+  html.dataset.mobileResponseLifecycle='v97';
 
   const CURRENT_RX=/\b(hoy|ahora|actual(?:es|idad|izado|izada)?|reciente|últim[oa]s?|latest|today|current|news|noticias|precio|cotización|jurisprudencia|reforma|ley vigente|verifica|fuentes?|evidencia|web)\b/i;
   const RESEARCH_RX=/\b(investiga|investigación|mercado|competidor|benchmark|tendencia|estadística)\b/i;
@@ -117,6 +119,41 @@
     const el=coreState();html.dataset.coreState=state;
     if(el)el.textContent=state==='recovering'?'recuperando':'operativo';
   }
+  function completedAssistant(turn){
+    if(!turn)return false;
+    const body=turn.querySelector('.assistant-body'),actions=turn.querySelector('.actions');
+    return !!body&&!body.classList.contains('error-text')&&!body.querySelector('.typing')&&!!body.textContent.trim()&&!!actions&&!actions.classList.contains('hidden');
+  }
+  function latestTurnSegment(){
+    const root=document.getElementById('messages');
+    if(!root)return{root:null,turns:[]};
+    const children=[...root.children];
+    let lastUser=-1;
+    for(let i=children.length-1;i>=0;i--){if(children[i].matches?.('.turn.user')){lastUser=i;break}}
+    if(lastUser<0)return{root,turns:[]};
+    return{root,turns:children.slice(lastUser+1).filter(node=>node.matches?.('.turn.assistant'))};
+  }
+  function settleVisibleComposer(){
+    const liveSend=document.getElementById('send'),liveInput=document.getElementById('input');
+    if(liveSend){liveSend.classList.remove('stop');liveSend.textContent='↑';liveSend.setAttribute('aria-label','Enviar');liveSend.disabled=!String(liveInput?.value||'').trim()}
+    setCoreState('operational');
+    html.dataset.mobileResponseLifecycleState='settled';
+  }
+  function reconcileCompletedTurn(){
+    const {root,turns}=latestTurnSegment();
+    if(!root||!turns.length)return false;
+    const completed=turns.filter(completedAssistant);
+    if(!completed.length)return false;
+    const winner=completed.at(-1);
+    let removed=0;
+    for(const turn of turns){
+      if(turn!==winner&&turn.querySelector('.typing')){turn.remove();removed++}
+    }
+    settleVisibleComposer();
+    requestAnimationFrame(()=>{try{winner.scrollIntoView({block:'end',behavior:'auto'});root.scrollTop=root.scrollHeight}catch{}});
+    if(removed)window.dispatchEvent(new CustomEvent('wae:mobile-orphan-typing-cleared',{detail:{version:RESPONSE_LIFECYCLE_VERSION,removed}}));
+    return true;
+  }
   function enhanceError(body){
     if(!body||body.dataset.v26Enhanced==='1')return;
     body.dataset.v26Enhanced='1';
@@ -128,14 +165,18 @@
   function inspect(){
     const all=[...document.querySelectorAll('.turn.assistant')];
     for(const turn of all){const body=turn.querySelector('.assistant-body.error-text');if(body)enhanceError(body)}
-    const latest=all.at(-1),latestBody=latest?.querySelector('.assistant-body');
+    reconcileCompletedTurn();
+    const latest=[...document.querySelectorAll('.turn.assistant')].at(-1),latestBody=latest?.querySelector('.assistant-body');
     if(latestBody&&!latestBody.classList.contains('error-text')&&!latestBody.querySelector('.typing')&&latestBody.textContent.trim())setCoreState('operational');
   }
   function init(){
     setCoreState('operational');
     const messages=document.getElementById('messages');
-    if(messages)new MutationObserver(inspect).observe(messages,{childList:true,subtree:true,attributes:true,attributeFilter:['class']});
+    if(messages)new MutationObserver(()=>queueMicrotask(inspect)).observe(messages,{childList:true,subtree:true,attributes:true,attributeFilter:['class']});
+    window.addEventListener('wae:voice-state',()=>queueMicrotask(inspect));
+    window.addEventListener('pageshow',()=>queueMicrotask(inspect));
     inspect();
   }
+  window.__WAE_MOBILE_RESPONSE_LIFECYCLE_V97__={version:RESPONSE_LIFECYCLE_VERSION,reconcile:reconcileCompletedTurn,completedAssistant};
   document.readyState==='loading'?document.addEventListener('DOMContentLoaded',init,{once:true}):init();
 })();

@@ -4,7 +4,7 @@ import { readFile } from 'node:fs/promises';
 
 const read = name => readFile(new URL(`../${name}`, import.meta.url), 'utf8');
 
-test('server exposes premium mobile route with v47 backpressure and v46 voice', async () => {
+test('server exposes premium mobile route with v47 backpressure, v46 voice and v97 response lifecycle', async () => {
   const server = await read('server.js');
   assert.match(server, /\/api\/mobile/);
   assert.match(server, /\/api\/ui-diagnostics/);
@@ -16,7 +16,7 @@ test('server exposes premium mobile route with v47 backpressure and v46 voice', 
   assert.match(server, /return mobileHandler\(req,res\)/);
   assert.match(server, /mobile-v26\.css\?v=34/);
   assert.match(server, /fast-lane-v23\.js\?v=34/);
-  assert.match(server, /mobile-v26\.js\?v=34/);
+  assert.match(server, /mobile-v26\.js\?v=97/);
   assert.match(server, /telemetry-throttle-v47\.js\?v=47/);
   assert.match(server, /mobile-runtime-v47\.js\?v=47/);
   assert.match(server, /mobile-bootstrap-v45\.js\?v=45/);
@@ -24,6 +24,8 @@ test('server exposes premium mobile route with v47 backpressure and v46 voice', 
   assert.match(server, /speech-lifecycle-v46\.js\?v=46/);
   assert.match(server, /mobile-voice-v46\.js\?v=46/);
   assert.match(server, /learning-client-v29\.js\?v=34/);
+  assert.match(server, /X-WAE-Mobile-Release','universal-core-mobile-v80-visible-chat'/);
+  assert.match(server, /X-WAE-Mobile-Response-Lifecycle','mobile-response-lifecycle\/v97'/);
   assert.match(server, /universal-core-mobile-v47-long-session/);
   assert.match(server, /long-session-backpressure-v47/);
   assert.match(server, /desktop.*=== '1'/s);
