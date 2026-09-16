@@ -19,6 +19,49 @@ test('configured is not the same as operationally healthy',()=>{
   assert.equal(state.state,'unhealthy');
 });
 
+test('fresh successful recovery rehabilitates a provider without erasing historical failure debt',()=>{
+  const now=Date.parse('2026-09-16T20:34:00Z');
+  const provider={id:'wae_edge',model:'iu-gpt-runtime-v13',configured:true};
+  const row={
+    provider:'wae_edge',model:'iu-gpt-runtime-v13',attempts:58,successes:7,failures:51,consecutiveFailures:0,
+    lastSuccessAt:'2026-09-16T20:33:19Z',lastFailureAt:'2026-09-16T20:31:51Z',circuitUntil:null,
+  };
+  const state=classifyOperationalProvider(provider,row,now);
+  assert.equal(state.state,'degraded');
+  assert.equal(state.eligible,true);
+  assert.equal(state.healthy,false);
+  assert.equal(state.reason,'recent_success_recovery');
+  assert.equal(state.recoveryProbe,true);
+  assert.equal(state.successRate,Number((7/58).toFixed(4)));
+  assert.ok(state.successAgeMs<60_000);
+});
+
+test('fresh success never overrides an explicitly open circuit',()=>{
+  const now=Date.parse('2026-09-16T20:34:00Z');
+  const provider={id:'wae_edge',model:'iu-gpt-runtime-v13',configured:true};
+  const row={
+    provider:'wae_edge',model:'iu-gpt-runtime-v13',attempts:58,successes:7,failures:51,consecutiveFailures:0,
+    lastSuccessAt:'2026-09-16T20:33:19Z',circuitUntil:'2026-09-16T20:40:00Z',
+  };
+  const state=classifyOperationalProvider(provider,row,now);
+  assert.equal(state.state,'unhealthy');
+  assert.equal(state.eligible,false);
+  assert.equal(state.reason,'persistent_circuit_open');
+});
+
+test('stale successful observation does not permanently rehabilitate low reliability',()=>{
+  const now=Date.parse('2026-09-16T20:34:00Z');
+  const provider={id:'wae_edge',model:'iu-gpt-runtime-v13',configured:true};
+  const row={
+    provider:'wae_edge',model:'iu-gpt-runtime-v13',attempts:58,successes:7,failures:51,consecutiveFailures:0,
+    lastSuccessAt:'2026-09-16T20:20:00Z',lastFailureAt:'2026-09-16T20:31:51Z',circuitUntil:null,
+  };
+  const state=classifyOperationalProvider(provider,row,now);
+  assert.equal(state.state,'unhealthy');
+  assert.equal(state.eligible,false);
+  assert.equal(state.reason,'low_recent_reliability');
+});
+
 test('open persistent circuit is removed from eligible routing',()=>{
   const registry=[
     {id:'wae_edge',model:'iu-gpt-runtime-v13',configured:true},

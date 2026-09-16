@@ -4,6 +4,7 @@ import { applyQualityReliability, QUALITY_RELIABILITY_VERSION } from '../lib/qua
 import { runFocusedFactualAnswer, focusedFactualEligible, FOCUSED_FACTUAL_VERSION } from '../lib/knowledge/focused-factual-v83.js';
 import { runKnowledgeAnswer, KNOWLEDGE_ANSWER_VERSION } from '../lib/knowledge/knowledge-answer-v1.js';
 import { classifyFactualityRequest, factualityDecision, factualityHoldText, FACTUALITY_GATE_VERSION } from '../lib/factuality-gate-v86.js';
+import { buildPremiumRepairBodyV100, premiumRepairDecisionV100, publicPremiumRepairV100, PREMIUM_RESPONSE_REPAIR_V100 } from '../lib/premium-response-repair-v100.js';
 
 export const CAPACITY_CHAT_V86='capacity-chat/v86-verify-before-accept';
 
@@ -75,6 +76,18 @@ function decorate(payload={},decision={},path='accepted'){
   };
 }
 
+function decoratePremiumRepair(payload={},repairState={}){
+  const response=payload.response&&typeof payload.response==='object'?payload.response:{};
+  return{
+    ...payload,
+    premium_response_repair:repairState,
+    response:{
+      ...response,
+      metadata:{...(response.metadata||{}),premiumResponseRepair:repairState}
+    }
+  };
+}
+
 function holdPayload(payload={},decision={}){
   const reply=factualityHoldText(decision);
   const response=payload.response&&typeof payload.response==='object'?payload.response:{};
@@ -131,11 +144,18 @@ async function forcedResearchRepair(req,res,body){
   return callV84(req,res,researchBody);
 }
 
+async function premiumInstructionRepair(req,res,body,repairPlan){
+  const repairBody=buildPremiumRepairBodyV100(body,repairPlan);
+  const timeout=Math.max(2500,Math.min(12000,Number(process.env.WAE_V100_PREMIUM_REPAIR_TIMEOUT_MS||7000)));
+  return withTimeout(callV84(req,res,repairBody),timeout);
+}
+
 function setHeaders(res,status,path){
   res.setHeader('X-WAE-Chat-Release',CAPACITY_CHAT_V86);
   res.setHeader('X-WAE-Factuality-Gate',FACTUALITY_GATE_VERSION);
   res.setHeader('X-WAE-Answer-Intelligence',ANSWER_INTELLIGENCE_VERSION);
   res.setHeader('X-WAE-Quality-Reliability',QUALITY_RELIABILITY_VERSION);
+  res.setHeader('X-WAE-Premium-Repair',PREMIUM_RESPONSE_REPAIR_V100);
   res.setHeader('X-WAE-Factuality-Status',status);
   if(path)res.setHeader('X-WAE-Factuality-Path',path);
 }
@@ -151,12 +171,31 @@ export default async function capacityChatV86(req,res){
 
   let candidate=verifyPayload(first.payload,body);
   let decision=factualityDecision(candidate,body);
-  if(decision.accept){
+  const profile=classifyFactualityRequest(body);
+  const premiumRepairPlan=premiumRepairDecisionV100(candidate,body);
+  if(decision.accept&&!premiumRepairPlan.attempt){
     setHeaders(res,'PASS','upstream-verified');
     return res.status(first.code).json(decorate(candidate,decision,'upstream-verified'));
   }
 
-  const profile=classifyFactualityRequest(body);
+  if(premiumRepairPlan.attempt&&!profile.requires_verification){
+    try{
+      const repair=await premiumInstructionRepair(req,res,body,premiumRepairPlan);
+      if(repair?.hasJson&&repair.code<400&&replyOf(repair.payload)){
+        const verified=verifyPayload(repair.payload,body);
+        const repairedDecision=factualityDecision(verified,body);
+        const secondPlan=premiumRepairDecisionV100(verified,{...body,quality_repair_v100:true});
+        if(repairedDecision.accept&&secondPlan.instructionBlockers.length===0){
+          const repairState=publicPremiumRepairV100(premiumRepairPlan,'accepted');
+          setHeaders(res,'PASS','premium-instruction-repair-v100');
+          return res.status(200).json(decorate(decoratePremiumRepair({...verified,degraded:false},repairState),repairedDecision,'premium-instruction-repair-v100'));
+        }
+        candidate=verified;
+        decision=repairedDecision;
+      }
+    }catch{}
+  }
+
   const userKey=String(body.userKey||body.sessionId||body.session_id||'anonymous').slice(0,160);
 
   if(profile.preferred_repair==='focused_factual'){
