@@ -44,9 +44,11 @@ test('ranked failover moves from a rate-limited lane to the next healthy GPU lan
   }finally{global.fetch=originalFetch;restore()}
 });
 
-test('v76 remains directly callable while the live chain advances through v89, v88, v87, v86, v84, v83, v81, v77 and v63 control',async()=>{
+test('v76 remains directly callable while the live chain advances through v91, v90, v89, v88, v87, v86, v84, v83, v81, v77 and v63 control',async()=>{
   assert.equal(typeof capacityChatV76,'function');
   const alias=await readFile(new URL('../api/capacity-chat-v60.js',import.meta.url),'utf8');
+  const specialistWrapper=await readFile(new URL('../api/capacity-chat-v91.js',import.meta.url),'utf8');
+  const latencyWrapper=await readFile(new URL('../api/capacity-chat-v90.js',import.meta.url),'utf8');
   const knowledgeWrapper=await readFile(new URL('../api/capacity-chat-v89.js',import.meta.url),'utf8');
   const fusionWrapper=await readFile(new URL('../api/capacity-chat-v88.js',import.meta.url),'utf8');
   const plannerWrapper=await readFile(new URL('../api/capacity-chat-v87.js',import.meta.url),'utf8');
@@ -57,5 +59,17 @@ test('v76 remains directly callable while the live chain advances through v89, v
   const healthWrapper=await readFile(new URL('../api/capacity-chat-v81.js',import.meta.url),'utf8');
   const legacyWrapper=await readFile(new URL('../api/capacity-chat-v76.js',import.meta.url),'utf8');
   const liveWrapper=await readFile(new URL('../api/capacity-chat-v77.js',import.meta.url),'utf8');
-  assert.match(alias,/capacity-chat-v89\.js/);assert.match(knowledgeWrapper,/capacity-chat-v88\.js/);assert.match(knowledgeWrapper,/classifyUniversalKnowledge/);assert.match(fusionWrapper,/capacity-chat-v87\.js/);assert.match(fusionWrapper,/runKnowledgeFusion/);assert.match(plannerWrapper,/capacity-chat-v86\.js/);assert.match(plannerWrapper,/planUniversalIntelligence/);assert.match(factualityWrapper,/capacity-chat-v84\.js/);assert.match(factualityWrapper,/factualityDecision/);assert.match(factualityWrapper,/applyAnswerIntelligence/);assert.match(resilienceWrapper,/capacity-chat-v83\.js/);assert.match(resilienceWrapper,/callIaGratisChat/);assert.match(factualWrapper,/capacity-chat-v81\.js/);assert.match(factualWrapper,/runFocusedFactualAnswer/);assert.match(recoveryWrapper,/capacity-chat-v81\.js/);assert.match(recoveryWrapper,/runKnowledgeAnswer/);assert.match(healthWrapper,/capacity-chat-v77\.js/);assert.match(healthWrapper,/chooseOperationalProvider/);assert.match(healthWrapper,/terminalControlFailure/);assert.match(legacyWrapper,/capacityChatV63/);assert.match(legacyWrapper,/GPU_FABRIC_VERSION/);assert.match(liveWrapper,/capacityChatV63/);assert.match(liveWrapper,/GPU_SCHEDULER_VERSION/);assert.match(liveWrapper,/sensitiveRequest/);assert.match(liveWrapper,/requiresGroundedData/);assert.match(liveWrapper,/originAllowed/);assert.match(liveWrapper,/allowRequest/);assert.match(liveWrapper,/WAE_GPU_ALLOW_ATTACHMENTS/);assert.match(liveWrapper,/WAE_GPU_ALLOW_UNGROUNDED_RESEARCH/);
+  assert.match(alias,/capacity-chat-v91\.js/);
+  assert.match(specialistWrapper,/capacity-chat-v90\.js/);
+  assert.match(latencyWrapper,/capacity-chat-v89\.js/);
+  assert.match(knowledgeWrapper,/capacity-chat-v88\.js/);assert.match(knowledgeWrapper,/classifyUniversalKnowledge/);
+  assert.match(fusionWrapper,/capacity-chat-v87\.js/);assert.match(fusionWrapper,/runKnowledgeFusion/);
+  assert.match(plannerWrapper,/capacity-chat-v86\.js/);assert.match(plannerWrapper,/planUniversalIntelligence/);
+  assert.match(factualityWrapper,/capacity-chat-v84\.js/);assert.match(factualityWrapper,/factualityDecision/);assert.match(factualityWrapper,/applyAnswerIntelligence/);
+  assert.match(resilienceWrapper,/capacity-chat-v83\.js/);assert.match(resilienceWrapper,/callIaGratisChat/);
+  assert.match(factualWrapper,/capacity-chat-v81\.js/);assert.match(factualWrapper,/runFocusedFactualAnswer/);
+  assert.match(recoveryWrapper,/capacity-chat-v81\.js/);assert.match(recoveryWrapper,/runKnowledgeAnswer/);
+  assert.match(healthWrapper,/capacity-chat-v77\.js/);assert.match(healthWrapper,/chooseOperationalProvider/);assert.match(healthWrapper,/terminalControlFailure/);
+  assert.match(legacyWrapper,/capacityChatV63/);assert.match(legacyWrapper,/GPU_FABRIC_VERSION/);
+  assert.match(liveWrapper,/capacityChatV63/);assert.match(liveWrapper,/GPU_SCHEDULER_VERSION/);assert.match(liveWrapper,/sensitiveRequest/);assert.match(liveWrapper,/requiresGroundedData/);assert.match(liveWrapper,/originAllowed/);assert.match(liveWrapper,/allowRequest/);assert.match(liveWrapper,/WAE_GPU_ALLOW_ATTACHMENTS/);assert.match(liveWrapper,/WAE_GPU_ALLOW_UNGROUNDED_RESEARCH/);
 });

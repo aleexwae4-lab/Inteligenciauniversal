@@ -92,13 +92,17 @@ test('public plan exposes routing decisions but not private classifier internals
   assert.equal(Object.prototype.hasOwnProperty.call(publicPlan,'constraints'),false);
 });
 
-test('public v60 compatibility alias advances through v89, v88 and v87 while keeping v86 as factual gate',()=>{
+test('public v60 compatibility alias advances through v91, v90, v89, v88 and v87 while keeping v86 as factual gate',()=>{
   const v60=fs.readFileSync(new URL('../api/capacity-chat-v60.js',import.meta.url),'utf8');
+  const v91=fs.readFileSync(new URL('../api/capacity-chat-v91.js',import.meta.url),'utf8');
+  const v90=fs.readFileSync(new URL('../api/capacity-chat-v90.js',import.meta.url),'utf8');
   const v89=fs.readFileSync(new URL('../api/capacity-chat-v89.js',import.meta.url),'utf8');
   const v88=fs.readFileSync(new URL('../api/capacity-chat-v88.js',import.meta.url),'utf8');
   const v87=fs.readFileSync(new URL('../api/capacity-chat-v87.js',import.meta.url),'utf8');
   const v86=fs.readFileSync(new URL('../api/capacity-chat-v86.js',import.meta.url),'utf8');
-  assert.match(v60,/capacity-chat-v89\.js/);
+  assert.match(v60,/capacity-chat-v91\.js/);
+  assert.match(v91,/capacity-chat-v90\.js/);
+  assert.match(v90,/capacity-chat-v89\.js/);
   assert.match(v89,/capacity-chat-v88\.js/);
   assert.match(v88,/capacity-chat-v87\.js/);
   assert.match(v88,/runKnowledgeFusion/);

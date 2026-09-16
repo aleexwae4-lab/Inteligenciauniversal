@@ -1,4 +1,5 @@
 import capacityChatV89 from './capacity-chat-v89.js';
+import baseCapacityChatHandler from './capacity-chat.js';
 import { planUniversalIntelligence } from '../lib/universal-intelligence-planner-v87.js';
 import { runFocusedFactualAnswer } from '../lib/knowledge/focused-factual-v83.js';
 import { applyAnswerIntelligence } from '../lib/answer-intelligence-v60.js';
@@ -10,7 +11,7 @@ import { knowledgeExpansionCapabilitiesV90, KNOWLEDGE_EXPANSION_VERSION } from '
 import { applyHeaders, originAllowed, getClientIp } from '../lib/security.js';
 import { tryAcquireChatSlot } from '../lib/concurrency-governor.js';
 
-export const CAPACITY_CHAT_V90='capacity-chat/v90.1-latency-autonomous-knowledge';
+export const CAPACITY_CHAT_V90='capacity-chat/v90.2-latency-autonomous-knowledge';
 
 function setHeaders(res,latencyPlan,path='fallback'){
   res.setHeader('X-WAE-Chat-Release',CAPACITY_CHAT_V90);
@@ -42,6 +43,11 @@ function hasExplicitProvider(body={}){
   return Boolean(provider&&provider!=='auto');
 }
 
+function hasExplicitContinuityProvider(body={}){
+  const provider=String(body.provider||'').trim().toLowerCase();
+  return provider==='continuity_core'||provider==='universal_continuity_core';
+}
+
 async function tryFastFactual(body,latencyPlan){
   const result=await withinLatencyBudget(latencyPlan.budgets.focused_timeout_ms,signal=>runFocusedFactualAnswer({body,fetchImpl:fetchWithParentSignal(signal)}));
   if(!result)return null;
@@ -62,8 +68,17 @@ export default async function capacityChatV90(req,res){
   applyHeaders(res);
   if(!originAllowed(req))return res.status(403).json({error:'origin_not_allowed'});
 
-  // Explicit provider selection is a caller contract. Do not spend time in the
-  // automatic v90 retrieval/fusion planner before honoring that choice.
+  // Continuity is a deterministic caller-selected provider. Route it directly
+  // to the base chat/runtime so downstream recovery wrappers cannot reinterpret
+  // an intentional degraded continuity response as a provider failure.
+  if(hasExplicitContinuityProvider(body)){
+    setHeaders(res,latencyPlan,'explicit-continuity-direct');
+    return baseCapacityChatHandler(req,res);
+  }
+
+  // Other explicit provider selections remain caller contracts. Avoid v90
+  // retrieval/fusion before honoring that choice while preserving downstream
+  // compatibility and provider-specific routing behavior.
   if(hasExplicitProvider(body)){
     setHeaders(res,latencyPlan,'explicit-provider-v89');
     return capacityChatV89(req,res);
@@ -114,6 +129,6 @@ export function capacityChatV90Capabilities(){
     latency:latencyGovernorCapabilitiesV90(),
     knowledgeExpansion:knowledgeExpansionCapabilitiesV90(),
     knowledgeFusion:KNOWLEDGE_FUSION_V90,
-    policy:{explicitProviderBypassesAutomaticPlanner:true,fastVerifiedFacts:true,directBypassWithoutResearchAdmission:true,parallelEvidence:true,parallelMultiagent:true,abortExpiredFocusedRetrieval:true,verifyBeforeAcceptPreserved:true,externalBenchmarkRequiredForSuperiorityClaim:true,superiorityClaim:false}
+    policy:{explicitContinuityProviderDirect:true,explicitProviderBypassesAutomaticPlanner:true,fastVerifiedFacts:true,directBypassWithoutResearchAdmission:true,parallelEvidence:true,parallelMultiagent:true,abortExpiredFocusedRetrieval:true,verifyBeforeAcceptPreserved:true,externalBenchmarkRequiredForSuperiorityClaim:true,superiorityClaim:false}
   };
 }
