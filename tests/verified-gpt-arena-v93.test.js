@@ -14,9 +14,9 @@ import { adversarialEvidenceSuite } from '../lib/adversarial-evidence-v72.js';
 
 const SECRET = 'v93-test-secret-abcdefghijklmnopqrstuvwxyz-0123456789';
 const TARGET = 'universal_core';
-const REFERENCE = 'openai:gpt-5.6-sol';
+const REFERENCE = 'openai:gpt-6-astra';
 const TARGET_MODEL = 'iu-gpt-runtime-v13';
-const REFERENCE_MODEL = 'gpt-5.6-sol';
+const REFERENCE_MODEL = 'gpt-6-astra';
 const COMMIT = '0123456789abcdef0123456789abcdef01234567';
 const OBSERVED = '2026-09-16T17:00:00.000Z';
 
@@ -67,13 +67,22 @@ test('v93 exposes an explicit signed provenance contract and forbids simulated G
   assert.match(manifest.claimPolicy.forbidden, /simulated/i);
 });
 
-test('v93 comparator readiness requires a configured versioned OpenAI model', () => {
-  const missing = gptComparatorReadiness([{ id: 'openai', configured: false, model: 'gpt-5.6-sol' }]);
-  assert.equal(missing.executable, false);
-  assert.equal(missing.reason, 'openai_provider_not_configured');
-  const ready = gptComparatorReadiness([{ id: 'openai', configured: true, model: 'gpt-5.6-sol' }]);
-  assert.equal(ready.executable, true);
-  assert.equal(ready.referenceId, REFERENCE);
+test('v96 comparator readiness uses dedicated Astra benchmark model instead of ordinary production model', () => {
+  const prior=process.env.OPENAI_BENCHMARK_MODEL;
+  delete process.env.OPENAI_BENCHMARK_MODEL;
+  try{
+    const missing = gptComparatorReadiness([{ id: 'openai', configured: false, model: 'gpt-5.6-sol' }]);
+    assert.equal(missing.executable, false);
+    assert.equal(missing.reason, 'openai_provider_not_configured');
+    const ready = gptComparatorReadiness([{ id: 'openai', configured: true, model: 'gpt-5.6-sol' }]);
+    assert.equal(ready.executable, true);
+    assert.equal(ready.referenceId, REFERENCE);
+    assert.equal(ready.model, REFERENCE_MODEL);
+    assert.equal(ready.ordinaryProviderModel,'gpt-5.6-sol');
+    assert.equal(ready.decoupledFromProductionModel,true);
+  } finally {
+    if(prior===undefined)delete process.env.OPENAI_BENCHMARK_MODEL; else process.env.OPENAI_BENCHMARK_MODEL=prior;
+  }
 });
 
 test('v93 HMAC attestation binds answer, case, provider, model and runtime receipt', () => {
