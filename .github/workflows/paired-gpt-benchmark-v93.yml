@@ -1,24 +1,25 @@
-name: Paired GPT Benchmark v93
+name: Verified Astra Benchmark v99
 
 on:
   workflow_dispatch:
     inputs:
-      reference_model:
-        description: Exact versioned OpenAI reference model
+      expected_reference_id:
+        description: Exact versioned comparator identity expected from production
         required: true
-        default: gpt-6-astra
+        default: openai:gpt-6-astra
         type: string
-      reasoning_effort:
-        description: Reference reasoning effort
+      concurrency:
+        description: Number of paired cases executed concurrently
         required: true
-        default: high
+        default: '2'
         type: choice
         options:
-          - high
-          - xhigh
-          - max
+          - '1'
+          - '2'
+          - '3'
+          - '4'
       require_certification:
-        description: Fail the job when the v62 superiority gates do not pass
+        description: Fail the workflow unless the complete premium gate authorizes a benchmark-scoped claim
         required: true
         default: false
         type: boolean
@@ -27,25 +28,24 @@ permissions:
   contents: read
 
 concurrency:
-  group: paired-gpt-benchmark-v93
+  group: verified-astra-benchmark-v99
   cancel-in-progress: false
 
 jobs:
-  paired-benchmark:
+  verified-arena:
     runs-on: ubuntu-latest
-    timeout-minutes: 60
+    timeout-minutes: 180
     env:
-      OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
       UNIVERSAL_CORE_URL: https://wae-inteligencia-universal.onrender.com
-      BENCHMARK_TARGET_ID: universal-core-v92
-      BENCHMARK_REFERENCE_ID: ${{ inputs.reference_model }}
-      BENCHMARK_REASONING_EFFORT: ${{ inputs.reasoning_effort }}
+      WAE_RUNTIME_BRIDGE_TOKEN: ${{ secrets.WAE_RUNTIME_BRIDGE_TOKEN }}
+      BENCHMARK_TARGET_ID: universal_core
+      BENCHMARK_REFERENCE_ID: ${{ inputs.expected_reference_id }}
+      BENCHMARK_CONCURRENCY: ${{ inputs.concurrency }}
       BENCHMARK_REQUIRE_CERTIFICATION: ${{ inputs.require_certification && '1' || '0' }}
-      BENCHMARK_INTER_CASE_MS: '4500'
       BENCHMARK_REQUEST_TIMEOUT_MS: '180000'
       BENCHMARK_ARTIFACT_DIR: artifacts
     steps:
-      - name: Checkout benchmark code
+      - name: Checkout verified arena code
         uses: actions/checkout@v4
 
       - name: Setup Node
@@ -53,63 +53,69 @@ jobs:
         with:
           node-version: '20'
 
-      - name: Verify benchmark contracts
+      - name: Verify v99 contracts
         run: |
-          node --check lib/paired-gpt-benchmark-v93.js
-          node --check scripts/paired-gpt-benchmark-v93.mjs
-          node --test tests/paired-gpt-benchmark-v93.test.js
+          node --check lib/verified-benchmark-runner-v99.js
+          node --check scripts/verified-astra-benchmark-v99.mjs
+          node --test tests/verified-benchmark-runner-v99.test.js
 
-      - name: Require direct reference credential
+      - name: Require trusted runtime credential
         shell: bash
         run: |
-          if [ -z "$OPENAI_API_KEY" ]; then
-            echo "OPENAI_API_KEY is not configured. A real versioned GPT response is required; simulated references are forbidden."
+          if [ ${#WAE_RUNTIME_BRIDGE_TOKEN} -lt 24 ]; then
+            echo "WAE_RUNTIME_BRIDGE_TOKEN is missing or too short. The benchmark refuses unsigned or client-supplied candidate evidence."
             exit 1
           fi
 
-      - name: Run immutable 32-case paired arena
-        run: node scripts/paired-gpt-benchmark-v93.mjs
+      - name: Run signed immutable 64-case arena
+        run: node scripts/verified-astra-benchmark-v99.mjs
 
-      - name: Publish benchmark summary
+      - name: Publish sanitized benchmark summary
         if: always()
         shell: bash
         run: |
-          latest=$(ls -1t artifacts/paired-gpt-benchmark-v93-*.json 2>/dev/null | head -n 1 || true)
+          latest=$(ls -1t artifacts/verified-astra-benchmark-v99-*.json 2>/dev/null | head -n 1 || true)
           if [ -z "$latest" ]; then
-            echo "## Paired GPT Benchmark v93" >> "$GITHUB_STEP_SUMMARY"
-            echo "No benchmark artifact was produced." >> "$GITHUB_STEP_SUMMARY"
+            echo "## Verified Astra Benchmark v99" >> "$GITHUB_STEP_SUMMARY"
+            echo "No sanitized evidence artifact was produced; no comparative claim is authorized." >> "$GITHUB_STEP_SUMMARY"
             exit 0
           fi
           node - "$latest" <<'NODE'
           const fs=require('fs');
           const path=process.argv[2];
           const r=JSON.parse(fs.readFileSync(path,'utf8'));
-          const c=r.certification||{};
-          const a=c.aggregate||{};
-          const m=c.metrics||{};
+          const q=r.quality||{};
+          const a=q.aggregate||{};
+          const m=q.metrics||{};
+          const p=r.premium||{};
           const lines=[
-            '## Paired GPT Benchmark v93',
+            '## Verified Astra Benchmark v99',
             '',
-            `- Target: **${c.targetId||r.manifest?.targetId||'unknown'}**`,
-            `- Reference: **${c.referenceId||r.manifest?.referenceId||'unknown'}**`,
-            `- Verdict: **${c.verdict||'NO_RESULT'}**`,
-            `- Evaluated cases: **${c.evaluatedCases||0}**`,
+            `- Target: **${r.target?.id||'unknown'}** @ **${r.target?.commitSha||'unknown'}**`,
+            `- Exact reference: **${r.reference?.id||'unknown'}**`,
+            `- Executed cases: **${r.suite?.executedCases||0}/${r.suite?.requiredCases||64}**`,
+            `- Quality verdict: **${q.verdict||'NOT_PROVEN'}**`,
+            `- Premium verdict: **${p.verdict||'NOT_PROVEN'}**`,
             `- Wins / ties / losses: **${a.wins||0} / ${a.ties||0} / ${a.losses||0}**`,
             `- Adjusted win rate: **${a.adjustedWinRate??'n/a'}**`,
             `- Target mean score: **${m.targetMeanScore??'n/a'}**`,
             `- Reference mean score: **${m.referenceMeanScore??'n/a'}**`,
-            `- Wilson lower bound 95%: **${m.wilsonLowerBound95??'n/a'}**`,
+            `- Target p95 latency: **${r.execution?.targetLatencyMs?.p95Ms??'n/a'} ms**`,
+            `- Reference p95 latency: **${r.execution?.referenceLatencyMs?.p95Ms??'n/a'} ms**`,
+            `- Evidence digest: **${r.evidenceDigest||'missing'}**`,
             '',
-            c.claimAllowed ? 'Certification is benchmark-scoped only; it does not establish universal superiority.' : 'Superiority is **not proven** by this run. Regressions must be fixed without changing the immutable suite.'
+            r.claimAuthorization?.allowed
+              ? `Benchmark-scoped claim authorized: ${r.claimAuthorization.scope}`
+              : 'Comparative superiority is **not proven** by this run. Global #1 claims remain forbidden.'
           ];
           fs.appendFileSync(process.env.GITHUB_STEP_SUMMARY,lines.join('\n')+'\n');
           NODE
 
-      - name: Upload raw paired evidence
+      - name: Upload sanitized verification evidence
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: paired-gpt-benchmark-v93-${{ github.run_id }}
-          path: artifacts/paired-gpt-benchmark-v93-*.json
+          name: verified-astra-benchmark-v99-${{ github.run_id }}
+          path: artifacts/verified-astra-benchmark-v99-*.json
           if-no-files-found: warn
           retention-days: 30
