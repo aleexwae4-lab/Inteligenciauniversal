@@ -73,13 +73,17 @@ test('software pack searches npm metadata without treating package content as un
   assert.ok(result.sources_selected.includes('npm_registry'));
 });
 
-test('v89 advances the live chain while preserving v88 fusion, v87 planning and v86 factuality',()=>{
+test('v89 remains in the live chain behind v91 and v90 while preserving v88 fusion, v87 planning and v86 factuality',()=>{
   assert.equal(typeof capacityChatV89,'function');assert.equal(CAPACITY_CHAT_V89,'capacity-chat/v89-universal-knowledge-mesh');
   const v60=fs.readFileSync(new URL('../api/capacity-chat-v60.js',import.meta.url),'utf8');
+  const v91=fs.readFileSync(new URL('../api/capacity-chat-v91.js',import.meta.url),'utf8');
+  const v90=fs.readFileSync(new URL('../api/capacity-chat-v90.js',import.meta.url),'utf8');
   const v89=fs.readFileSync(new URL('../api/capacity-chat-v89.js',import.meta.url),'utf8');
   const v88=fs.readFileSync(new URL('../api/capacity-chat-v88.js',import.meta.url),'utf8');
   const fusion=fs.readFileSync(new URL('../lib/knowledge-fusion-v88.js',import.meta.url),'utf8');
-  assert.match(v60,/capacity-chat-v89\.js/);
+  assert.match(v60,/capacity-chat-v91\.js/);
+  assert.match(v91,/capacity-chat-v90\.js/);
+  assert.match(v90,/capacity-chat-v89\.js/);
   assert.match(v89,/capacity-chat-v88\.js/);
   assert.match(v89,/universal_knowledge:true/);
   assert.match(v88,/knowledge-fusion-v88/);
