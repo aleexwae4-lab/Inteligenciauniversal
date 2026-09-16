@@ -57,6 +57,11 @@ export default async function capacityChatV90(req,res){
   applyHeaders(res);
   if(!originAllowed(req))return res.status(403).json({error:'origin_not_allowed'});
 
+  if(latencyPlan.profile==='bypass'){
+    setHeaders(res,latencyPlan,'direct-v89-bypass');
+    return capacityChatV89(req,res);
+  }
+
   const key=userKey(req,body);
   const slot=tryAcquireChatSlot(`${key}:v90`.slice(0,180));
   if(!slot.ok){
@@ -75,15 +80,13 @@ export default async function capacityChatV90(req,res){
       }
     }
 
-    if(latencyPlan.profile!=='bypass'){
-      const v90Body={...body,universal_knowledge:true,knowledge:true,fusion:true,...(latencyPlan.profile==='live_current'?{web_enabled:true}:{})};
-      const fusion=await runKnowledgeFusionV90({body:v90Body,plan:intelligencePlan,userKey:key,sessionId:String(body.sessionId||body.session_id||body.conversationId||body.conversation_id||'').slice(0,500)}).catch(()=>null);
-      if(fusion?.accepted&&fusion.payload){
-        setHeaders(res,latencyPlan,'parallel-fusion-v90');
-        res.setHeader('X-WAE-Knowledge-Fusion',KNOWLEDGE_FUSION_V90);
-        res.setHeader('X-WAE-Factuality-Status','PASS');
-        return res.status(200).json(decorate(fusion.payload,latencyPlan,'parallel-fusion-v90'));
-      }
+    const v90Body={...body,universal_knowledge:true,knowledge:true,fusion:true,...(latencyPlan.profile==='live_current'?{web_enabled:true}:{})};
+    const fusion=await runKnowledgeFusionV90({body:v90Body,plan:intelligencePlan,userKey:key,sessionId:String(body.sessionId||body.session_id||body.conversationId||body.conversation_id||'').slice(0,500)}).catch(()=>null);
+    if(fusion?.accepted&&fusion.payload){
+      setHeaders(res,latencyPlan,'parallel-fusion-v90');
+      res.setHeader('X-WAE-Knowledge-Fusion',KNOWLEDGE_FUSION_V90);
+      res.setHeader('X-WAE-Factuality-Status','PASS');
+      return res.status(200).json(decorate(fusion.payload,latencyPlan,'parallel-fusion-v90'));
     }
   }finally{
     slot.release();
@@ -99,6 +102,6 @@ export function capacityChatV90Capabilities(){
     latency:latencyGovernorCapabilitiesV90(),
     knowledgeExpansion:knowledgeExpansionCapabilitiesV90(),
     knowledgeFusion:KNOWLEDGE_FUSION_V90,
-    policy:{fastVerifiedFacts:true,parallelEvidence:true,parallelMultiagent:true,abortExpiredFocusedRetrieval:true,verifyBeforeAcceptPreserved:true,externalBenchmarkRequiredForSuperiorityClaim:true,superiorityClaim:false}
+    policy:{fastVerifiedFacts:true,directBypassWithoutResearchAdmission:true,parallelEvidence:true,parallelMultiagent:true,abortExpiredFocusedRetrieval:true,verifyBeforeAcceptPreserved:true,externalBenchmarkRequiredForSuperiorityClaim:true,superiorityClaim:false}
   };
 }
