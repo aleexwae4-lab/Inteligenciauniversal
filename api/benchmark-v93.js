@@ -49,7 +49,7 @@ function normalizeEntries(value) {
     candidates: (Array.isArray(entry?.candidates) ? entry.candidates : []).slice(0, 4).map(candidate => ({
       id: text(candidate?.id, 160),
       answer: text(candidate?.answer ?? candidate?.text ?? '', MAX_ANSWER),
-      sources: Array.isArray(candidate?.sources) ? candidate.sources.slice(0, 20) : [],
+      sources: Array.isArray(candidate?.sources) ? candidate.sources.slice(0, 40) : [],
       latencyMs: candidate?.latencyMs ?? null,
       costUsd: candidate?.costUsd ?? null,
       attestation: candidate?.attestation && typeof candidate.attestation === 'object' ? candidate.attestation : null,
@@ -126,6 +126,8 @@ async function statusPayload() {
       unversionedGptForbidden: true,
       genericAttestationEndpointEnabled: false,
       candidateExecutionMustOccurInsideTrustedRuntime: true,
+      researchToolParityRequired: true,
+      answerAndSourceIntegrityRequired: true,
     },
   };
 }
@@ -164,6 +166,7 @@ async function executeCase(body) {
     provider: execution.provider,
     model: execution.model,
     answer: execution.answer,
+    sources: execution.sources || [],
     responseId: execution.responseId,
     requestId: execution.requestId,
     commitSha,
@@ -185,11 +188,15 @@ async function executeCase(body) {
         requestId: execution.requestId || null,
         latencyMs: execution.latencyMs,
         observedAt: execution.observedAt,
+        reasoningEffort: execution.reasoningEffort || null,
+        webSearchEnabled: execution.webSearchEnabled === true,
+        sourceCount: Array.isArray(execution.sources) ? execution.sources.length : 0,
         path: execution.execution,
       },
       candidate: {
         id: candidateId,
         answer: execution.answer,
+        sources: Array.isArray(execution.sources) ? execution.sources : [],
         latencyMs: execution.latencyMs,
         attestation,
       },
