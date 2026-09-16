@@ -1,9 +1,9 @@
 import {createClient as createSupabaseClient} from 'npm:@supabase/supabase-js@2.57.4';
 
-export const EDGE_DB_TRANSPORT_VERSION='wae-edge-db-transport/v84-session-retry';
+export const EDGE_DB_TRANSPORT_VERSION='wae-edge-db-transport/v84.1-session-retry-http500';
 
 const SESSION_INSERT_ATTEMPTS=3;
-const RETRYABLE_STATUS=new Set([502,503,504]);
+const RETRYABLE_STATUS=new Set([500,502,503,504]);
 
 function deadlineMs(){
   const raw=Number(Deno.env.get('WAE_EDGE_DB_TIMEOUT_MS')||5000);
@@ -68,7 +68,7 @@ async function boundedFetch(input:RequestInfo|URL,init:RequestInit={}){
     try{
       const response=await fetch(requestInput,{...requestInit,signal:mergedSignal(init.signal)});
       if(sessionInsert&&RETRYABLE_STATUS.has(response.status)&&attempt<attempts-1){
-        console.warn('[Edge DB transport v84] retry session bootstrap response',{attempt:attempt+1,status:response.status});
+        console.warn('[Edge DB transport v84.1] retry session bootstrap response',{attempt:attempt+1,status:response.status});
         await sleep(120*(attempt+1));
         continue;
       }
@@ -77,7 +77,7 @@ async function boundedFetch(input:RequestInfo|URL,init:RequestInit={}){
       lastError=error;
       const elapsed=Date.now()-started;
       if(sessionInsert&&retryableTransportError(error,init.signal)&&attempt<attempts-1){
-        console.warn('[Edge DB transport v84] retry session bootstrap transport',{attempt:attempt+1,elapsed_ms:elapsed,error:String(error?.name||'transport').slice(0,60)});
+        console.warn('[Edge DB transport v84.1] retry session bootstrap transport',{attempt:attempt+1,elapsed_ms:elapsed,error:String(error?.name||'transport').slice(0,60)});
         await sleep(120*(attempt+1));
         continue;
       }
