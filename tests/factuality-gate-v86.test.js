@@ -57,11 +57,32 @@ test('v86 does not force evidence for creative transformation prompts',()=>{
   assert.equal(decision.accept,true);
 });
 
-test('v86 treats high-risk factual requests as verify-before-accept',()=>{
+test('v86 treats high-impact medical facts as verify-before-accept',()=>{
   const profile=classifyFactualityRequest({message:'¿Cuál es la dosis actual de este medicamento?'});
   assert.equal(profile.high_risk,true);
+  assert.equal(profile.high_impact_fact,true);
   assert.equal(profile.requires_verification,true);
   assert.equal(profile.preferred_repair,'research');
+});
+
+test('v86 does not confuse a legal analysis request with a factual lookup',()=>{
+  const profile=classifyFactualityRequest({message:'Analiza este contrato legal y señala cláusulas ambiguas.'});
+  assert.equal(profile.high_risk,true);
+  assert.equal(profile.high_impact_fact,false);
+  assert.equal(profile.requires_verification,false);
+});
+
+test('v86 does not treat generic cuál recommendations as precise factual questions',()=>{
+  const profile=classifyFactualityRequest({message:'¿Cuál estrategia recomiendas para mejorar la experiencia de usuario?'});
+  assert.equal(profile.precise_fact,false);
+  assert.equal(profile.requires_verification,false);
+});
+
+test('v86 still verifies legal claims that assert a concrete legal status',()=>{
+  const profile=classifyFactualityRequest({message:'¿Esto es legal actualmente en México?'});
+  assert.equal(profile.high_risk,true);
+  assert.equal(profile.high_impact_fact,true);
+  assert.equal(profile.requires_verification,true);
 });
 
 test('v86 capabilities prohibit promotion of unverified factual output',()=>{
