@@ -1,3 +1,3 @@
-// Compatibility alias: server.js and older clients may still reference v60,
-// but the live pipeline is Universal Core v77: v63 distributed control wrapped by adaptive GPU scheduling and resilience.
-export { default } from './capacity-chat-v77.js';
+// Compatibility alias: server.js and older clients may still reference v60.
+// Live backend: v63 distributed control wrapped by persistent GPU Control Plane v81, with adaptive GPU Fabric v77 as underlay.
+export { default } from './capacity-chat-v81.js';
