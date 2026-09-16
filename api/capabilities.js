@@ -16,6 +16,7 @@ import { specialistCopilotCapabilitiesV91 } from '../lib/specialist-copilot-arse
 import { benchmarkSuiteManifest } from '../lib/supremacy-benchmark-v62.js';
 import { continuousImprovementCapabilities, getContinuousImprovementStatus } from '../lib/continuous-improvement-v54.js';
 import { evalTrainingCapabilitiesV95 } from '../lib/eval-training-loop-v95.js';
+import { selfAwarenessCapabilitiesV99, selfAwarenessSnapshotV99 } from '../lib/self-awareness-v99.js';
 import { answerIntelligenceCapabilities } from '../lib/answer-intelligence-v60.js';
 import { qualityReliabilityCapabilities } from '../lib/quality-reliability-v61.js';
 import { performanceRouterCapabilities, providerMeshSnapshot } from '../lib/provider-mesh-v63.js';
@@ -55,6 +56,7 @@ export default async function handler(req,res){
     ...health,
     interface:'experience-v8-living-core',
     reasoningProfiles:['auto','deep'],
+    selfAwareness:{...selfAwarenessCapabilitiesV99(),snapshot:selfAwarenessSnapshotV99(coreContext||{})},
     answerIntelligence:answerIntelligenceCapabilities(),
     qualityReliability:qualityReliabilityCapabilities(),
     latencyGovernor:latencyGovernorCapabilitiesV90(),
