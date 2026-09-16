@@ -44,10 +44,16 @@ test('ranked failover moves from a rate-limited lane to the next healthy GPU lan
   }finally{global.fetch=originalFetch;restore()}
 });
 
-test('v76 remains directly callable while the live compatibility alias advances through v77 and preserves v63 control',async()=>{
+test('v76 remains directly callable while live compatibility advances through v80 and preserves v77 plus v63 control',async()=>{
   assert.equal(typeof capacityChatV76,'function');
   const alias=await readFile(new URL('../api/capacity-chat-v60.js',import.meta.url),'utf8');
   const legacyWrapper=await readFile(new URL('../api/capacity-chat-v76.js',import.meta.url),'utf8');
-  const liveWrapper=await readFile(new URL('../api/capacity-chat-v77.js',import.meta.url),'utf8');
-  assert.match(alias,/capacity-chat-v77\.js/);assert.match(legacyWrapper,/capacityChatV63/);assert.match(legacyWrapper,/GPU_FABRIC_VERSION/);assert.match(liveWrapper,/capacityChatV63/);assert.match(liveWrapper,/GPU_SCHEDULER_VERSION/);assert.match(liveWrapper,/sensitiveRequest/);assert.match(liveWrapper,/requiresGroundedData/);assert.match(liveWrapper,/originAllowed/);assert.match(liveWrapper,/allowRequest/);assert.match(liveWrapper,/WAE_GPU_ALLOW_ATTACHMENTS/);assert.match(liveWrapper,/WAE_GPU_ALLOW_UNGROUNDED_RESEARCH/);
+  const v77Wrapper=await readFile(new URL('../api/capacity-chat-v77.js',import.meta.url),'utf8');
+  const v80Wrapper=await readFile(new URL('../api/capacity-chat-v80.js',import.meta.url),'utf8');
+  const controlPlane=await readFile(new URL('../lib/gpu-control-plane-v80.js',import.meta.url),'utf8');
+  assert.match(alias,/capacity-chat-v80\.js/);
+  assert.match(legacyWrapper,/capacityChatV63/);assert.match(legacyWrapper,/GPU_FABRIC_VERSION/);
+  assert.match(v77Wrapper,/capacityChatV63/);assert.match(v77Wrapper,/GPU_SCHEDULER_VERSION/);assert.match(v77Wrapper,/sensitiveRequest/);assert.match(v77Wrapper,/requiresGroundedData/);assert.match(v77Wrapper,/originAllowed/);assert.match(v77Wrapper,/allowRequest/);
+  assert.match(v80Wrapper,/capacityChatV63/);assert.match(v80Wrapper,/generateWithGpuControlPlane/);assert.match(v80Wrapper,/sensitiveRequest/);assert.match(v80Wrapper,/requiresGroundedData/);assert.match(v80Wrapper,/originAllowed/);assert.match(v80Wrapper,/allowRequest/);assert.match(v80Wrapper,/WAE_GPU_ALLOW_ATTACHMENTS/);assert.match(v80Wrapper,/WAE_GPU_ALLOW_UNGROUNDED_RESEARCH/);
+  assert.match(controlPlane,/gpu-fabric-v77\.js/);assert.match(controlPlane,/wae-gpu-scheduler\/v80/);assert.match(controlPlane,/wae_gpu_metrics_record_v79/);
 });
