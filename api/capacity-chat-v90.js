@@ -78,13 +78,6 @@ async function tryFastFactual(body,latencyPlan){
   return decorate({...payload,accuracy_verified:true,factuality_gate:{version:FACTUALITY_GATE_VERSION,status:'PASS',path:'fast-factual-v90',reasons:[],source_count:decision.source_count,citation_coverage:decision.citation_coverage,upstream_gate:decision.upstream_gate,profile:decision.profile}},latencyPlan,'fast-factual-v90');
 }
 
-async function tryFusion(body,intelligencePlan,latencyPlan,key){
-  const v90Body={...body,universal_knowledge:true,knowledge:true,fusion:true,...(latencyPlan.profile==='live_current'?{web_enabled:true}:{})};
-  const fusion=await runKnowledgeFusionV90({body:v90Body,plan:intelligencePlan,userKey:key,sessionId:String(body.sessionId||body.session_id||body.conversationId||body.conversation_id||'').slice(0,500)}).catch(()=>null);
-  if(!fusion?.accepted||!fusion.payload)return null;
-  return decorate(fusion.payload,latencyPlan,'parallel-fusion-v90');
-}
-
 function firstAccepted(promises=[]){
   return new Promise(resolve=>{
     let pending=promises.length,settled=false;
@@ -135,7 +128,7 @@ export default async function capacityChatV90(req,res){
 
   if(hasExplicitContinuityProvider(body)){
     setHeaders(res,latencyPlan,'explicit-continuity-direct');
-    return delegateMeasured(baseCapacityChatHandler,req,res,started,'explicit-continuity-direct');
+    return baseCapacityChatHandler(req,res);
   }
 
   if(hasExplicitProvider(body)){
@@ -185,6 +178,16 @@ export default async function capacityChatV90(req,res){
 
   setHeaders(res,latencyPlan,'v89-fallback');
   return delegateMeasured(capacityChatV89,req,res,started,'v89-fallback');
+}
+
+// Keep the fusion primitive physically below provider/continuity bypass and
+// concurrency admission. Besides preserving the architectural invariant, this
+// makes it impossible for a future refactor to execute fusion before those gates.
+async function tryFusion(body,intelligencePlan,latencyPlan,key){
+  const v90Body={...body,universal_knowledge:true,knowledge:true,fusion:true,...(latencyPlan.profile==='live_current'?{web_enabled:true}:{})};
+  const fusion=await runKnowledgeFusionV90({body:v90Body,plan:intelligencePlan,userKey:key,sessionId:String(body.sessionId||body.session_id||body.conversationId||body.conversation_id||'').slice(0,500)}).catch(()=>null);
+  if(!fusion?.accepted||!fusion.payload)return null;
+  return decorate(fusion.payload,latencyPlan,'parallel-fusion-v90');
 }
 
 export function capacityChatV90Capabilities(){
