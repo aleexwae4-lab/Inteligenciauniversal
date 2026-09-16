@@ -93,6 +93,15 @@ test('v90 fusion runs evidence and multiagent work in parallel and preserves fac
   assert.match(source,/applyQualityReliability/);
 });
 
+test('health readiness no longer reports the whole service down when only generative providers are degraded',async()=>{
+  const source=await readFile(new URL('../api/health.js',import.meta.url),'utf8');
+  assert.match(source,/ready:serviceReady/);
+  assert.match(source,/generativeReady:generativeEligible/);
+  assert.match(source,/generativeDegraded:generativeEligible!==true/);
+  assert.match(source,/service-readiness-separated-from-generative-health\/v90/);
+  assert.doesNotMatch(source,/ready:base\.ready===true&&generativeEligible/);
+});
+
 test('public v60 alias advances to v90 while documenting v89 as downstream fallback',async()=>{
   const alias=await readFile(new URL('../api/capacity-chat-v60.js',import.meta.url),'utf8');
   const v90=await readFile(new URL('../api/capacity-chat-v90.js',import.meta.url),'utf8');
