@@ -1,5 +1,5 @@
 // Compatibility alias: server.js and older clients may still reference v60,
-// but the live pipeline is Universal Core v83: focused factual recovery
-// in front of v82 same-origin knowledge recovery, v81 provider health,
-// v77 GPU scheduling, v63 distributed control and the existing runtime.
-export { default } from './capacity-chat-v83.js';
+// but the live pipeline is Universal Core v85: session-independent native
+// intelligence before focused factual recovery, then provider health, GPU
+// scheduling, distributed control and the existing runtime.
+export { default } from './capacity-chat-v85.js';
