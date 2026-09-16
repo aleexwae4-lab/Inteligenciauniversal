@@ -1,10 +1,37 @@
 import { allowRequest, originAllowed, applyHeaders, getClientIp } from '../lib/security.js';
 import { normalizeUserIntent } from '../lib/input-intelligence.js';
 import { tryAcquireChatSlot } from '../lib/concurrency-governor.js';
-import { runExecutiveOrchestration, EXECUTIVE_ORCHESTRATION_VERSION } from '../lib/executive-orchestration-v52.js';
+import { runExecutiveOrchestration, EXECUTIVE_ORCHESTRATION_VERSION, EXECUTIVE_RESILIENCE_VERSION } from '../lib/executive-orchestration-v52.js';
+import { ORCHESTRATOR_VERSION } from '../lib/orchestrator.js';
 import { runWithRequestSignal } from '../lib/network-deadlines-v46.js';
 
-const publicResponse=(response={})=>({...response,metadata:{...(response.metadata||{}),provider:undefined,model:undefined}});
+export function publicResponse(response={}){
+  const metadata={...(response.metadata||{})};
+  delete metadata.provider;delete metadata.model;
+  return{...response,metadata};
+}
+
+export function publicOrchestrationResult(result={},intent={}){
+  const internal=result.orchestration||{};
+  const specialists=Array.isArray(internal.specialists)?internal.specialists:[];
+  const orchestration={
+    ...internal,
+    schema:ORCHESTRATOR_VERSION,
+    implementationVersion:EXECUTIVE_ORCHESTRATION_VERSION,
+    synthesis:'executive',
+    synthesisStatus:internal.synthesis||null,
+    specialists
+  };
+  const payload={
+    ...result,
+    orchestration,
+    response:publicResponse(result.response||{}),
+    input_interpretation:intent.changed?{normalized:true,domain:intent.domain,confidence:intent.confidence,corrections:intent.corrections}:undefined,
+    agent:{id:'universal-executive-committee',name:'Universal Core Executive Committee'}
+  };
+  delete payload.provider;delete payload.model;delete payload.fallbackFailures;
+  return payload;
+}
 
 export default async function handler(req,res){
   applyHeaders(res);
@@ -31,16 +58,10 @@ export default async function handler(req,res){
     const result=await runWithRequestSignal(signal,()=>runExecutiveOrchestration({body:{...body,message,multiagent:true,deep:true},userKey:rootKey,sessionId}));
     if(!result)return res.status(503).json({error:'orchestration_unavailable',message:'El registro ejecutivo no estuvo disponible para este turno.',recoverable:true});
     res.setHeader('X-WAE-Multi-Agent','database-backed-v52');
-    res.setHeader('X-WAE-Orchestrator',EXECUTIVE_ORCHESTRATION_VERSION);
-    return res.status(200).json({
-      ...result,
-      response:publicResponse(result.response),
-      provider:undefined,
-      model:undefined,
-      fallbackFailures:undefined,
-      input_interpretation:intent.changed?{normalized:true,domain:intent.domain,confidence:intent.confidence,corrections:intent.corrections}:undefined,
-      agent:{id:'universal-executive-committee',name:'Universal Core Executive Committee'}
-    });
+    res.setHeader('X-WAE-Orchestrator',ORCHESTRATOR_VERSION);
+    res.setHeader('X-WAE-Orchestrator-Implementation',EXECUTIVE_ORCHESTRATION_VERSION);
+    res.setHeader('X-WAE-Executive-Resilience',EXECUTIVE_RESILIENCE_VERSION);
+    return res.status(200).json(publicOrchestrationResult(result,intent));
   }catch(error){
     return res.status(503).json({error:'deep_orchestration_failed',message:'El comité liberó el turno antes de quedar bloqueado. Puedes reintentarlo.',recoverable:true,detail:String(error?.message||error).slice(0,180)});
   }finally{
