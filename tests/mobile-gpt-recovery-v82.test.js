@@ -26,12 +26,13 @@ test('high-risk requests do not fall into generic knowledge recovery',()=>{
   assert.equal(sameOriginKnowledgeEligible('Qué estrategia legal debo usar en un delito?','general'),false);
 });
 
-test('v83 is the live alias while v82 remains the same-origin knowledge layer over v81',()=>{
+test('v83 is the live alias while v82 remains independently callable over v81',()=>{
   const v60=fs.readFileSync(new URL('../api/capacity-chat-v60.js',import.meta.url),'utf8');
   const v83=fs.readFileSync(new URL('../api/capacity-chat-v83.js',import.meta.url),'utf8');
   const v82=fs.readFileSync(new URL('../api/capacity-chat-v82.js',import.meta.url),'utf8');
   assert.match(v60,/capacity-chat-v83\.js/);
-  assert.match(v83,/capacity-chat-v82\.js/);
+  assert.match(v83,/capacity-chat-v81\.js/);
+  assert.match(v83,/runKnowledgeAnswer/);
   assert.match(v82,/capacity-chat-v81\.js/);
   assert.match(v82,/runKnowledgeAnswer/);
   assert.match(v82,/same-origin-knowledge-v82/);
