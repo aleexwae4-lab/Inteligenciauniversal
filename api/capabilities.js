@@ -56,8 +56,8 @@ export default async function handler(req,res){
     capacityCertification:{...capacityCertificationCapabilities(),endpoint:'/api/capacity-certification',actions:['evaluate','certify_and_record']},
     performanceRouter:{...performanceRouterCapabilities(),snapshot:providerMeshSnapshot()},
     orchestration:{
-      schema:EXECUTIVE_ORCHESTRATION_VERSION,
-      legacySchema:ORCHESTRATOR_VERSION,
+      schema:ORCHESTRATOR_VERSION,
+      implementationVersion:EXECUTIVE_ORCHESTRATION_VERSION,
       databaseBacked:true,
       parallel:true,
       maxSpecialists:3,
