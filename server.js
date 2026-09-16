@@ -38,21 +38,21 @@ function mobilePremiumHandler(req,res) {
       if (!chunk.includes('mobile-v26.js')) scripts.push('<script src="/mobile-v26.js?v=34" defer></script>');
       if (!chunk.includes('telemetry-throttle-v47.js')) scripts.push('<script src="/telemetry-throttle-v47.js?v=47" defer></script>');
       if (!chunk.includes('mobile-runtime-v47.js')) scripts.push('<script src="/mobile-runtime-v47.js?v=47&rev=60" defer></script>');
-      if (!chunk.includes('mobile-bootstrap-v45.js')) scripts.push('<script src="/mobile-bootstrap-v45.js?v=45" defer></script>');
+      if (!chunk.includes('mobile-bootstrap-v45.js')) scripts.push('<script src="/mobile-bootstrap-v45.js?v=45.1&rev=89" defer></script>');
       if (!chunk.includes('semantic-ux-v32.js')) scripts.push('<script src="/semantic-ux-v32.js?v=46" defer></script>');
       if (!chunk.includes('speech-lifecycle-v46.js')) scripts.push('<script src="/speech-lifecycle-v46.js?v=46" defer></script>');
-      if (!chunk.includes('mobile-voice-v46.js')) scripts.push('<script src="/mobile-voice-v46.js?v=46" defer></script>');
+      if (!chunk.includes('mobile-voice-v46.js')) scripts.push('<script src="/mobile-voice-v46.js?v=46.1&rev=89" defer></script>');
       if (!chunk.includes('learning-client-v29.js')) scripts.push('<script src="/learning-client-v29.js?v=34" defer></script>');
       if (!chunk.includes('premium-v5.js')) scripts.push('<script src="/premium-v5.js?v=43" defer></script>');
       if (!chunk.includes('productivity-v59.js')) scripts.push('<script src="/productivity-v59.js?v=59" defer></script>');
-      if (!chunk.includes('mobile-canonical-chat-v80.js')) scripts.push('<script src="/mobile-canonical-chat-v80.js?v=80" defer></script>');
+      if (!chunk.includes('mobile-canonical-chat-v80.js')) scripts.push('<script src="/mobile-canonical-chat-v80.js?v=80.1&rev=89" defer></script>');
       if (scripts.length) chunk = chunk.replace('</body>', `${scripts.join('')}</body>`);
       res.setHeader('Cache-Control','no-store, max-age=0, must-revalidate');
       res.setHeader('Pragma','no-cache');
       res.setHeader('Expires','0');
-      res.setHeader('X-WAE-Mobile-Release','universal-core-mobile-v80-visible-chat');
-      res.setHeader('X-WAE-Mobile-Chat-Route','same-origin-json-and-sse-first');
-      res.setHeader('X-WAE-Mobile-Fix','context-history-projects-v59');
+      res.setHeader('X-WAE-Mobile-Release','universal-core-mobile-v89-render-primary');
+      res.setHeader('X-WAE-Mobile-Chat-Route','same-origin-render-primary');
+      res.setHeader('X-WAE-Mobile-Fix','fast-factual-render-bootstrap-browser-voice-v89');
       res.setHeader('X-WAE-Mobile-Compatible','universal-core-mobile-v47-long-session');
       res.setHeader('X-WAE-Mobile-Compatible-Fix','long-session-backpressure-v47');
       res.setHeader('X-WAE-Capacity-Release','capacity-governor-v48');
@@ -144,6 +144,7 @@ async function readJsonBody(req) {
 }
 
 async function runApi(req, res, handler) {
+  const startedAt=Date.now();
   attachResponseHelpers(res);
   try {
     req.body = await readJsonBody(req);
@@ -155,6 +156,18 @@ async function runApi(req, res, handler) {
     }
     if (!res.writableEnded) {
       res.end(JSON.stringify({ error: error.message || 'internal_error' }));
+    }
+  } finally {
+    if (String(req.url || '').startsWith('/api/chat')) {
+      console.log('[CHAT_METRIC]', JSON.stringify({
+        duration_ms:Date.now()-startedAt,
+        status:res.statusCode,
+        release:String(res.getHeader('X-WAE-Chat-Release')||''),
+        fast_factual:String(res.getHeader('X-WAE-Fast-Factual')||''),
+        latency_class:String(res.getHeader('X-WAE-Latency-Class')||''),
+        factuality_path:String(res.getHeader('X-WAE-Factuality-Path')||''),
+        recovery:String(res.getHeader('X-WAE-Operational-Recovery')||'')
+      }));
     }
   }
 }
