@@ -32,6 +32,12 @@ function weakPayload(payload={}){
     ||/continuity_pass_through|all_models_unavailable|rutas generativas.*(?:saturad|no estuv)|no pude completar/.test(reply);
 }
 function successful(code,payload){return code>=200&&code<300&&!weakPayload(payload)}
+function terminalControlFailure(code,payload={}){
+  const error=String(payload?.error||payload?.code||'').toUpperCase();
+  return code===403||code===405||code===429||[
+    'CAPACITY_BUSY','RATE_LIMITED','ORIGIN_NOT_ALLOWED','METHOD_NOT_ALLOWED','GPU_RATE_LIMITED','LIVE_RATE_LIMITED','KNOWLEDGE_RATE_LIMITED'
+  ].includes(error);
+}
 
 async function callV77(req,res,body){
   const previous=req.body;
@@ -67,7 +73,7 @@ export default async function capacityChatV81(req,res){
   const firstBody=decision.overridden?{...originalBody,provider:decision.provider}:originalBody;
   let first=await callV77(req,res,firstBody);
   if(res.writableEnded||!first.hasJson)return;
-  if(successful(first.code,first.payload))return res.status(first.code).json(first.payload);
+  if(successful(first.code,first.payload)||terminalControlFailure(first.code,first.payload))return res.status(first.code).json(first.payload);
 
   if(requested==='auto'&&decision?.snapshot){
     const alternates=decision.snapshot.providers.filter(row=>row.eligible&&row.id!==decision.provider&&row.id!=='wae_edge').slice(0,1);
@@ -78,9 +84,11 @@ export default async function capacityChatV81(req,res){
         res.setHeader('X-WAE-Operational-Recovery',alternate.id);
         return res.status(retry.code).json(retry.payload);
       }
-      if((!first.payload||weakPayload(first.payload))&&retry.payload)first=retry;
+      if(!terminalControlFailure(retry.code,retry.payload)&&(!first.payload||weakPayload(first.payload))&&retry.payload)first=retry;
     }
   }
+
+  if(terminalControlFailure(first.code,first.payload))return res.status(first.code).json(first.payload);
 
   const message=String(originalBody.message||originalBody.task||'').trim();
   const recoverable=first.code>=500||weakPayload(first.payload);
