@@ -8,7 +8,7 @@ import { tryAcquireChatSlot } from '../lib/concurrency-governor.js';
 export const CAPACITY_CHAT_V88='capacity-chat/v88-knowledge-fusion-open-source-mesh';
 
 function setHeaders(res,plan={},fusion=false){
-  res.setHeader('X-WAE-Chat-Release',CAPACITY_CHAT_V88);
+  if(!res.getHeader?.('X-WAE-Chat-Release'))res.setHeader('X-WAE-Chat-Release',CAPACITY_CHAT_V88);
   res.setHeader('X-WAE-Knowledge-Fusion',fusion?KNOWLEDGE_FUSION_VERSION:'bypass');
   res.setHeader('X-WAE-Open-Source-Mesh',OPEN_SOURCE_CAPABILITY_MESH_VERSION);
   res.setHeader('X-WAE-Intelligence-Route',String(plan.route||'standard'));
@@ -61,7 +61,7 @@ export default async function capacityChatV88(req,res){
     if(fusion?.accepted&&fusion.payload){
       setHeaders(res,plan,true);
       res.setHeader('X-WAE-Factuality-Status','PASS');
-      res.setHeader('X-WAE-Factuality-Path','knowledge-fusion-v88');
+      res.setHeader('X-WAE-Factuality-Path',body.universal_knowledge===true?'universal-knowledge-v89':'knowledge-fusion-v88');
       return res.status(200).json(decorate(fusion.payload,plan,fusion.payload.knowledge_fusion));
     }
   }catch(error){

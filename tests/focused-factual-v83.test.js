@@ -70,14 +70,17 @@ test('domain recognizer covers GPU and optical scattering explicitly',()=>{
   assert.equal(detectFactualDomain('Rayleigh scattering optical light wavelength'),'physics');
 });
 
-test('v88 fusion and v87 planning run before v86 verification and the established resilience chain',()=>{
+test('v89 universal knowledge and v88 fusion run before v87 planning, v86 verification and the established resilience chain',()=>{
   const v60=fs.readFileSync(new URL('../api/capacity-chat-v60.js',import.meta.url),'utf8');
+  const v89=fs.readFileSync(new URL('../api/capacity-chat-v89.js',import.meta.url),'utf8');
   const v88=fs.readFileSync(new URL('../api/capacity-chat-v88.js',import.meta.url),'utf8');
   const v87=fs.readFileSync(new URL('../api/capacity-chat-v87.js',import.meta.url),'utf8');
   const v86=fs.readFileSync(new URL('../api/capacity-chat-v86.js',import.meta.url),'utf8');
   const v84=fs.readFileSync(new URL('../api/capacity-chat-v84.js',import.meta.url),'utf8');
   const v83=fs.readFileSync(new URL('../api/capacity-chat-v83.js',import.meta.url),'utf8');
-  assert.match(v60,/capacity-chat-v88\.js/);
+  assert.match(v60,/capacity-chat-v89\.js/);
+  assert.match(v89,/capacity-chat-v88\.js/);
+  assert.match(v89,/classifyUniversalKnowledge/);
   assert.match(v88,/capacity-chat-v87\.js/);
   assert.match(v88,/runKnowledgeFusion/);
   assert.match(v87,/capacity-chat-v86\.js/);
