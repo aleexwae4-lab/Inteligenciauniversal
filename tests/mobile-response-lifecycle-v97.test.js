@@ -36,9 +36,9 @@ test('v97 reconciliation is driven by DOM completion and voice-state as a second
   assert.doesNotMatch(mobileSource,/setTimeout\([^\n]*reconcileCompletedTurn/);
 });
 
-test('server cache-busts the mobile lifecycle asset and exposes the production release header',()=>{
+test('server preserves canonical v80 transport release while cache-busting and exposing v97 lifecycle',()=>{
   assert.match(serverSource,/mobile-v26\.js\?v=97/);
+  assert.match(serverSource,/X-WAE-Mobile-Release','universal-core-mobile-v80-visible-chat'/);
   assert.match(serverSource,/X-WAE-Mobile-Response-Lifecycle/);
   assert.match(serverSource,/mobile-response-lifecycle\/v97/);
-  assert.match(serverSource,/universal-core-mobile-v97-response-lifecycle/);
 });
