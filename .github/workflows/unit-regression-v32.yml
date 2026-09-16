@@ -29,6 +29,7 @@ jobs:
           - test/universal-core-ui.test.js
           - tests/capability-kernel.test.js
           - tests/tool-fabric.test.js
+          - tests/ia-gratis-tools-v85.test.js
           - tests/deterministic-rescue-contract.test.js
           - tests/execution-contract.test.js
           - tests/execution-plane.test.js
