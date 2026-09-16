@@ -1,6 +1,5 @@
 import { capabilityPlan } from '../lib/capability-kernel.js';
 import { executeCapability, executionPlaneSnapshot, probeExecutionPlane } from '../lib/execution-plane.js';
-import { persistExecutionReceipt } from '../lib/execution-ledger-v75.js';
 import { allowRequest, originAllowed, applyHeaders, getClientIp } from '../lib/security.js';
 
 function supportedCapabilities(){
@@ -40,7 +39,6 @@ export default async function handler(req,res){
     userKey,
     sessionId,
     approved:false,
-    persistReceipt:persistExecutionReceipt,
   });
 
   const statusCode=execution.success?200:execution.status==='blocked'?422:502;
