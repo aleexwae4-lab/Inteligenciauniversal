@@ -1,5 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import {readFile} from 'node:fs/promises';
+import capacityChatV75 from '../api/capacity-chat-v75.js';
 import {gpuFabricConfigured,gpuFabricLanes,gpuFabricSnapshot,generateWithGpuFabric,__resetGpuFabricForTests,GPU_FABRIC_VERSION} from '../lib/gpu-fabric-v75.js';
 
 const KEYS=['WAE_GPU_FABRIC_ENABLED','WAE_GPU_FABRIC_MAX_ATTEMPTS','WAE_GPU_FABRIC_TIMEOUT_MS','NVIDIA_API_KEY','NVIDIA_MODEL','WAE_NVIDIA_MODEL','GROQ_API_KEY','GROQ_MODEL','WAE_GROQ_MODEL','HF_TOKEN','HUGGINGFACE_API_KEY','HF_MODEL','HUGGINGFACE_MODEL','OPENROUTER_API_KEY','OPENROUTER_MODEL','CEREBRAS_API_BASE','CEREBRAS_API_KEY','CEREBRAS_MODEL','TOGETHER_API_BASE','TOGETHER_API_KEY','TOGETHER_MODEL','FIREWORKS_API_BASE','FIREWORKS_API_KEY','FIREWORKS_MODEL','DEEPINFRA_API_BASE','DEEPINFRA_API_KEY','DEEPINFRA_MODEL','SAMBANOVA_API_BASE','SAMBANOVA_API_KEY','SAMBANOVA_MODEL',...Array.from({length:8},(_,i)=>i+1).flatMap(i=>[`WAE_GPU_LANE_${i}_ID`,`WAE_GPU_LANE_${i}_BASE_URL`,`WAE_GPU_LANE_${i}_API_KEY`,`WAE_GPU_LANE_${i}_MODEL`])];
@@ -75,4 +77,18 @@ test('ranked failover moves from a rate-limited GPU lane to the next healthy lan
     const first=gpuFabricSnapshot().lanes.find(x=>x.id==='lane_one');
     assert.equal(first.circuit,'OPEN');
   }finally{global.fetch=originalFetch;restore()}
+});
+
+test('v75 chat wrapper parses and legacy v60 points to it without replacing v63 control plane',async()=>{
+  assert.equal(typeof capacityChatV75,'function');
+  const alias=await readFile(new URL('../api/capacity-chat-v60.js',import.meta.url),'utf8');
+  const wrapper=await readFile(new URL('../api/capacity-chat-v75.js',import.meta.url),'utf8');
+  assert.match(alias,/capacity-chat-v75\.js/);
+  assert.match(wrapper,/capacityChatV63/);
+  assert.match(wrapper,/GPU_FABRIC_VERSION/);
+  assert.match(wrapper,/sensitiveRequest/);
+  assert.match(wrapper,/requiresGroundedData/);
+  assert.match(wrapper,/originAllowed/);
+  assert.match(wrapper,/allowRequest/);
+  assert.match(wrapper,/WAE_GPU_ALLOW_ATTACHMENTS/);
 });
