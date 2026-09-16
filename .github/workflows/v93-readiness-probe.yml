@@ -1,0 +1,62 @@
+name: Verified GPT Arena v93 Readiness
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - fix/v93-pin-gpt6-astra
+    paths:
+      - '.github/workflows/v93-readiness-probe.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  readiness:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Probe public v93 readiness without executing paid candidates
+        shell: bash
+        run: |
+          set -euo pipefail
+          url='https://wae-inteligencia-universal.onrender.com/api/benchmark/v93'
+          body=$(curl --fail-with-body --silent --show-error --max-time 30 "$url")
+          printf '%s' "$body" > v93-readiness.json
+          node - <<'NODE'
+          const fs=require('fs');
+          const r=JSON.parse(fs.readFileSync('v93-readiness.json','utf8'));
+          const publicView={
+            success:r.success,
+            version:r.version,
+            executionVersion:r.executionVersion,
+            comparator:r.comparator,
+            attestation:r.attestation,
+            databaseGate:r.databaseGate,
+            publicGate:r.publicGate,
+            policy:r.policy,
+          };
+          console.log(JSON.stringify(publicView,null,2));
+          const lines=[
+            '## Verified GPT Arena v93 readiness',
+            '',
+            `- Version: **${r.version||'unknown'}**`,
+            `- Comparator configured: **${r.comparator?.configured===true}**`,
+            `- Comparator model: **${r.comparator?.model||'none'}**`,
+            `- Comparator executable: **${r.comparator?.executable===true}**`,
+            `- Attestation configured: **${r.attestation?.configured===true}**`,
+            `- Database gate: **${r.databaseGate?.state||'unknown'}**`,
+            `- Public gate: **${r.publicGate?.state||'unknown'}**`,
+            `- Claim allowed now: **${r.publicGate?.claimAllowed===true}**`,
+            '',
+            '> This probe executes no GPT candidate and creates no benchmark superiority claim.'
+          ];
+          fs.appendFileSync(process.env.GITHUB_STEP_SUMMARY,lines.join('\n')+'\n');
+          NODE
+
+      - name: Upload readiness evidence
+        uses: actions/upload-artifact@v4
+        with:
+          name: verified-gpt-arena-v93-readiness-${{ github.run_id }}
+          path: v93-readiness.json
+          retention-days: 14
