@@ -1,0 +1,115 @@
+name: Paired GPT Benchmark v93
+
+on:
+  workflow_dispatch:
+    inputs:
+      reference_model:
+        description: Exact versioned OpenAI reference model
+        required: true
+        default: gpt-6-astra
+        type: string
+      reasoning_effort:
+        description: Reference reasoning effort
+        required: true
+        default: high
+        type: choice
+        options:
+          - high
+          - xhigh
+          - max
+      require_certification:
+        description: Fail the job when the v62 superiority gates do not pass
+        required: true
+        default: false
+        type: boolean
+
+permissions:
+  contents: read
+
+concurrency:
+  group: paired-gpt-benchmark-v93
+  cancel-in-progress: false
+
+jobs:
+  paired-benchmark:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    env:
+      OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+      UNIVERSAL_CORE_URL: https://wae-inteligencia-universal.onrender.com
+      BENCHMARK_TARGET_ID: universal-core-v92
+      BENCHMARK_REFERENCE_ID: ${{ inputs.reference_model }}
+      BENCHMARK_REASONING_EFFORT: ${{ inputs.reasoning_effort }}
+      BENCHMARK_REQUIRE_CERTIFICATION: ${{ inputs.require_certification && '1' || '0' }}
+      BENCHMARK_INTER_CASE_MS: '4500'
+      BENCHMARK_REQUEST_TIMEOUT_MS: '180000'
+      BENCHMARK_ARTIFACT_DIR: artifacts
+    steps:
+      - name: Checkout benchmark code
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Verify benchmark contracts
+        run: |
+          node --check lib/paired-gpt-benchmark-v93.js
+          node --check scripts/paired-gpt-benchmark-v93.mjs
+          node --test tests/paired-gpt-benchmark-v93.test.js
+
+      - name: Require direct reference credential
+        shell: bash
+        run: |
+          if [ -z "$OPENAI_API_KEY" ]; then
+            echo "OPENAI_API_KEY is not configured. A real versioned GPT response is required; simulated references are forbidden."
+            exit 1
+          fi
+
+      - name: Run immutable 32-case paired arena
+        run: node scripts/paired-gpt-benchmark-v93.mjs
+
+      - name: Publish benchmark summary
+        if: always()
+        shell: bash
+        run: |
+          latest=$(ls -1t artifacts/paired-gpt-benchmark-v93-*.json 2>/dev/null | head -n 1 || true)
+          if [ -z "$latest" ]; then
+            echo "## Paired GPT Benchmark v93" >> "$GITHUB_STEP_SUMMARY"
+            echo "No benchmark artifact was produced." >> "$GITHUB_STEP_SUMMARY"
+            exit 0
+          fi
+          node - "$latest" <<'NODE'
+          const fs=require('fs');
+          const path=process.argv[2];
+          const r=JSON.parse(fs.readFileSync(path,'utf8'));
+          const c=r.certification||{};
+          const a=c.aggregate||{};
+          const m=c.metrics||{};
+          const lines=[
+            '## Paired GPT Benchmark v93',
+            '',
+            `- Target: **${c.targetId||r.manifest?.targetId||'unknown'}**`,
+            `- Reference: **${c.referenceId||r.manifest?.referenceId||'unknown'}**`,
+            `- Verdict: **${c.verdict||'NO_RESULT'}**`,
+            `- Evaluated cases: **${c.evaluatedCases||0}**`,
+            `- Wins / ties / losses: **${a.wins||0} / ${a.ties||0} / ${a.losses||0}**`,
+            `- Adjusted win rate: **${a.adjustedWinRate??'n/a'}**`,
+            `- Target mean score: **${m.targetMeanScore??'n/a'}**`,
+            `- Reference mean score: **${m.referenceMeanScore??'n/a'}**`,
+            `- Wilson lower bound 95%: **${m.wilsonLowerBound95??'n/a'}**`,
+            '',
+            c.claimAllowed ? 'Certification is benchmark-scoped only; it does not establish universal superiority.' : 'Superiority is **not proven** by this run. Regressions must be fixed without changing the immutable suite.'
+          ];
+          fs.appendFileSync(process.env.GITHUB_STEP_SUMMARY,lines.join('\n')+'\n');
+          NODE
+
+      - name: Upload raw paired evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: paired-gpt-benchmark-v93-${{ github.run_id }}
+          path: artifacts/paired-gpt-benchmark-v93-*.json
+          if-no-files-found: warn
+          retention-days: 30
