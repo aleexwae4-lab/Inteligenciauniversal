@@ -10,7 +10,9 @@ test('tool fabric is default-deny and exposes immutable contracts',()=>{
   assert.equal(snapshot.policy.defaultDeny,true);
   assert.equal(snapshot.policy.mutationsEnabled,false);
   assert.equal(snapshot.policy.clientApprovalTrusted,false);
-  assert.equal(snapshot.toolCount,10);
+  assert.equal(snapshot.policy.externalProcessingDeclared,true);
+  assert.equal(snapshot.policy.perCallBudgetEnforced,true);
+  assert.equal(snapshot.toolCount,15);
   assert.equal(snapshot.blockedToolCount,3);
   assert.ok(snapshot.tools.every((tool)=>tool.contractHash.length===64));
 });
@@ -27,6 +29,25 @@ test('GitHub repository intelligence is registered as read-only evaluation, not 
   assert.ok(tool.contractHash.length===64);
 });
 
+test('ia.gratis extensions declare external processing and bounded token costs',()=>{
+  const ids=['ia_gratis.search','ia_gratis.summarize','ia_gratis.translate','ia_gratis.humanize','ia_gratis.detect'];
+  for(const id of ids){
+    const tool=getToolDefinition(id);
+    assert.ok(tool);
+    assert.equal(tool.provider,'ia_gratis');
+    assert.equal(tool.externalProcessing,true);
+    assert.equal(tool.riskLevel,'low');
+    assert.equal(tool.approval,'none');
+    assert.ok(Number(tool.tokenCost)>0&&Number(tool.tokenCost)<=50);
+    assert.ok(tool.contractHash.length===64);
+  }
+  assert.equal(resolveTool('web_search','ai_search')?.id,'ia_gratis.search');
+  assert.equal(resolveTool('conversation_reasoning','summarize')?.id,'ia_gratis.summarize');
+  assert.equal(resolveTool('conversation_reasoning','translate')?.id,'ia_gratis.translate');
+  assert.equal(resolveTool('conversation_reasoning','humanize')?.id,'ia_gratis.humanize');
+  assert.equal(resolveTool('conversation_reasoning','detect_ai_text')?.id,'ia_gratis.detect');
+});
+
 test('sensitive tools are discoverable but never enabled',()=>{
   for(const id of ['computer.control','browser.cloud','terminal.exec']){
     const tool=getToolDefinition(id);
@@ -41,6 +62,7 @@ test('sensitive tools are discoverable but never enabled',()=>{
 test('tool input contracts reject missing and oversized inputs',()=>{
   assert.deepEqual(validateToolInput('text.inspect',{}),{ok:false,error:'tool_input_required',field:'content'});
   assert.deepEqual(validateToolInput('github.repository_evaluate',{}),{ok:false,error:'tool_input_required',field:'repository'});
+  assert.deepEqual(validateToolInput('ia_gratis.translate',{}),{ok:false,error:'tool_input_required',field:'text'});
   const oversized='x'.repeat(120001);
   const invalid=validateToolInput('text.inspect',{content:oversized});
   assert.equal(invalid.ok,false);
