@@ -28,6 +28,14 @@ test('simple precise stable facts enter the verified fast factual lane',()=>{
   assert.equal(plan.policy.verificationPreserved,true);
 });
 
+test('short stable definitions also use the verified fast factual lane',()=>{
+  const body={message:'¿Qué es una GPU?',mode:'general'};
+  const plan=planLatencyV90(body,planUniversalIntelligence(body));
+  assert.equal(plan.profile,'fast_factual');
+  assert.equal(plan.signals.stable_definition,true);
+  assert.equal(shouldAttemptFastFactualV90(plan),true);
+});
+
 test('current facts prefer live retrieval and never use the simple fast lane',()=>{
   const body={message:'¿Quién es el CEO actual de esta empresa?',mode:'general'};
   const plan=planLatencyV90(body,planUniversalIntelligence(body));
@@ -36,13 +44,13 @@ test('current facts prefer live retrieval and never use the simple fast lane',()
   assert.ok(plan.budgets.live_timeout_ms>0);
 });
 
-test('deep research and executive work receive bounded wider budgets',()=>{
+test('deep research and factual executive work receive bounded wider budgets',()=>{
   const research={message:'Investiga profundamente la evidencia científica reciente sobre hipertensión.',mode:'research'};
   const researchPlan=planLatencyV90(research,planUniversalIntelligence(research));
   assert.equal(researchPlan.profile,'live_current');
   assert.ok(researchPlan.budgets.knowledge_timeout_ms<=6800);
 
-  const executive={message:'Audita arquitectura, seguridad, costos y estrategia de escalamiento de la empresa.',mode:'executive'};
+  const executive={message:'Investiga evidencia y audita arquitectura, seguridad, costos y estrategia de escalamiento de la empresa.',mode:'executive'};
   const executivePlan=planLatencyV90(executive,{needs:{multiagent:true}});
   assert.equal(executivePlan.profile,'executive');
   assert.ok(executivePlan.budgets.multiagent_timeout_ms<=8000);
@@ -94,4 +102,5 @@ test('public v60 alias advances to v90 while documenting v89 as downstream fallb
   assert.match(v90,/runFocusedFactualAnswer/);
   assert.match(v90,/runKnowledgeFusionV90/);
   assert.match(v90,/factualityDecision/);
+  assert.match(v90,/fetchWithParentSignal/);
 });
