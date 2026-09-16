@@ -26,14 +26,17 @@ test('high-risk requests do not fall into generic knowledge recovery',()=>{
   assert.equal(sameOriginKnowledgeEligible('Qué estrategia legal debo usar en un delito?','general'),false);
 });
 
-test('v87 is the live alias over v86 verification, v84 resilience and v83 while v82 remains independently callable over v81',()=>{
+test('v88 is the live alias over v87 planning, v86 verification and the resilience chain while v82 remains independently callable over v81',()=>{
   const v60=fs.readFileSync(new URL('../api/capacity-chat-v60.js',import.meta.url),'utf8');
+  const v88=fs.readFileSync(new URL('../api/capacity-chat-v88.js',import.meta.url),'utf8');
   const v87=fs.readFileSync(new URL('../api/capacity-chat-v87.js',import.meta.url),'utf8');
   const v86=fs.readFileSync(new URL('../api/capacity-chat-v86.js',import.meta.url),'utf8');
   const v84=fs.readFileSync(new URL('../api/capacity-chat-v84.js',import.meta.url),'utf8');
   const v83=fs.readFileSync(new URL('../api/capacity-chat-v83.js',import.meta.url),'utf8');
   const v82=fs.readFileSync(new URL('../api/capacity-chat-v82.js',import.meta.url),'utf8');
-  assert.match(v60,/capacity-chat-v87\.js/);
+  assert.match(v60,/capacity-chat-v88\.js/);
+  assert.match(v88,/capacity-chat-v87\.js/);
+  assert.match(v88,/knowledge-fusion-v88/);
   assert.match(v87,/capacity-chat-v86\.js/);
   assert.match(v87,/planUniversalIntelligence/);
   assert.match(v86,/capacity-chat-v84\.js/);

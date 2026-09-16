@@ -1,5 +1,5 @@
 import { capabilityPlan } from '../lib/capability-kernel.js';
-import { executeCapability, executionPlaneSnapshot, probeExecutionPlane } from '../lib/execution-plane.js';
+import { executeCapability, executionPlaneSnapshot, probeExecutionPlane } from '../lib/execution-plane-v88.js';
 import { allowRequest, originAllowed, applyHeaders, getClientIp } from '../lib/security.js';
 
 function supportedCapabilities(){
@@ -34,6 +34,7 @@ export default async function handler(req,res){
   const execution=await executeCapability({
     capability,
     action:body.action,
+    toolId:body.toolId||body.tool_id,
     task,
     input,
     userKey,
@@ -50,6 +51,7 @@ export default async function handler(req,res){
       kernel:plan.kernel,
       matched:plan.matched,
       selectedCapability:capability||null,
+      selectedTool:String(body.toolId||body.tool_id||'')||null,
     },
   });
 }

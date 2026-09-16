@@ -92,11 +92,14 @@ test('public plan exposes routing decisions but not private classifier internals
   assert.equal(Object.prototype.hasOwnProperty.call(publicPlan,'constraints'),false);
 });
 
-test('public v60 compatibility alias advances through v87 and keeps v86 as final factual gate',()=>{
+test('public v60 compatibility alias advances through v88 then v87 and keeps v86 as final factual gate',()=>{
   const v60=fs.readFileSync(new URL('../api/capacity-chat-v60.js',import.meta.url),'utf8');
+  const v88=fs.readFileSync(new URL('../api/capacity-chat-v88.js',import.meta.url),'utf8');
   const v87=fs.readFileSync(new URL('../api/capacity-chat-v87.js',import.meta.url),'utf8');
   const v86=fs.readFileSync(new URL('../api/capacity-chat-v86.js',import.meta.url),'utf8');
-  assert.match(v60,/capacity-chat-v87\.js/);
+  assert.match(v60,/capacity-chat-v88\.js/);
+  assert.match(v88,/capacity-chat-v87\.js/);
+  assert.match(v88,/runKnowledgeFusion/);
   assert.match(v87,/capacity-chat-v86\.js/);
   assert.match(v87,/planUniversalIntelligence/);
   assert.match(v86,/factualityDecision/);
