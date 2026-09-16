@@ -5,6 +5,9 @@ import { runExecutiveOrchestration, EXECUTIVE_ORCHESTRATION_VERSION, EXECUTIVE_R
 import { ORCHESTRATOR_VERSION } from '../lib/orchestrator.js';
 import { runWithRequestSignal } from '../lib/network-deadlines-v46.js';
 import { callIaGratisChat, iaGratisConfigured, IA_GRATIS_PROVIDER_VERSION } from '../lib/ia-gratis-v84.js';
+import { rescueMission } from '../lib/intelligence-rescue.js';
+
+export const EXECUTIVE_LOCAL_RECOVERY_VERSION='executive-local-recovery/v85.2';
 
 export function publicResponse(response={}){
   const metadata={...(response.metadata||{})};
@@ -98,6 +101,78 @@ async function runIaGratisExecutiveRecovery({body={},message='',reason='orchestr
   };
 }
 
+function normalizeLocalProtocol(value=''){
+  return String(value||'')
+    .normalize('NFD').replace(/[\u0300-\u036f]/g,'')
+    .toLowerCase().replace(/[¿?¡!.,;:]+/g,' ')
+    .replace(/\s+/g,' ').trim();
+}
+
+export function localExecutiveRecoveryEligible(body={},message=''){
+  if(body.web_enabled===true||(Array.isArray(body.attachments)&&body.attachments.length>0))return false;
+  const q=normalizeLocalProtocol(message||body.message||body.task||'');
+  if(!q||q.length>220)return false;
+  if(/^(responde )?(exactamente |solamente |solo )?(con )?(la )?palabra ok$/.test(q)||/^responde (exactamente|solamente|solo) ok$/.test(q))return true;
+  if(/^(hola|hey|buenas|buenos dias|buenas tardes|buenas noches)(?:\s+(como estas|como te sientes|como andas|que tal))?$/.test(q))return true;
+  if(/^(como estas|como te sientes|como andas|que tal|gracias|muchas gracias|ok|vale|perfecto|listo)$/.test(q))return true;
+  if(/^(que tan inteligente eres|que puedes hacer|cuales son tus capacidades|que capacidades tienes|como puedes ayudarme|como funcionas|quien eres|que eres|que es universal core)$/.test(q))return true;
+  return false;
+}
+
+export async function runLocalExecutiveRecovery({body={},message='',userKey='',reason='executive_recovery_required'}={}){
+  if(!localExecutiveRecoveryEligible(body,message))return null;
+  const started=Date.now();
+  const rescued=await rescueMission({
+    payload:{...body,message},
+    userKey,
+    error:{code:String(reason||'executive_recovery_required').slice(0,120)},
+  });
+  const reply=String(rescued?.reply||rescued?.response?.content||'').trim();
+  if(!reply||rescued?.resilience?.path!=='deterministic_protocol')return null;
+  const latencyMs=Date.now()-started;
+  const response={
+    ...(rescued.response||{}),
+    content:reply,
+    metadata:{
+      ...(rescued.response?.metadata||{}),
+      executiveOrchestration:true,
+      degraded:true,
+      recovery:'universal-core-local-v85.2',
+      recoveryReason:String(reason||'executive_recovery_required').slice(0,120),
+      resilience:EXECUTIVE_LOCAL_RECOVERY_VERSION,
+      latencyMs,
+    },
+  };
+  return{
+    ...rescued,
+    success:true,
+    reply,
+    response,
+    speech_text:rescued.speech_text||response.speechText||reply,
+    components:Array.isArray(rescued.components)?rescued.components:[],
+    actions:Array.isArray(rescued.actions)?rescued.actions:[],
+    web_sources:[],
+    degraded:true,
+    latencyMs,
+    deep:true,
+    orchestration:{
+      version:EXECUTIVE_LOCAL_RECOVERY_VERSION,
+      db_backed:false,
+      active_agent_instances:0,
+      executive_roles:0,
+      collaboration_edges:0,
+      strategy:'deterministic-local-protocol-recovery',
+      roles:['Universal Core Recovery'],
+      max_specialists:1,
+      specialists:[{role:'Universal Core Recovery',ok:true,latencyMs,evidence_count:0,error:null}],
+      synthesis:'Universal Core',
+      resilience:EXECUTIVE_LOCAL_RECOVERY_VERSION,
+    },
+    evidence_router:{degraded:true,routes:[]},
+    library:{degraded:true},
+  };
+}
+
 export default async function handler(req,res){
   applyHeaders(res);
   if(req.method!=='POST')return res.status(405).json({error:'method_not_allowed'});
@@ -118,29 +193,39 @@ export default async function handler(req,res){
     return res.status(503).json({error:'CAPACITY_BUSY',message:'El comité ejecutivo está absorbiendo una ráfaga de concurrencia. La misión fue rechazada de forma controlada antes de quedar bloqueada.',recoverable:true,retry_after_ms:slot.retryAfterMs});
   }
 
-  const sendResult=(result,recovery=false)=>{
-    res.setHeader('X-WAE-Multi-Agent',recovery?'degraded-executive-recovery-v84':'database-backed-v52');
+  const sendResult=(result,recovery='none')=>{
+    const isIa=recovery==='ia_gratis',isLocal=recovery==='local';
+    res.setHeader('X-WAE-Multi-Agent',isIa?'degraded-executive-recovery-v84':isLocal?'degraded-executive-local-recovery-v85.2':'database-backed-v52');
     res.setHeader('X-WAE-Orchestrator',ORCHESTRATOR_VERSION);
     res.setHeader('X-WAE-Orchestrator-Implementation',EXECUTIVE_ORCHESTRATION_VERSION);
-    res.setHeader('X-WAE-Executive-Resilience',recovery?IA_GRATIS_PROVIDER_VERSION:EXECUTIVE_RESILIENCE_VERSION);
-    if(recovery)res.setHeader('X-WAE-Executive-Recovery','ia-gratis-v84');
+    res.setHeader('X-WAE-Executive-Resilience',isIa?IA_GRATIS_PROVIDER_VERSION:isLocal?EXECUTIVE_LOCAL_RECOVERY_VERSION:EXECUTIVE_RESILIENCE_VERSION);
+    if(isIa)res.setHeader('X-WAE-Executive-Recovery','ia-gratis-v84');
+    if(isLocal)res.setHeader('X-WAE-Executive-Recovery','universal-core-local-v85.2');
     return res.status(200).json(publicOrchestrationResult(result,intent));
+  };
+
+  const tryRecovery=async(reason)=>{
+    try{
+      const recovered=await runIaGratisExecutiveRecovery({body:{...body,message},message,reason});
+      if(recovered)return sendResult(recovered,'ia_gratis');
+    }catch{}
+    try{
+      const local=await runLocalExecutiveRecovery({body:{...body,message},message,userKey:rootKey,reason});
+      if(local)return sendResult(local,'local');
+    }catch{}
+    return null;
   };
 
   try{
     const signal=AbortSignal.timeout(Number(process.env.WAE_ORCHESTRATION_DEADLINE_MS||24_000));
     const result=await runWithRequestSignal(signal,()=>runExecutiveOrchestration({body:{...body,message,multiagent:true,deep:true},userKey:rootKey,sessionId}));
-    if(result)return sendResult(result,false);
-    try{
-      const recovered=await runIaGratisExecutiveRecovery({body:{...body,message},message,reason:'orchestration_unavailable'});
-      if(recovered)return sendResult(recovered,true);
-    }catch{}
+    if(result)return sendResult(result,'none');
+    const recovered=await tryRecovery('orchestration_unavailable');
+    if(recovered)return recovered;
     return res.status(503).json({error:'orchestration_unavailable',message:'El registro ejecutivo no estuvo disponible para este turno.',recoverable:true});
   }catch(error){
-    try{
-      const recovered=await runIaGratisExecutiveRecovery({body:{...body,message},message,reason:error?.message||'deep_orchestration_failed'});
-      if(recovered)return sendResult(recovered,true);
-    }catch{}
+    const recovered=await tryRecovery(error?.message||'deep_orchestration_failed');
+    if(recovered)return recovered;
     return res.status(503).json({error:'deep_orchestration_failed',message:'El comité liberó el turno antes de quedar bloqueado. Puedes reintentarlo.',recoverable:true,detail:String(error?.message||error).slice(0,180)});
   }finally{
     slot.release();
