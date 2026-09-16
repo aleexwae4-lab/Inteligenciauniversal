@@ -30,6 +30,7 @@ jobs:
           - tests/capability-kernel.test.js
           - tests/tool-fabric.test.js
           - tests/ia-gratis-tools-v85.test.js
+          - tests/orchestrate-local-recovery-v85.test.js
           - tests/deterministic-rescue-contract.test.js
           - tests/execution-contract.test.js
           - tests/execution-plane.test.js
