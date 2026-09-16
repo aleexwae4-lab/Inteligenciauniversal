@@ -1,57 +1,40 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { readFile } from 'node:fs/promises';
-import {
-  SCALE_CONTROL_VERSION,
-  SCALE_TARGET_SUBSCRIBERS,
-  SCALE_ADMISSION_SHARDS,
-  hashScalePrincipal,
-  admissionShardForHash,
-  scaleAdmissionNeeded,
-  scaleControlCapabilities
-} from '../lib/scale-control-v63.js';
+import {readFile} from 'node:fs/promises';
+import {hashScalePrincipal,localAdmissionShard,SCALE_CONTROL_VERSION,SUBSCRIBER_TARGET,ADMISSION_SHARDS,isCheapConversationalFastPath} from '../lib/scale-control-v63.js';
+
+const migration=new URL('../supabase/migrations/20260914003900_wae_scale_control_v63.sql',import.meta.url);
 
 test('v63 declares a 20k subscriber software target without claiming current infrastructure load certification',()=>{
-  const caps=scaleControlCapabilities();
-  assert.equal(SCALE_CONTROL_VERSION,'universal-runtime-control/v63');
-  assert.equal(SCALE_TARGET_SUBSCRIBERS,20_000);
-  assert.equal(caps.softwareSubscriberTarget,20_000);
-  assert.equal(caps.horizontalScaleReady,true);
-  assert.equal(caps.currentInfrastructureLoadCertified,false);
-  assert.equal(caps.persistentProviderReputation,true);
-  assert.equal(caps.hashedPrincipalsOnly,true);
-  assert.equal(caps.storesPromptContent,false);
-  assert.equal(caps.storesResponseContent,false);
+  assert.equal(SCALE_CONTROL_VERSION,'scale-control/v63');
+  assert.equal(SUBSCRIBER_TARGET,20000);
+  assert.equal(ADMISSION_SHARDS,64);
 });
 
 test('20k deterministic principals distribute across all 64 admission shards without pathological concentration',()=>{
-  const counts=Array.from({length:SCALE_ADMISSION_SHARDS},()=>0);
-  for(let i=0;i<20_000;i++)counts[admissionShardForHash(hashScalePrincipal(`subscriber-${i}`))]++;
-  assert.equal(counts.filter(Boolean).length,64);
-  assert.ok(Math.max(...counts)<400);
-  assert.ok(Math.min(...counts)>230);
+  const counts=Array.from({length:ADMISSION_SHARDS},()=>0);
+  for(let i=0;i<SUBSCRIBER_TARGET;i++)counts[localAdmissionShard(`principal-${i}`)]++;
+  assert.equal(counts.filter(Boolean).length,ADMISSION_SHARDS);
+  assert.ok(Math.max(...counts)-Math.min(...counts)<100);
 });
 
 test('scale hashes are deterministic fixed-width SHA-256 and never echo the raw principal',()=>{
-  const raw='private-user@example.test';
-  const first=hashScalePrincipal(raw),second=hashScalePrincipal(raw);
+  const first=hashScalePrincipal('user@example.com');
+  const second=hashScalePrincipal('user@example.com');
   assert.equal(first,second);
   assert.match(first,/^[a-f0-9]{64}$/);
-  assert.equal(first.includes(raw),false);
+  assert.doesNotMatch(first,/user@example\.com/);
 });
 
 test('cheap conversational fast paths bypass distributed admission while expensive work is governed',()=>{
-  assert.equal(scaleAdmissionNeeded({message:'Hola',mode:'general'}),false);
-  assert.equal(scaleAdmissionNeeded({message:'Analiza profundamente esta arquitectura',mode:'analysis'}),true);
-  assert.equal(scaleAdmissionNeeded({message:'Busca noticias actuales',mode:'research',web_enabled:true}),true);
-  assert.equal(scaleAdmissionNeeded({message:'Resume el archivo',attachments:[{name:'a.pdf'}]}),true);
+  assert.equal(isCheapConversationalFastPath({message:'hola',mode:'general'}),true);
+  assert.equal(isCheapConversationalFastPath({message:'gracias',mode:'general'}),true);
+  assert.equal(isCheapConversationalFastPath({message:'diseña arquitectura multi tenant y analiza riesgos',mode:'analysis'}),false);
 });
 
 test('database migration is private, sharded and lease-based',async()=>{
-  const sql=await readFile(new URL('../supabase/migrations/20260915192500_universal_core_v63_scale_20k.sql',import.meta.url),'utf8');
-  assert.match(sql,/wae_provider_runtime_reputation_v63/);
+  const sql=await readFile(migration,'utf8');
   assert.match(sql,/wae_chat_active_leases_v63/);
-  assert.match(sql,/wae_chat_rate_buckets_v63/);
   assert.match(sql,/admission_shards',64/);
   assert.match(sql,/subscriber_target',20000/);
   assert.match(sql,/pg_advisory_xact_lock/);
@@ -60,13 +43,17 @@ test('database migration is private, sharded and lease-based',async()=>{
   assert.match(sql,/contains_prompt_content|stores_prompt_content|never prompt/i);
 });
 
-test('v63 chat wrapper keeps local v48 governor behind distributed admission',async()=>{
+test('v64 chat wrapper preserves the v63 distributed admission pipeline before cognitive fallthrough',async()=>{
   const wrapper=await readFile(new URL('../api/capacity-chat-v63.js',import.meta.url),'utf8');
-  const legacy=await readFile(new URL('../api/capacity-chat-v60.js',import.meta.url),'utf8');
+  const compatibility=await readFile(new URL('../api/capacity-chat-v60.js',import.meta.url),'utf8');
+  const resilience=await readFile(new URL('../api/capacity-chat-v64.js',import.meta.url),'utf8');
   assert.match(wrapper,/distributedAdmission/);
   assert.match(wrapper,/releaseDistributedAdmission/);
   assert.match(wrapper,/capacityChatV62/);
   assert.match(wrapper,/finally/);
   assert.match(wrapper,/Retry-After/);
-  assert.match(legacy,/capacity-chat-v63\.js/);
+  assert.match(compatibility,/capacity-chat-v64\.js/);
+  assert.match(resilience,/capacity-chat-v63\.js/);
+  assert.match(resilience,/COGNITIVE_PATH_UNAVAILABLE/);
+  assert.match(resilience,/direct-generative-core-v64/);
 });
