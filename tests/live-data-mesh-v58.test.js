@@ -2,7 +2,13 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { shouldUseLiveData, retrieveLiveData, formatLiveDataContext, publicLiveDataMetadata, LIVE_DATA_MESH_VERSION } from '../lib/live-data-mesh-v58.js';
 
-function okJson(payload){return{ok:true,status:200,async json(){return payload}}}
+function okJson(payload){return{ok:true,status:200,async json(){return payload},async text(){return JSON.stringify(payload)},headers:{get(){return null}}}}
+
+async function withEnv(values,work){
+  const previous={};
+  for(const [key,value] of Object.entries(values)){previous[key]=process.env[key];if(value===null||value===undefined)delete process.env[key];else process.env[key]=String(value)}
+  try{return await work()}finally{for(const [key,value] of Object.entries(previous)){if(value===undefined)delete process.env[key];else process.env[key]=value}}
+}
 
 test('detecta intención temporal sin exigir modo research',()=>{
   assert.equal(shouldUseLiveData({message:'¿Quién es el CEO actual y cuáles son las noticias recientes?',mode:'general'}),true);
@@ -41,6 +47,25 @@ test('fusiona GDELT y búsqueda web con provenance y timestamps',async()=>{
   const publicMeta=publicLiveDataMetadata(live);
   assert.equal(publicMeta.evidence_ready,true);
   assert.equal(publicMeta.source_count,2);
+});
+
+test('SearXNG configured locally participates in live retrieval as a zero-fee metasearch connector',async()=>{
+  await withEnv({SEARXNG_BASE_URL:'https://searx.example.test',TAVILY_API_KEY:null},async()=>{
+    const calls=[];
+    const fakeFetch=async url=>{
+      calls.push(String(url));
+      if(String(url).includes('api.gdeltproject.org'))return okJson({articles:[]});
+      if(String(url).startsWith('https://searx.example.test/search'))return okJson({results:[{
+        title:'Official current update',url:'https://official.example.test/status',content:'Current status from a metasearch result.',score:.95,engine:'search-engine'
+      }]});
+      throw new Error(`unexpected_url:${url}`);
+    };
+    const live=await retrieveLiveData({message:'current system status unique-v88-searx-test',mode:'research',force:true,fetchImpl:fakeFetch,maxResults:4});
+    assert.equal(live.evidenceReady,true);
+    assert.ok(live.connectors.some(item=>item.id==='searxng'&&item.ok));
+    assert.ok(live.sources.some(item=>item.source==='searxng'));
+    assert.ok(calls.some(url=>url.startsWith('https://searx.example.test/search')));
+  });
 });
 
 test('falla cerrado cuando no existe evidencia viva',async()=>{
