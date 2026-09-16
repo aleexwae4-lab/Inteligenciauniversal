@@ -36,7 +36,7 @@ export function backendConfig() {
     exposeDiagnostics: boolEnv('WAE_V73_EXPOSE_DIAGNOSTICS', nodeEnv !== 'production'),
     adminApiKeyConfigured: Boolean(process.env.WAE_ADMIN_API_KEY),
     supabaseConfigured: Boolean(process.env.SUPABASE_URL && (process.env.SUPABASE_PUBLISHABLE_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY)),
-    providerConfigured: Boolean(process.env.OPENAI_API_KEY || process.env.ANTHROPIC_API_KEY || process.env.GEMINI_API_KEY || process.env.XAI_API_KEY || process.env.OPENROUTER_API_KEY),
+    providerConfigured: Boolean(process.env.OPENAI_API_KEY || process.env.ANTHROPIC_API_KEY || process.env.GEMINI_API_KEY || process.env.XAI_API_KEY || process.env.OPENROUTER_API_KEY || process.env.IA_GRATIS_API_TOKEN),
   });
 }
 
