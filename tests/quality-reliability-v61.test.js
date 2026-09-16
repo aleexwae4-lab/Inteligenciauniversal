@@ -43,9 +43,21 @@ test('v61 catches exact bullet counts and word limits',()=>{
   assert.equal(audit.blockers.some(x=>x.startsWith('bullet_count_')),true);
 });
 
+test('v61 never promotes an unverified factual answer even when its aggregate score is high',()=>{
+  const payload={
+    reply:'La empresa fue fundada en 2024 y desarrolla software empresarial.',
+    answer_intelligence:{gate:'UNVERIFIED',factual_claims:1,citation_coverage:0}
+  };
+  const audit=auditQualityReliability(payload,{prompt:'Describe brevemente la empresa.'});
+  assert.equal(audit.promotion_eligible,false);
+  assert.equal(audit.claim_policy.unverified_promotion,false);
+});
+
 test('v61 never advertises universal superiority without benchmark proof',()=>{
   const caps=qualityReliabilityCapabilities();
   assert.equal(caps.version,'quality-reliability/v61');
+  assert.equal(caps.unverifiedPromotion,false);
+  assert.deepEqual(caps.promotionAnswerGates,['PASS']);
   assert.equal(caps.competitorClaimRequiresBenchmark,true);
   assert.equal(caps.universalSuperiorityClaim,false);
   assert.equal(caps.baseModelTraining,false);
