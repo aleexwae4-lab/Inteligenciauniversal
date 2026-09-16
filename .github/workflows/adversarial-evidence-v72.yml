@@ -1,0 +1,55 @@
+name: Adversarial Evidence v72
+
+on:
+  pull_request:
+    paths:
+      - 'lib/adversarial-evidence-v72.js'
+      - 'api/evals.js'
+      - 'tests/adversarial-evidence-v72.test.js'
+      - 'supabase/migrations/20260915235500_trusted_evidence_certification_v72.sql'
+      - 'supabase/migrations/20260916000100_trusted_evidence_certification_v72_hardening.sql'
+      - '.github/workflows/adversarial-evidence-v72.yml'
+      - 'package.json'
+  push:
+    branches: [main]
+    paths:
+      - 'lib/adversarial-evidence-v72.js'
+      - 'api/evals.js'
+      - 'tests/adversarial-evidence-v72.test.js'
+      - 'supabase/migrations/20260915235500_trusted_evidence_certification_v72.sql'
+      - 'supabase/migrations/20260916000100_trusted_evidence_certification_v72_hardening.sql'
+
+permissions:
+  contents: read
+
+jobs:
+  adversarial-evidence:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - run: npm install --no-audit --no-fund
+      - name: Syntax gate
+        run: |
+          node --check lib/adversarial-evidence-v72.js
+          node --check api/evals.js
+      - name: Adversarial benchmark unit gate
+        run: node --test tests/adversarial-evidence-v72.test.js
+      - name: Migration security contract
+        run: |
+          BASE=supabase/migrations/20260915235500_trusted_evidence_certification_v72.sql
+          HARD=supabase/migrations/20260916000100_trusted_evidence_certification_v72_hardening.sql
+          grep -q 'complete_64_case_suite_required' "$BASE"
+          grep -q 'enable row level security' "$BASE"
+          grep -q 'target_answer_hash' "$BASE"
+          grep -q 'wae_validate_worker_token' "$BASE"
+          grep -q 'benchmark_threshold_contract_mismatch' "$HARD"
+          grep -q 'aggregate_outcome_mismatch' "$HARD"
+          grep -q 'claim_gate_inconsistency' "$HARD"
+          grep -q 'claim_metric_threshold_failure' "$HARD"
+          grep -q 'complete_case_scores_required' "$HARD"
+          grep -q 'pg_column_size(p_entries)>2097152' "$HARD"
+          ! grep -Eq 'target_answer[[:space:]]+text|reference_answer[[:space:]]+text' "$BASE" "$HARD"
