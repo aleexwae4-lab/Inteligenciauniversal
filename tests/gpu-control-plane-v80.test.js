@@ -53,5 +53,7 @@ test('live compatibility chain is v60 -> v80 -> v63 and telemetry contract store
     readFile(new URL('../lib/gpu-control-plane-v80.js',import.meta.url),'utf8')
   ]);
   assert.match(alias,/capacity-chat-v80\.js/);assert.match(v80,/capacity-chat-v63\.js/);assert.match(v80,/generateWithGpuControlPlane/);
-  assert.match(control,/wae_gpu_metrics_record_v79/);assert.match(control,/p_scope_hash/);assert.match(control,/createHmac/);assert.doesNotMatch(control,/p_prompt|p_response|p_message_content|p_attachment_content/);
+  assert.match(control,/wae_gpu_metrics_record_v79/);assert.match(control,/p_scope_hash/);assert.match(control,/createHmac/);
+  assert.doesNotMatch(control,/\bp_prompt\b|\bp_response\b|\bp_response_content\b|\bp_message_content\b|\bp_attachment_content\b/);
+  assert.match(control,/p_response_start_ms/);
 });
