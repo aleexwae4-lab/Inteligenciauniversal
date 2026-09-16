@@ -15,7 +15,8 @@ const certification={
   gates:{provenance:true},
   baseCertification:{
     evaluatedCases:64,
-    gates:{fullSuiteGate:true},
+    invalid:[],
+    gates:{fullPairedSuite:true},
     regressions:[
       {caseId:'research-1',failureTags:['assertion:minimum_sources','evidence:missing'],targetScore:.71,referenceScore:.92},
       {caseId:'efficiency-1',failureTags:['performance:latency_budget'],targetScore:.80,referenceScore:.89},
@@ -33,6 +34,7 @@ test('v95 training requires a complete signed 64-case v93 provenance gate',()=>{
   assert.equal(ready.baseModelWeightsChanged,false);
   assert.equal(verifiedTrainingReadinessV95({...certification,evaluatedCases:63}).ready,false);
   assert.equal(verifiedTrainingReadinessV95({...certification,gates:{provenance:false}}).ready,false);
+  assert.equal(verifiedTrainingReadinessV95({...certification,baseCertification:{...certification.baseCertification,gates:{fullPairedSuite:false}}}).ready,false);
 });
 
 test('benchmark losses become privacy-safe regression curriculum items without raw answers',()=>{
