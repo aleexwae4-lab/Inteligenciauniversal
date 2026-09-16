@@ -2,6 +2,7 @@ import capacityChatV81 from './capacity-chat-v81.js';
 import { runKnowledgeAnswer } from '../lib/knowledge/knowledge-answer-v1.js';
 import { sameOriginKnowledgeEligible } from '../lib/recovery-policy-v82.js';
 import { runFocusedFactualAnswer, focusedFactualEligible, FOCUSED_FACTUAL_VERSION } from '../lib/knowledge/focused-factual-v83.js';
+export { CAPACITY_CHAT_V82 } from './capacity-chat-v82.js';
 
 export const CAPACITY_CHAT_V83='capacity-chat/v83-focused-factual-answer';
 
