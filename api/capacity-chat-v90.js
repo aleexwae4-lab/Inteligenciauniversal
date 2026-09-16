@@ -10,7 +10,7 @@ import { knowledgeExpansionCapabilitiesV90, KNOWLEDGE_EXPANSION_VERSION } from '
 import { applyHeaders, originAllowed, getClientIp } from '../lib/security.js';
 import { tryAcquireChatSlot } from '../lib/concurrency-governor.js';
 
-export const CAPACITY_CHAT_V90='capacity-chat/v90-latency-autonomous-knowledge';
+export const CAPACITY_CHAT_V90='capacity-chat/v90.1-latency-autonomous-knowledge';
 
 function setHeaders(res,latencyPlan,path='fallback'){
   res.setHeader('X-WAE-Chat-Release',CAPACITY_CHAT_V90);
@@ -37,6 +37,11 @@ function userKey(req,body={}){
   return String(body.userKey||body.user_id||body.userId||body.sessionId||body.session_id||getClientIp(req)||'anonymous').slice(0,500);
 }
 
+function hasExplicitProvider(body={}){
+  const provider=String(body.provider||'').trim().toLowerCase();
+  return Boolean(provider&&provider!=='auto');
+}
+
 async function tryFastFactual(body,latencyPlan){
   const result=await withinLatencyBudget(latencyPlan.budgets.focused_timeout_ms,signal=>runFocusedFactualAnswer({body,fetchImpl:fetchWithParentSignal(signal)}));
   if(!result)return null;
@@ -56,6 +61,13 @@ export default async function capacityChatV90(req,res){
   if(req.method!=='POST')return capacityChatV89(req,res);
   applyHeaders(res);
   if(!originAllowed(req))return res.status(403).json({error:'origin_not_allowed'});
+
+  // Explicit provider selection is a caller contract. Do not spend time in the
+  // automatic v90 retrieval/fusion planner before honoring that choice.
+  if(hasExplicitProvider(body)){
+    setHeaders(res,latencyPlan,'explicit-provider-v89');
+    return capacityChatV89(req,res);
+  }
 
   if(latencyPlan.profile==='bypass'){
     setHeaders(res,latencyPlan,'direct-v89-bypass');
@@ -102,6 +114,6 @@ export function capacityChatV90Capabilities(){
     latency:latencyGovernorCapabilitiesV90(),
     knowledgeExpansion:knowledgeExpansionCapabilitiesV90(),
     knowledgeFusion:KNOWLEDGE_FUSION_V90,
-    policy:{fastVerifiedFacts:true,directBypassWithoutResearchAdmission:true,parallelEvidence:true,parallelMultiagent:true,abortExpiredFocusedRetrieval:true,verifyBeforeAcceptPreserved:true,externalBenchmarkRequiredForSuperiorityClaim:true,superiorityClaim:false}
+    policy:{explicitProviderBypassesAutomaticPlanner:true,fastVerifiedFacts:true,directBypassWithoutResearchAdmission:true,parallelEvidence:true,parallelMultiagent:true,abortExpiredFocusedRetrieval:true,verifyBeforeAcceptPreserved:true,externalBenchmarkRequiredForSuperiorityClaim:true,superiorityClaim:false}
   };
 }
