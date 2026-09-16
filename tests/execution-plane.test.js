@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { createExecutionReceipt, executeCapability, executionPlaneSnapshot, resolveExecutionAdapter, EXECUTION_PLANE_VERSION } from '../lib/execution-plane.js';
+import { createExecutionReceipt, executeCapability, executionPlaneSnapshot, executionReceiptPersistenceState, resolveExecutionAdapter, EXECUTION_AUDIT_LEDGER_VERSION, EXECUTION_PLANE_VERSION } from '../lib/execution-plane.js';
 
 function withEnv(patch,fn){
   const previous=Object.fromEntries(Object.keys(patch).map((key)=>[key,process.env[key]]));
@@ -16,6 +16,25 @@ test('execution plane is fail-closed and exposes only read or pure-compute adapt
   assert.ok(snapshot.adapters.length>=4);
   assert.ok(snapshot.adapters.every((adapter)=>['read','none'].includes(adapter.sideEffect)));
   assert.ok(snapshot.adapters.every((adapter)=>adapter.approvalRequired===false));
+});
+
+test('audit ledger prefers service role and supports a token-guarded write-only fallback',async()=>{
+  await withEnv({SUPABASE_URL:'https://example.invalid',SUPABASE_SERVICE_ROLE_KEY:'service-test',SUPABASE_PUBLISHABLE_KEY:'public-test',WAE_RUNTIME_BRIDGE_TOKEN:'runtime-test'},()=>{
+    const state=executionReceiptPersistenceState();
+    assert.equal(state.version,EXECUTION_AUDIT_LEDGER_VERSION);
+    assert.equal(state.mode,'service_role');
+    assert.equal(state.configured,true);
+    assert.equal(state.writeOnlyFallback,false);
+  });
+  await withEnv({SUPABASE_URL:'https://example.invalid',SUPABASE_SERVICE_ROLE_KEY:null,SUPABASE_PUBLISHABLE_KEY:'public-test',WAE_RUNTIME_BRIDGE_TOKEN:'runtime-test'},()=>{
+    const state=executionReceiptPersistenceState();
+    assert.equal(state.mode,'token_guarded_rls');
+    assert.equal(state.configured,true);
+    assert.equal(state.durable,true);
+    assert.equal(state.writeOnlyFallback,true);
+    assert.equal(state.rawContentStored,false);
+    assert.equal(state.identityHashesOnly,true);
+  });
 });
 
 test('adapter resolution is explicit and unsupported capabilities never fall through',()=>{
