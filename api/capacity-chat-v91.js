@@ -3,6 +3,8 @@ import { applyHeaders, originAllowed, allowRequest, getClientIp } from '../lib/s
 import { tryAcquireChatSlot } from '../lib/concurrency-governor.js';
 import { planSpecialistCopilots, publicSpecialistPlan, runSpecialistCouncilV91, shouldRunSpecialistCouncilV91, SPECIALIST_COPILOT_VERSION } from '../lib/specialist-copilot-arsenal-v91.js';
 import { runSpecialistSinglePassV91, shouldRunSpecialistSinglePassV91 } from '../lib/specialist-copilot-runtime-v91.js';
+import { runSpecialistCouncilV92 } from '../lib/specialist-council-v92.js';
+import { userContextStateV92 } from '../lib/user-context-v92.js';
 
 export const CAPACITY_CHAT_V91='capacity-chat/v91-specialist-copilot-arsenal';
 
@@ -85,8 +87,11 @@ export default async function capacityChatV91(req,res){
 
   try{
     let result=null,path='';
-    if(council){result=await runSpecialistCouncilV91({body,plan}).catch(()=>null);path='parallel-specialist-council-v91'}
-    else if(single){result=await runSpecialistSinglePassV91({body,plan}).catch(()=>null);path='single-pass-specialist-v91'}
+    if(council){
+      const personalized=userContextStateV92(body).affectsGeneration===true;
+      result=personalized?await runSpecialistCouncilV92({body,plan}).catch(()=>null):await runSpecialistCouncilV91({body,plan}).catch(()=>null);
+      path=personalized?'parallel-specialist-council-v92-context':'parallel-specialist-council-v91';
+    }else if(single){result=await runSpecialistSinglePassV91({body,plan}).catch(()=>null);path='single-pass-specialist-v91'}
     if(result){
       setHeaders(res,plan,path);
       return res.status(200).json(decorate(result,plan,true,path));
