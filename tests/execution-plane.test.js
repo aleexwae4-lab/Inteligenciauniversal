@@ -37,12 +37,20 @@ test('audit ledger prefers service role and supports a token-guarded write-only 
   });
 });
 
-test('adapter resolution is explicit and unsupported capabilities never fall through',()=>{
+test('adapter resolution is explicit and unsupported capabilities never fall through',async()=>withEnv({TAVILY_API_KEY:'test-key',IA_GRATIS_API_TOKEN:null},()=>{
   assert.equal(resolveExecutionAdapter('web_search','')?.adapter.id,'web_search_read');
   assert.equal(resolveExecutionAdapter('software_engineering','search_code')?.adapter.id,'github_code_search_read');
   assert.equal(resolveExecutionAdapter('image_generation','generate'),null);
   assert.equal(resolveExecutionAdapter('computer_use','click'),null);
-});
+}));
+
+test('ia.gratis can become the governed web-search recovery adapter when the primary search runtime is absent',async()=>withEnv({TAVILY_API_KEY:null,IA_GRATIS_API_TOKEN:'test-token'},()=>{
+  const resolved=resolveExecutionAdapter('web_search','');
+  assert.equal(resolved?.adapter.id,'ia_gratis_search_read');
+  assert.equal(resolved?.tool.externalProcessing,true);
+  assert.equal(resolved?.tool.tokenCost,50);
+  assert.equal(resolved?.adapter.sideEffect,'read');
+}));
 
 test('execution receipts hash identities and payloads instead of storing raw secrets',()=>{
   const receipt=createExecutionReceipt({
@@ -71,7 +79,7 @@ test('unsupported execution is blocked and still emits an auditable receipt',asy
   assert.equal(persisted.length,1);
 });
 
-test('configured read-only adapter executes through injected certified primitive',async()=>withEnv({TAVILY_API_KEY:'test-key'},async()=>{
+test('configured read-only adapter executes through injected certified primitive',async()=>withEnv({TAVILY_API_KEY:'test-key',IA_GRATIS_API_TOKEN:null},async()=>{
   const persisted=[];
   const result=await executeCapability({
     capability:'web_search',task:'estado actual del sistema',userKey:'u2',sessionId:'s2',
