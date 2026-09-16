@@ -1,1 +1,1 @@
-{"compilerOptions":{"strict":false}}
+{"compilerOptions":{"strict":false},"imports":{"https://raw.githubusercontent.com/aleexwae4-lab/Inteligenciauniversal/401e30e65991d28740ce185de05df8674a2315b6/supabase/functions/wae-local-voice-demo-v61/router.ts":"./router-v25.ts","npm:@supabase/supabase-js@2":"./supabase-client-v81.ts"}}
