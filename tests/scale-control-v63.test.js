@@ -10,7 +10,7 @@ import {
   scaleAdmissionNeeded
 } from '../lib/scale-control-v63.js';
 
-const migration=new URL('../supabase/migrations/20260914003900_wae_scale_control_v63.sql',import.meta.url);
+const migration=new URL('../supabase/migrations/20260915192500_universal_core_v63_scale_20k.sql',import.meta.url);
 
 test('v63 declares a 20k subscriber software target without claiming current infrastructure load certification',()=>{
   assert.equal(SCALE_CONTROL_VERSION,'universal-runtime-control/v63');
