@@ -1,6 +1,7 @@
 import { timingSafeEqual } from 'node:crypto';
 import { applyHeaders } from '../lib/security.js';
 import { callInternalSupabaseRpc } from '../lib/internal-supabase-rpc-v74.js';
+import { adversarialEvidenceSuite } from '../lib/adversarial-evidence-v72.js';
 import {
   VERIFIED_GPT_ARENA_VERSION,
   benchmarkAttestationState,
@@ -10,11 +11,17 @@ import {
   verifiedGptArenaCapabilities,
   verifiedGptArenaManifest,
 } from '../lib/verified-gpt-arena-v93.js';
+import {
+  executeExactOpenAIReference,
+  executeExactUniversalCoreTarget,
+  VERIFIED_PROVIDER_EXECUTION_VERSION,
+} from '../lib/verified-provider-execution-v93.js';
 
 const MAX_ENTRIES = 64;
 const MAX_ANSWER = 80_000;
 const text = (value, max = 200) => String(value ?? '').slice(0, max);
 const bodyOf = req => req?.body && typeof req.body === 'object' ? req.body : {};
+const suiteById = new Map(adversarialEvidenceSuite().map(item => [item.id, item]));
 
 function requestToken(req) {
   const raw = req?.headers?.['x-wae-worker-token'] ?? req?.headers?.get?.('x-wae-worker-token') ?? '';
@@ -51,6 +58,10 @@ function normalizeEntries(value) {
   }));
 }
 
+function immutableCase(caseId) {
+  return suiteById.get(text(caseId, 120)) || null;
+}
+
 async function databaseGate() {
   const result = await callInternalSupabaseRpc({
     functionName: 'iu_supremacy_gate_v1',
@@ -66,7 +77,7 @@ async function databaseGate() {
       reason: result.unconfigured ? 'supabase_internal_transport_unconfigured' : result.error || 'database_gate_unavailable',
     };
   }
-  const payload = result.payload && typeof result.payload === 'object' ? result.payload : {};
+  const payload = Array.isArray(result.payload) ? (result.payload[0] || {}) : (result.payload && typeof result.payload === 'object' ? result.payload : {});
   return {
     available: true,
     state: text(payload.state || 'HOLD_UNKNOWN', 120),
@@ -86,10 +97,12 @@ async function statusPayload() {
   const comparator = gptComparatorReadiness();
   const attestation = benchmarkAttestationState();
   const db = await databaseGate();
-  const publicClaimAllowed = Boolean(db.claimAllowed && comparator.executable && attestation.configured);
+  const executionReady = comparator.executable && attestation.configured;
+  const publicClaimAllowed = Boolean(db.claimAllowed && executionReady);
   return {
     success: true,
     version: VERIFIED_GPT_ARENA_VERSION,
+    executionVersion: VERIFIED_PROVIDER_EXECUTION_VERSION,
     manifest: verifiedGptArenaManifest(),
     comparator,
     attestation,
@@ -98,7 +111,7 @@ async function statusPayload() {
       claimAllowed: publicClaimAllowed,
       state: publicClaimAllowed ? 'ELIGIBLE_FOR_V93_ATTESTED_CERTIFICATION' : 'HOLD',
       reason: publicClaimAllowed
-        ? 'The database, exact GPT comparator, and signed-attestation prerequisites are present. A complete 64-case attested certification is still required for a benchmark-scoped advantage claim.'
+        ? 'The database, exact GPT comparator, and signed-attestation prerequisites are present. A complete 64-case server-executed certification is still required for a benchmark-scoped advantage claim.'
         : !comparator.executable
           ? comparator.reason
           : !attestation.configured
@@ -109,7 +122,77 @@ async function statusPayload() {
       globalSuperiorityClaimAllowed: false,
       benchmarkScopedClaimRequiresCompleteCertification: true,
       simulatedGptForbidden: true,
+      pastedCompetitorAnswerForbidden: true,
       unversionedGptForbidden: true,
+      genericAttestationEndpointEnabled: false,
+      candidateExecutionMustOccurInsideTrustedRuntime: true,
+    },
+  };
+}
+
+async function executeCase(body) {
+  const testCase = immutableCase(body.caseId);
+  if (!testCase) return { status: 404, payload: { success: false, error: 'benchmark_case_not_found' } };
+  if (text(body.promptHash, 128) && text(body.promptHash, 128) !== testCase.promptHash) {
+    return { status: 422, payload: { success: false, error: 'prompt_hash_mismatch' } };
+  }
+
+  const side = text(body.side, 20).toLowerCase();
+  let execution;
+  let candidateId;
+  let commitSha = '';
+  if (side === 'reference') {
+    const comparator = gptComparatorReadiness();
+    if (!comparator.executable || !comparator.referenceId) {
+      return { status: 503, payload: { success: false, error: comparator.reason || 'gpt_comparator_unavailable', comparator } };
+    }
+    execution = await executeExactOpenAIReference({ prompt: testCase.prompt, mode: testCase.mode });
+    candidateId = comparator.referenceId;
+  } else if (side === 'target') {
+    execution = await executeExactUniversalCoreTarget({ prompt: testCase.prompt, mode: testCase.mode });
+    candidateId = 'universal_core';
+    commitSha = text(process.env.RENDER_GIT_COMMIT || process.env.GITHUB_SHA || body.commitSha || '', 80);
+    if (!commitSha) return { status: 503, payload: { success: false, error: 'target_commit_identity_unavailable' } };
+  } else {
+    return { status: 422, payload: { success: false, error: 'side_must_be_target_or_reference' } };
+  }
+
+  const attestation = createRuntimeAttestation({
+    caseId: testCase.id,
+    promptHash: testCase.promptHash,
+    candidateId,
+    provider: execution.provider,
+    model: execution.model,
+    answer: execution.answer,
+    responseId: execution.responseId,
+    requestId: execution.requestId,
+    commitSha,
+    observedAt: execution.observedAt,
+  });
+  if (attestation.signed !== true) return { status: 503, payload: { success: false, error: attestation.error || 'attestation_failed' } };
+
+  return {
+    status: 200,
+    payload: {
+      success: true,
+      caseId: testCase.id,
+      promptHash: testCase.promptHash,
+      side,
+      execution: {
+        provider: execution.provider,
+        model: execution.model,
+        responseId: execution.responseId || null,
+        requestId: execution.requestId || null,
+        latencyMs: execution.latencyMs,
+        observedAt: execution.observedAt,
+        path: execution.execution,
+      },
+      candidate: {
+        id: candidateId,
+        answer: execution.answer,
+        latencyMs: execution.latencyMs,
+        attestation,
+      },
     },
   };
 }
@@ -128,20 +211,24 @@ export default async function handler(req, res) {
   if (!auth.ok) return res.status(auth.status).json({ success: false, error: auth.error });
 
   if (action === 'attest') {
-    const attestation = createRuntimeAttestation({
-      caseId: body.caseId,
-      promptHash: body.promptHash,
-      candidateId: body.candidateId,
-      provider: body.provider,
-      model: body.model,
-      answer: text(body.answer ?? body.text ?? '', MAX_ANSWER),
-      responseId: body.responseId,
-      requestId: body.requestId,
-      commitSha: body.commitSha,
-      observedAt: body.observedAt || new Date().toISOString(),
+    return res.status(410).json({
+      success: false,
+      error: 'direct_attestation_forbidden_use_execute_case',
+      reason: 'v93 never signs worker-supplied provider/model/answer claims. The candidate must be executed inside the trusted runtime first.',
     });
-    if (attestation.signed !== true) return res.status(503).json({ success: false, error: attestation.error || 'attestation_failed' });
-    return res.status(200).json({ success: true, attestation });
+  }
+
+  if (action === 'execute_case') {
+    try {
+      const result = await executeCase(body);
+      return res.status(result.status).json(result.payload);
+    } catch (error) {
+      return res.status(Number(error?.status) >= 400 && Number(error?.status) < 600 ? Number(error.status) : 502).json({
+        success: false,
+        error: 'trusted_candidate_execution_failed',
+        detail: text(error?.message || error, 300),
+      });
+    }
   }
 
   if (action === 'certify_attested') {
