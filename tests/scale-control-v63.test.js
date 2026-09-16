@@ -60,13 +60,15 @@ test('database migration is private, sharded and lease-based',async()=>{
   assert.match(sql,/contains_prompt_content|stores_prompt_content|never prompt/i);
 });
 
-test('v63 chat wrapper keeps local v48 governor behind distributed admission',async()=>{
+test('v76 compatibility wrapper preserves v63 distributed admission and local v48 governor underneath',async()=>{
   const wrapper=await readFile(new URL('../api/capacity-chat-v63.js',import.meta.url),'utf8');
-  const legacy=await readFile(new URL('../api/capacity-chat-v60.js',import.meta.url),'utf8');
+  const compatibility=await readFile(new URL('../api/capacity-chat-v60.js',import.meta.url),'utf8');
+  const gpuWrapper=await readFile(new URL('../api/capacity-chat-v76.js',import.meta.url),'utf8');
   assert.match(wrapper,/distributedAdmission/);
   assert.match(wrapper,/releaseDistributedAdmission/);
   assert.match(wrapper,/capacityChatV62/);
   assert.match(wrapper,/finally/);
   assert.match(wrapper,/Retry-After/);
-  assert.match(legacy,/capacity-chat-v63\.js/);
+  assert.match(compatibility,/capacity-chat-v76\.js/);
+  assert.match(gpuWrapper,/capacityChatV63/);
 });
