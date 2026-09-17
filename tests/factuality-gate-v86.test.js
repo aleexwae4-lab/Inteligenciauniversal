@@ -1,6 +1,8 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import capacityChatV86 from '../api/capacity-chat-v86.js';
+import { conversationRoutingClassV105 } from '../api/capacity-chat-v105.js';
+import { edgeGenerativeRescueEligible, researchRescueEligible } from '../lib/intelligence-rescue.js';
 import { classifyFactualityRequest, factualityDecision, factualityGateCapabilities } from '../lib/factuality-gate-v86.js';
 
 test('v86 live chat handler loads',()=>{
@@ -12,6 +14,14 @@ test('v86 requires verification for current information',()=>{
   assert.equal(profile.current,true);
   assert.equal(profile.requires_verification,true);
   assert.equal(profile.preferred_repair,'research');
+});
+
+test('stable factual prompts stay on premium brain and keep Edge as post-failure rescue',()=>{
+  const message='¿Sabes qué es un termostato?';
+  assert.equal(conversationRoutingClassV105({message,mode:'general',provider:'auto'}),'legacy');
+  assert.equal(edgeGenerativeRescueEligible(message,'general'),true);
+  assert.equal(researchRescueEligible(message,'general'),true);
+  assert.equal(edgeGenerativeRescueEligible('Dime el precio actual de Bitcoin','general'),false);
 });
 
 test('v86 blocks precise factual answers without evidence',()=>{
