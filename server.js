@@ -5,6 +5,7 @@ import { stat } from 'node:fs/promises';
 import { extname, join, normalize, basename } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import chatHandler from './api/capacity-chat-v60.js';
+import nativeBrainHandler from './api/native-brain.js';
 import continuityHandler from './api/continuity.js';
 import performanceHandler from './api/performance.js';
 import healthHandler from './api/health.js';
@@ -48,16 +49,17 @@ function mobilePremiumHandler(req,res) {
       if (!chunk.includes('premium-v5.js')) scripts.push('<script src="/premium-v5.js?v=43" defer></script>');
       if (!chunk.includes('productivity-v59.js')) scripts.push('<script src="/productivity-v59.js?v=59" defer></script>');
       if (!chunk.includes('mobile-canonical-chat-v80.js')) scripts.push('<script src="/mobile-canonical-chat-v80.js?v=103" defer></script>');
+      if (!chunk.includes('canonical-brain-v106.js')) scripts.push('<script src="/canonical-brain-v106.js?v=108" data-canonical-brain-v106="1" defer></script>');
       if (scripts.length) chunk = chunk.replace('</body>', `${scripts.join('')}</body>`);
       res.setHeader('Cache-Control','no-store, max-age=0, must-revalidate');
       res.setHeader('Pragma','no-cache');
       res.setHeader('Expires','0');
-      res.setHeader('X-WAE-Mobile-Release','universal-core-mobile-v103-context-integrity');
-      res.setHeader('X-WAE-Mobile-Chat-Route','same-origin-context-history-first');
-      res.setHeader('X-WAE-Mobile-Fix','context-integrity-v103-stable-session-history');
+      res.setHeader('X-WAE-Mobile-Release','universal-core-mobile-v108-native-brain');
+      res.setHeader('X-WAE-Mobile-Chat-Route','native-brain-first');
+      res.setHeader('X-WAE-Mobile-Fix','native-brain-v1-canonical-v108');
       res.setHeader('X-WAE-Mobile-Response-Lifecycle','mobile-response-lifecycle/v97');
       res.setHeader('X-WAE-Mobile-Compatible','universal-core-mobile-v47-long-session');
-      res.setHeader('X-WAE-Mobile-Compatible-Fix','long-session-backpressure-v47 + context-history-identity-v103');
+      res.setHeader('X-WAE-Mobile-Compatible-Fix','long-session-backpressure-v47 + native-brain-v1');
       res.setHeader('X-WAE-Capacity-Release','capacity-governor-v48');
       res.setHeader('X-WAE-Premium-Release','universal-core-rich-v43');
       res.setHeader('X-WAE-Live-Data','live-data-mesh/v58');
@@ -65,16 +67,18 @@ function mobilePremiumHandler(req,res) {
       res.setHeader('X-WAE-Answer-Intelligence','answer-intelligence/v60');
       res.setHeader('X-WAE-Knowledge-Fabric','universal-knowledge-fabric/v1');
       res.setHeader('X-WAE-Context-Integrity','context-integrity/v103');
+      res.setHeader('X-WAE-Native-Brain','wae-native-brain/v1');
     }
     return nativeEnd(chunk, encoding, callback);
   };
   return mobileHandler(req,res);
 }
 
-// Compatibility contract: api/capacity-chat-v58.js remains the live-data gateway wrapped by capacity-chat-v60.
 const apiRoutes = new Map([
   ['/api/chat', chatHandler],
   ['/api/fast-chat', chatHandler],
+  ['/api/native-brain/chat', nativeBrainHandler],
+  ['/api/native-brain/status', nativeBrainHandler],
   ['/api/continuity/chat/completions', continuityHandler],
   ['/api/performance', performanceHandler],
   ['/api/health', healthHandler],
@@ -191,7 +195,7 @@ async function serveFile(req, res, pathname) {
   res.setHeader('Content-Type', contentTypes[ext] || 'application/octet-stream');
   res.setHeader('X-Content-Type-Options', 'nosniff');
   res.setHeader('Referrer-Policy', 'same-origin');
-  if (name === 'sw.js' || name === 'mobile-canonical-chat-v80.js' || ext === '.html') {
+  if (name === 'sw.js' || name === 'mobile-canonical-chat-v80.js' || name === 'canonical-brain-v106.js' || ext === '.html') {
     res.setHeader('Cache-Control','no-store, max-age=0, must-revalidate');
     res.setHeader('Pragma','no-cache');
     res.setHeader('Expires','0');
