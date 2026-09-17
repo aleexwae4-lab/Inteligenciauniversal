@@ -1,6 +1,7 @@
 (()=>{
   'use strict';
   const VERSION='canonical-brain/v112-server-first';
+  // Compatibility contract: local-native-cpu-wasm-v111 remains available as an offline fallback through universal-core-local-brain/v2-hybrid.
   if(window.__waeCanonicalBrainV112?.installed)return;
 
   const EDGE='https://pbswcbryxawsmltyromd.supabase.co/functions/v1/wae-local-voice-demo-v61';
