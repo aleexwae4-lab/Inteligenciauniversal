@@ -3,13 +3,14 @@ import legacyCapacityChat from './capacity-chat-v91.js';
 
 export const CAPACITY_CHAT_V106='capacity-chat/v106-universal-runtime-first';
 
-const GENERAL_MODES=new Set(['','general','auto']);
+const AUTO_MODES=new Set(['','general','auto']);
+const MODERN_MODES=new Set(['','general','auto','code','analysis','design']);
 
 const CURRENT_OR_RESEARCH_RX=/\b(hoy|ahora|actual(?:es|idad|izado|izada)?|reciente|recientes|ultim[oa]s?|latest|today|current|noticias|news|precio|cotizacion|jurisprudencia|reforma|ley vigente|verifica|verificar|fuentes?|evidencia|investiga|investigacion|research|paper|papers|estado del arte|benchmark actual|tendencia actual)\b/i;
 const HIGH_IMPACT_RX=/\b(medic\w*|diagnost\w*|tratamiento\w*|dosis|farmac\w*|legal\w*|juridic\w*|penal\w*|delito\w*|fiscal\w*|tributar\w*|inversion\w*|credito\w*|fraude\w*|seguridad critica|high[- ]risk)\b/i;
 const CODE_RX=/```|\b(codigo|programa(?:r|cion)?|typescript|javascript|python|sql|api|backend|frontend|debug|bug|refactor|github|deploy|supabase|render|vercel|router|runtime|middleware|endpoint|servidor|server|node|react|vite|prisma)\b/i;
 const DESIGN_RX=/\b(disena|ux|ui|interfaz|experiencia|flujo|pantalla|responsive|movil|branding|producto visual)\b/i;
-const ANALYSIS_RX=/\b(analiza|analisis|audita|auditar|revisa|evaluar|evalua|diagnostico|estrategia|riesgo|roi|prioridad|decision|compara|arquitectura|causa raiz|optimiza|optimizar|endurece|endurecer|certifica|certificar)\b/i;
+const ANALYSIS_RX=/\b(analiza|analisis|audita|auditar|revisa|evaluar|evalua|diagnostico|estrategia|riesgo|roi|prioridad|decision|compara|arquitectura|causa raiz|optimiza|optimizar|endurece|endurecer|endure|certifica|certificar)\b/i;
 
 function normalize(value=''){
   return String(value||'')
@@ -49,7 +50,7 @@ export function universalRoutingClassV106(body={}){
   const q=normalize(raw);
 
   if(!raw)return'legacy';
-  if(!GENERAL_MODES.has(mode)||hasExternalIntent(body)||explicitSpecialistIntent(body))return'legacy';
+  if(mode==='research'||mode==='executive'||!MODERN_MODES.has(mode)||hasExternalIntent(body)||explicitSpecialistIntent(body))return'legacy';
 
   if(!q&&/[?¿]+/.test(raw))return'conversation';
   if(/\b(quien eres(?: tu)?|que eres(?: tu)?|que es universal core|quien eres tu como (?:ia|inteligencia artificial)|que eres como (?:ia|inteligencia artificial))\b/.test(q))return'identity';
@@ -77,12 +78,21 @@ function canonicalUniversalMessage(body={}){
 
 export function inferredUniversalModeV106(body={}){
   const requested=String(body.mode||body.agent||'general').toLowerCase();
-  if(!GENERAL_MODES.has(requested))return requested;
+  if(!AUTO_MODES.has(requested))return requested;
   const q=normalize(body.message||body.task||body.prompt||body.query||'');
   if(CODE_RX.test(q))return'code';
   if(DESIGN_RX.test(q))return'design';
   if(ANALYSIS_RX.test(q))return'analysis';
   return'general';
+}
+
+export function hardenedUniversalMessageV106(body={},inferredMode=inferredUniversalModeV106(body)){
+  const message=canonicalUniversalMessage(body);
+  // adaptive-router historically classified any <=24-char non-matched prompt
+  // as FAST before honoring mode=analysis. Prefix only those short analytical
+  // commands so they cannot silently collapse into the low-depth lane.
+  if(inferredMode==='analysis'&&normalize(message).length<=24)return `Analiza con profundidad: ${message}`;
+  return message;
 }
 
 export default async function capacityChatV106(req,res){
@@ -98,7 +108,7 @@ export default async function capacityChatV106(req,res){
   res.setHeader('X-WAE-Universal-Mode',inferredMode);
   req.body={
     ...body,
-    message:canonicalUniversalMessage(body),
+    message:hardenedUniversalMessageV106(body,inferredMode),
     mode:inferredMode,
     universal_router:CAPACITY_CHAT_V106,
     universal_runtime_first:true
