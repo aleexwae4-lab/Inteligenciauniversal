@@ -1,12 +1,25 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import capacityChatV86 from '../api/capacity-chat-v86.js';
+import nativeBrainHandler from '../api/native-brain.js';
 import { conversationRoutingClassV105 } from '../api/capacity-chat-v105.js';
 import { edgeGenerativeRescueEligible } from '../lib/intelligence-rescue.js';
+import { nativeLocalReply, nativeBrainStatus } from '../lib/native-brain-v1.js';
 import { classifyFactualityRequest, factualityDecision, factualityGateCapabilities } from '../lib/factuality-gate-v86.js';
 
 test('v86 live chat handler loads',()=>{
   assert.equal(typeof capacityChatV86,'function');
+});
+
+test('native brain handler and survival kernel are production-wired',()=>{
+  assert.equal(typeof nativeBrainHandler,'function');
+  const status=nativeBrainStatus();
+  assert.equal(status.version,'wae-native-brain/v1');
+  assert.equal(status.ready,true);
+  assert.equal(status.localKernel,true);
+  assert.match(nativeLocalReply('¿Sabes cuántos planetas hay en el sistema solar?'),/8 planetas/i);
+  assert.match(nativeLocalReply('¿Sabes qué es un termostato?'),/temperatura/i);
+  assert.match(nativeLocalReply('12 * 7'),/84/);
 });
 
 test('v86 requires verification for current information',()=>{
