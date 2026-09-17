@@ -163,4 +163,15 @@
     bootstrapFailOpenToCanonical:true
   };
   document.documentElement.dataset.mobileCanonicalChat='v103';
+
+  // Install the final v106 bridge after every historical fetch interceptor. It uses
+  // XMLHttpRequest for /api/chat, so runtime-client and this v103 wrapper cannot recapture
+  // the canonical call and bounce it back to Edge.
+  if(!document.querySelector('script[data-canonical-brain-v106]')){
+    const script=document.createElement('script');
+    script.src='/canonical-brain-v106.js?v=106';
+    script.async=false;
+    script.dataset.canonicalBrainV106='1';
+    document.head.appendChild(script);
+  }
 })();
