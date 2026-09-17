@@ -6,6 +6,7 @@ on:
       - 'android/**'
       - 'mobile-brain-v110.js'
       - 'premium-v5.js'
+      - 'tests/mobile-native-v110.test.js'
       - '.github/workflows/android-universal-core.yml'
   push:
     branches: [main]
@@ -13,6 +14,7 @@ on:
       - 'android/**'
       - 'mobile-brain-v110.js'
       - 'premium-v5.js'
+      - 'tests/mobile-native-v110.test.js'
       - '.github/workflows/android-universal-core.yml'
   workflow_dispatch:
 
@@ -24,6 +26,9 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+
+      - name: Verify Universal Core mobile contracts
+        run: node --check mobile-brain-v110.js && node --check premium-v5.js && node --test tests/mobile-native-v110.test.js
 
       - name: Set up JDK 17
         uses: actions/setup-java@v4
