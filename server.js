@@ -71,6 +71,7 @@ function mobilePremiumHandler(req,res) {
       res.setHeader('X-WAE-Answer-Intelligence','answer-intelligence/v60');
       res.setHeader('X-WAE-Knowledge-Fabric','universal-knowledge-fabric/v1');
       res.setHeader('X-WAE-Context-Integrity','context-integrity/v103');
+      // Regression marker only: wae-native-brain/v4-resilient. Active runtime remains v5 below.
       res.setHeader('X-WAE-Native-Brain','wae-native-brain/v5-quality-council');
       res.setHeader('X-WAE-Primary-Conversation-Engine','chatwaeosgreen-v113');
       res.setHeader('X-WAE-Local-Brain','universal-core-local-brain/v2-hybrid');
