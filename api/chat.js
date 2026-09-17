@@ -9,6 +9,7 @@ import { councilEligible, deliberateMission } from '../lib/deliberation-plane.js
 import { runWithRequestSignal } from '../lib/network-deadlines-v46.js';
 import { userContextStateV92 } from '../lib/user-context-v92.js';
 import { classifySelfAwarenessV99, buildSelfAwarenessReplyV99, selfAwarenessSnapshotV99 } from '../lib/self-awareness-v99.js';
+import { contextualFollowupV103 } from '../lib/context-integrity-v103.js';
 
 function normalizeFastPath(value='') {
   return String(value || '')
@@ -130,32 +131,34 @@ export default async function handler(req,res) {
   const intent=normalizeUserIntent(body.message || body.task || '');
   const runtimeBody=intent.changed?{...body,message:intent.text}:body;
   const userContext=userContextStateV92(runtimeBody);
+  const contextualFollowup=contextualFollowupV103(runtimeBody.message||runtimeBody.task||'',runtimeBody.history||[]);
   const budget=responseBudgetMs(runtimeBody);
   res.setHeader('X-WAE-Response-Budget-Ms',String(budget));
   res.setHeader('X-WAE-Long-Session','abortable-v47');
   res.setHeader('X-WAE-Answer-Assurance','v101');
+  res.setHeader('X-WAE-Context-Integrity','v103');
 
   const awareness=userContext.affectsGeneration?{eligible:false}:classifySelfAwarenessV99(runtimeBody);
   if(awareness.eligible){
     const reply=buildSelfAwarenessReplyV99({kind:awareness.kind});
     const snapshot=selfAwarenessSnapshotV99();
-    res.setHeader('X-WAE-Fast-Path','grounded-self-awareness-v99');
+    res.setHeader('X-WAE-Fast-Path','grounded-self-awareness-v103');
     return res.status(200).json({
       success:true,
       reply,
       speech_text:reply,
-      response:{content:reply,speechText:reply,metadata:{fastLane:true,fastLaneVersion:'grounded-self-awareness/v99',selfAwareness:snapshot}},
+      response:{content:reply,speechText:reply,metadata:{fastLane:true,fastLaneVersion:'grounded-self-awareness/v103',selfAwareness:snapshot}},
       provider:'universal_core',
-      model:'universal-core-self-awareness-v99',
+      model:'universal-core-self-awareness-v103',
       fast_lane:true,
-      fast_lane_version:'grounded-self-awareness/v99',
+      fast_lane_version:'grounded-self-awareness/v103',
       web_sources:[],
       self_awareness:snapshot,
       input_interpretation:publicIntent(intent)
     });
   }
 
-  if (!userContext.affectsGeneration && protocolFastPathEligible(runtimeBody)) {
+  if (!contextualFollowup && !userContext.affectsGeneration && protocolFastPathEligible(runtimeBody)) {
     const protocolBody={...runtimeBody,message:canonicalProtocolPrompt(runtimeBody.message || runtimeBody.task || '')};
     const fast = await rescueMission({ payload:protocolBody, userKey, error:{code:'PROTOCOL_FAST_PATH'} });
     if (fast?.resilience?.path === 'deterministic_protocol') {
@@ -164,7 +167,7 @@ export default async function handler(req,res) {
     }
   }
 
-  const helpReply=userContext.affectsGeneration?null:conversationalHelpReply(runtimeBody);
+  const helpReply=contextualFollowup||userContext.affectsGeneration?null:conversationalHelpReply(runtimeBody);
   if(helpReply){
     res.setHeader('X-WAE-Fast-Path','conversational-help-v46');
     return res.status(200).json({
@@ -189,7 +192,7 @@ export default async function handler(req,res) {
   });
   const routing=publicRoute(route);
 
-  if(councilEligible({route,body:runtimeBody})){
+  if(!contextualFollowup&&councilEligible({route,body:runtimeBody})){
     try{
       const council=await withAbortableDeadline(
         ()=>deliberateMission({body:runtimeBody,userKey,route}),
