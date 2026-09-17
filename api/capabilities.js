@@ -19,6 +19,8 @@ import { evalTrainingCapabilitiesV95 } from '../lib/eval-training-loop-v95.js';
 import { selfAwarenessCapabilitiesV99, selfAwarenessSnapshotV99 } from '../lib/self-awareness-v99.js';
 import { frontierQualityCapabilitiesV102, refreshFrontierCurriculumV102 } from '../lib/frontier-quality-curriculum-v102.js';
 import { digitalAssetMemoryCapabilitiesV105 } from '../lib/digital-asset-memory-v105.js';
+import { adaptiveMetaOSCapabilitiesV107 } from '../lib/adaptive-meta-os-v107.js';
+import { personalValueLedgerCapabilitiesV107 } from '../lib/personal-value-ledger-v107.js';
 import { answerIntelligenceCapabilities } from '../lib/answer-intelligence-v60.js';
 import { qualityReliabilityCapabilities } from '../lib/quality-reliability-v61.js';
 import { performanceRouterCapabilities, providerMeshSnapshot } from '../lib/provider-mesh-v63.js';
@@ -60,6 +62,8 @@ export default async function handler(req,res){
     reasoningProfiles:['auto','deep'],
     selfAwareness:{...selfAwarenessCapabilitiesV99(),snapshot:selfAwarenessSnapshotV99(coreContext||{})},
     frontierQuality:frontierQualityCapabilitiesV102(),
+    adaptiveMetaOS:{...adaptiveMetaOSCapabilitiesV107(),endpoint:'/api/meta-os'},
+    personalValueIntelligence:personalValueLedgerCapabilitiesV107(),
     digitalAssetMemory:digitalAssetMemoryCapabilitiesV105(),
     answerIntelligence:answerIntelligenceCapabilities(),
     qualityReliability:qualityReliabilityCapabilities(),
