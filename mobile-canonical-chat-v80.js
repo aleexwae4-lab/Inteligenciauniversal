@@ -1,10 +1,10 @@
 (()=>{
   'use strict';
-  const VERSION='mobile-canonical-chat/v103-context';
+  const VERSION='mobile-canonical-chat/v104-quality-fallback';
   const EDGE_HOST='pbswcbryxawsmltyromd.supabase.co';
   const EDGE_PATH='/functions/v1/wae-local-voice-demo-v61';
   const nativeFetch=window.fetch.bind(window);
-  const WEAK=/continuity_pass_through|all_models_unavailable|todos los proveedores configurados fallaron|rutas generativas.*(?:saturad|no estuv)|respuesta con evidencia recuperada|no pude completar|runtime_temporarily_unavailable|generation failed/i;
+  const WEAK=/continuity_pass_through|all_models_unavailable|todos los proveedores configurados fallaron|rutas generativas.*(?:saturad|no estuv)|respuesta con evidencia recuperada|no pude completar|solicitud qued[oó] preservada|umbral m[ií]nimo de calidad|objetivo preservado|runtime_temporarily_unavailable|generation failed/i;
   const uuid=()=>globalThis.crypto?.randomUUID?.()||`00000000-0000-4000-8000-${Math.random().toString(16).slice(2,14).padEnd(12,'0')}`;
   const ID_KEYS=Object.freeze({session:'wae.contextSession.v103',conversation:'wae.conversationId.v103'});
 
@@ -52,10 +52,10 @@
       context_integrity:data?.context_integrity?.version||data?.response?.metadata?.contextIntegrity?.version||null
     };
   }
-  function jsonResponse(data,status=200,route='same-origin-v103'){
+  function jsonResponse(data,status=200,route='same-origin-v104'){
     return new Response(JSON.stringify(data),{status,headers:{'content-type':'application/json; charset=utf-8','cache-control':'no-store','x-wae-mobile-chat':VERSION,'x-wae-chat-route':route}});
   }
-  function sseResponse(data,route='same-origin-v103'){
+  function sseResponse(data,route='same-origin-v104'){
     const envelope={...data,mobile_canonical:VERSION,canonical_route:route};
     const body=`event: response.complete\ndata: ${JSON.stringify(envelope)}\n\n`;
     return new Response(body,{status:200,headers:{'content-type':'text/event-stream; charset=utf-8','cache-control':'no-store','x-accel-buffering':'no','x-wae-mobile-chat':VERSION,'x-wae-chat-route':route}});
@@ -84,14 +84,14 @@
     const canonical=serverPayload(payload);
     const r=await nativeFetch('/api/chat',{
       method:'POST',
-      headers:{'content-type':'application/json','accept':'application/json','x-wae-mobile-canonical':'v103'},
+      headers:{'content-type':'application/json','accept':'application/json','x-wae-mobile-canonical':'v104'},
       body:JSON.stringify(canonical),
       cache:'no-store',
       signal
     });
     const d=await r.json().catch(()=>({}));
     if(!r.ok||isWeak(d))throw Object.assign(new Error(String(d?.message||d?.error||`canonical_http_${r.status}`)),{code:'CANONICAL_MOBILE_REJECTED',status:r.status||503,payload:d});
-    return{...d,mobile_canonical:VERSION,canonical_route:'same-origin-v103',client_context:{session_id:canonical.sessionId,conversation_id:canonical.conversation_id,history_turns:canonical.history.length}};
+    return{...d,mobile_canonical:VERSION,canonical_route:'same-origin-v104',client_context:{session_id:canonical.sessionId,conversation_id:canonical.conversation_id,history_turns:canonical.history.length}};
   }
 
   async function edgeFallbackData(input,init,payload){
@@ -104,7 +104,7 @@
     const r=await nativeFetch(input,{...init,headers,body:JSON.stringify(fallbackPayload)});
     const d=await r.json().catch(()=>({}));
     if(!r.ok||isWeak(d))throw Object.assign(new Error(String(d?.message||d?.error||`edge_http_${r.status}`)),{code:'EDGE_MOBILE_REJECTED',status:r.status||503,payload:d});
-    return{...d,mobile_canonical:VERSION,canonical_route:'edge-fallback-v103'};
+    return{...d,mobile_canonical:VERSION,canonical_route:'edge-fallback-v104'};
   }
 
   window.fetch=async(input,init={})=>{
@@ -123,17 +123,17 @@
 
     try{
       const data=await canonicalData(payload,init.signal);
-      routeMark('same-origin-v103',data);
-      return payload.stream===true?sseResponse(data,'same-origin-v103'):jsonResponse(data,200,'same-origin-v103');
+      routeMark('same-origin-v104',data);
+      return payload.stream===true?sseResponse(data,'same-origin-v104'):jsonResponse(data,200,'same-origin-v104');
     }catch(canonicalError){
-      console.warn('[Universal Core v103] canonical mobile route degraded; trying Edge fallback',canonicalError?.message||canonicalError);
+      console.warn('[Universal Core v104] canonical mobile route degraded; trying Edge fallback',canonicalError?.message||canonicalError);
       try{
         const data=await edgeFallbackData(input,init,payload);
-        routeMark('edge-fallback-v103',data);
-        return payload.stream===true?sseResponse(data,'edge-fallback-v103'):jsonResponse(data,200,'edge-fallback-v103');
+        routeMark('edge-fallback-v104',data);
+        return payload.stream===true?sseResponse(data,'edge-fallback-v104'):jsonResponse(data,200,'edge-fallback-v104');
       }catch(edgeError){
         routeMark('all-routes-failed',{degraded:true});
-        console.warn('[Universal Core v103] all visible mobile routes failed',edgeError?.message||edgeError);
+        console.warn('[Universal Core v104] all visible mobile routes failed',edgeError?.message||edgeError);
         return payload.stream===true
           ?sseError(String(edgeError?.message||canonicalError?.message||'mobile_routes_unavailable').slice(0,180))
           :jsonResponse({error:'mobile_routes_unavailable',message:'Universal Core no recibió una respuesta completa por ninguna ruta.',recoverable:true,mobile_canonical:VERSION},503,'all-routes-failed');
@@ -159,7 +159,8 @@
     stableConversation:true,
     newConversationRotatesMemoryScope:true,
     rejectsContinuityPassThrough:true,
+    rejectsBoundedContinuity:true,
     bootstrapFailOpenToCanonical:true
   };
-  document.documentElement.dataset.mobileCanonicalChat='v103';
+  document.documentElement.dataset.mobileCanonicalChat='v104';
 })();
