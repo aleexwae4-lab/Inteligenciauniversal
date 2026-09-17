@@ -1,6 +1,5 @@
 import modernChat from './chat.js';
 import legacyCapacityChat from './capacity-chat-v91.js';
-import { stableFactualEligibleV106, stableFactualEdgeResponseV106, STABLE_FACTUAL_EDGE_V106 } from '../lib/stable-factual-edge-v106.js';
 
 export const CAPACITY_CHAT_V105='capacity-chat/v105-conversation-routing-firewall';
 
@@ -27,8 +26,6 @@ export function conversationRoutingClassV105(body={}){
   const raw=String(body.message||body.task||body.prompt||body.query||'').trim();
   const q=normalize(raw);
   if(!GENERAL_MODES.has(mode)||hasExternalIntent(body)||!raw)return'legacy';
-
-  if(stableFactualEligibleV106(body))return'stable_factual';
 
   if(!q&&/[?¿]+/.test(raw))return'conversation';
 
@@ -57,19 +54,6 @@ export default async function capacityChatV105(req,res){
   const route=conversationRoutingClassV105(body);
   res.setHeader('X-WAE-Conversation-Router',CAPACITY_CHAT_V105);
   res.setHeader('X-WAE-Conversation-Route',route);
-
-  if(route==='stable_factual'){
-    try{
-      const factual=await stableFactualEdgeResponseV106(body);
-      if(factual){
-        res.setHeader('X-WAE-Fast-Path',STABLE_FACTUAL_EDGE_V106);
-        return res.status(200).json(factual);
-      }
-    }catch(error){
-      console.warn('[Stable factual edge v106]',String(error?.message||error).slice(0,220));
-    }
-    return legacyCapacityChat(req,res);
-  }
 
   if(route==='legacy')return legacyCapacityChat(req,res);
 
