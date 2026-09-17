@@ -1,6 +1,8 @@
 import { executeMission } from '../lib/runtime.js';
 import { allowRequest, originAllowed, applyHeaders, getClientIp } from '../lib/security.js';
-import { rescueMission, recoverableRuntimeError } from '../lib/intelligence-rescue.js';
+import { rescueMission } from '../lib/intelligence-rescue.js';
+import { emergencyGenerate } from '../lib/emergency-generation-v49.js';
+import { assuranceRecoveryPlanV101, buildBoundedContinuityV101, markAssuredPayloadV101 } from '../lib/answer-assurance-v101.js';
 import { normalizeUserIntent } from '../lib/input-intelligence.js';
 import { selectProviderRoute, observeProviderOutcome } from '../lib/provider-mesh.js';
 import { councilEligible, deliberateMission } from '../lib/deliberation-plane.js';
@@ -130,6 +132,7 @@ export default async function handler(req,res) {
   const budget=responseBudgetMs(runtimeBody);
   res.setHeader('X-WAE-Response-Budget-Ms',String(budget));
   res.setHeader('X-WAE-Long-Session','abortable-v47');
+  res.setHeader('X-WAE-Answer-Assurance','v101');
 
   if (!userContext.affectsGeneration && protocolFastPathEligible(runtimeBody)) {
     const protocolBody={...runtimeBody,message:canonicalProtocolPrompt(runtimeBody.message || runtimeBody.task || '')};
@@ -198,23 +201,50 @@ export default async function handler(req,res) {
   } catch (error) {
     if(error?.code==='REQUEST_CANCELLED')return;
     observeProviderOutcome({route,error});
-    if (error?.code !== 'RUNTIME_DEADLINE' && recoverableRuntimeError(error)) {
+
+    const assurance=assuranceRecoveryPlanV101(error);
+    if(assurance.eligible){
       try {
         const rescued = await withAbortableDeadline(
-          ()=>rescueMission({ payload:runtimeBody, userKey, error }),
-          2_500,
+          ()=>rescueMission({ payload:runtimeBody, userKey, error, allowResearch:!assurance.deadline }),
+          assurance.rescueBudgetMs,
           'RESCUE_DEADLINE',
           clientController.signal
         );
         if (rescued) {
-          res.setHeader('X-WAE-Resilience','recovered');
-          return res.status(200).json({ ...rescued, input_interpretation:publicIntent(intent), provider_mesh:routing });
+          res.setHeader('X-WAE-Resilience',assurance.deadline?'deadline-local-recovered-v101':'specialized-recovered-v101');
+          const marked=markAssuredPayloadV101(rescued,assurance.deadline?'local_rescue':'specialized_rescue',error);
+          return res.status(200).json({ ...marked, input_interpretation:publicIntent(intent), provider_mesh:routing });
         }
       } catch (rescueError) {
         if(rescueError?.code==='REQUEST_CANCELLED')return;
-        console.warn('[Universal Core Rescue]', String(rescueError?.message || rescueError));
+        console.warn('[Universal Core Answer Assurance Rescue v101]', String(rescueError?.message || rescueError));
+      }
+
+      try{
+        const emergency=await withAbortableDeadline(
+          ()=>emergencyGenerate({body:runtimeBody,userKey,failure:error}),
+          assurance.emergencyBudgetMs,
+          'EMERGENCY_GENERATION_DEADLINE',
+          clientController.signal
+        );
+        if(emergency){
+          res.setHeader('X-WAE-Resilience','emergency-generated-v101');
+          const marked=markAssuredPayloadV101(emergency,'emergency_generation',error);
+          return res.status(200).json({ ...marked, input_interpretation:publicIntent(intent), provider_mesh:routing });
+        }
+      }catch(emergencyError){
+        if(emergencyError?.code==='REQUEST_CANCELLED')return;
+        console.warn('[Universal Core Answer Assurance Emergency v101]', String(emergencyError?.message || emergencyError));
+      }
+
+      const bounded=buildBoundedContinuityV101({body:runtimeBody,userKey,error});
+      if(bounded){
+        res.setHeader('X-WAE-Resilience','bounded-continuity-v101');
+        return res.status(200).json({ ...bounded, input_interpretation:publicIntent(intent), provider_mesh:routing });
       }
     }
+
     const deadline=error?.code==='RUNTIME_DEADLINE';
     if(deadline)res.setHeader('X-WAE-Resilience','deadline-enforced-v47');
     const status = error.statusCode || (error.code === 'NO_PROVIDER' ? 503 : 502);
