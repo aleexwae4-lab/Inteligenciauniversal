@@ -4,7 +4,7 @@ import { readFile } from 'node:fs/promises';
 
 const read = name => readFile(new URL(`../${name}`, import.meta.url), 'utf8');
 
-test('server exposes premium mobile route with v47 backpressure, v46 voice and v97 response lifecycle', async () => {
+test('server exposes premium mobile route with v47 backpressure, v46 voice and v103 context integrity', async () => {
   const server = await read('server.js');
   assert.match(server, /\/api\/mobile/);
   assert.match(server, /\/api\/ui-diagnostics/);
@@ -24,7 +24,7 @@ test('server exposes premium mobile route with v47 backpressure, v46 voice and v
   assert.match(server, /speech-lifecycle-v46\.js\?v=46/);
   assert.match(server, /mobile-voice-v46\.js\?v=46/);
   assert.match(server, /learning-client-v29\.js\?v=34/);
-  assert.match(server, /X-WAE-Mobile-Release','universal-core-mobile-v80-visible-chat'/);
+  assert.match(server, /X-WAE-Mobile-Release','universal-core-mobile-v103-context-integrity'/);
   assert.match(server, /X-WAE-Mobile-Response-Lifecycle','mobile-response-lifecycle\/v97'/);
   assert.match(server, /universal-core-mobile-v47-long-session/);
   assert.match(server, /long-session-backpressure-v47/);
