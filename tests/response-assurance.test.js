@@ -4,6 +4,7 @@ import { readFileSync } from 'node:fs';
 import chatHandler from '../api/chat.js';
 import { extractCoreUserQuery, adaptiveResponseContract, shouldEvidenceRescue, edgeRequestPolicy } from '../lib/providers.js';
 import { researchRescueEligible, rescueMission } from '../lib/intelligence-rescue.js';
+import { answerAssuranceEligibleV101, assuranceRecoveryPlanV101, boundedContinuityTextV101, buildBoundedContinuityV101 } from '../lib/answer-assurance-v101.js';
 
 test('extractCoreUserQuery removes routing, memory and tool context', () => {
   const input='Investiga y verifica con evidencia web reciente antes de responder. Distingue hechos verificados de inferencias y cita las fuentes disponibles.\n\n¿Qué es una API REST?\n\nMEMORIA RECUPERADA (contexto previo potencialmente relevante):\n1. dato viejo\n\nEVIDENCIA DE HERRAMIENTAS (usa solo lo observado; no inventes ejecuciones):\n[web_search] OK';
@@ -53,15 +54,18 @@ function fakeResponse(){
   };
 }
 
-test('chat serves intelligence meta prompt before provider routing', async () => {
+test('chat serves grounded intelligence self-awareness before provider routing', async () => {
   const {headers,res}=fakeResponse();
   const req={method:'POST',headers:{},socket:{remoteAddress:'127.0.0.44'},body:{message:'¿Qué tan inteligente eres?',mode:'general'}};
   await chatHandler(req,res);
   assert.equal(res.statusCode,200);
-  assert.equal(headers['x-wae-fast-path'],'deterministic-protocol-v4');
-  assert.equal(res.payload?.provider,'universal_core_protocol');
+  assert.equal(headers['x-wae-fast-path'],'grounded-self-awareness-v99');
+  assert.equal(headers['x-wae-answer-assurance'],'v101');
+  assert.equal(res.payload?.provider,'universal_core');
   assert.equal(res.payload?.fast_lane,true);
-  assert.match(res.payload?.reply||'',/Soy Universal Core/i);
+  assert.match(res.payload?.reply||'',/pruebas|mide|competitivo/i);
+  assert.equal(res.payload?.self_awareness?.answerAssurance?.version,'answer-assurance/v101');
+  assert.equal(res.payload?.self_awareness?.claimPolicy?.globalNumberOneClaimAllowed,false);
   assert.equal(Array.isArray(res.payload?.web_sources),true);
   assert.equal(res.payload.web_sources.length,0);
 });
@@ -91,18 +95,75 @@ test('mobile Auto greeting bypasses providers and returns deterministic protocol
   assert.doesNotMatch(res.payload?.reply||'',/no llegó completa|recuperando|evidencia recuperada|rutas generativas|saturadas/i);
 });
 
-test('capabilities prompt from the clip bypasses saturated providers entirely', async () => {
+test('capabilities prompt uses grounded self-awareness and exposes verified continuity capability', async () => {
   const {headers,res}=fakeResponse();
   const req={method:'POST',headers:{},socket:{remoteAddress:'127.0.0.46'},body:{message:'Cuales son tus capacidades?',mode:'general'}};
   await chatHandler(req,res);
   assert.equal(res.statusCode,200);
-  assert.equal(headers['x-wae-fast-path'],'deterministic-protocol-v4');
-  assert.equal(res.payload?.provider,'universal_core_protocol');
+  assert.equal(headers['x-wae-fast-path'],'grounded-self-awareness-v99');
+  assert.equal(res.payload?.provider,'universal_core');
   assert.equal(res.payload?.fast_lane,true);
   assert.equal(Array.isArray(res.payload?.web_sources),true);
   assert.equal(res.payload.web_sources.length,0);
-  assert.match(res.payload?.reply||'',/analizar|investigar|programar/i);
-  assert.doesNotMatch(res.payload?.reply||'',/evidencia recuperada|rutas generativas|saturadas|cdc|swine|google/i);
+  assert.match(res.payload?.reply||'',/Razonamiento|Investigación|Ingeniería|Continuidad v101/i);
+  assert.equal(res.payload?.self_awareness?.capabilities?.answerAssurance,true);
+  assert.equal(res.payload?.self_awareness?.answerAssurance?.absoluteQualityGuarantee,false);
+  assert.doesNotMatch(res.payload?.reply||'',/cdc|swine|google/i);
+});
+
+test('competitor comparison is fail-closed and benchmark-scoped', async () => {
+  const {headers,res}=fakeResponse();
+  const req={method:'POST',headers:{},socket:{remoteAddress:'127.0.0.48'},body:{message:'¿Universal Core supera a GPT Astra?',mode:'general'}};
+  await chatHandler(req,res);
+  assert.equal(res.statusCode,200);
+  assert.equal(headers['x-wae-fast-path'],'grounded-self-awareness-v99');
+  assert.equal(res.payload?.self_awareness?.claimPolicy?.benchmarkScopedEvidenceOnly,true);
+  assert.match(res.payload?.reply||'',/no debo afirmar|CERTIFIED|pruebas medibles/i);
+});
+
+test('answer assurance v101 treats runtime deadline as recoverable without research tail', () => {
+  const error={code:'RUNTIME_DEADLINE',statusCode:504};
+  assert.equal(answerAssuranceEligibleV101(error),true);
+  const plan=assuranceRecoveryPlanV101(error);
+  assert.equal(plan.deadline,true);
+  assert.deepEqual(plan.stages,['local_rescue','emergency_generation','bounded_continuity']);
+  assert.equal(plan.rescueBudgetMs,1500);
+  assert.equal(plan.emergencyBudgetMs,6000);
+});
+
+test('answer assurance v101 treats provider collapse and low quality as recoverable', () => {
+  for(const code of ['NO_PROVIDER','ALL_PROVIDERS_FAILED','LOW_QUALITY']){
+    const plan=assuranceRecoveryPlanV101({code});
+    assert.equal(plan.eligible,true,code);
+    assert.equal(plan.deadline,false,code);
+    assert.deepEqual(plan.stages,['specialized_rescue','emergency_generation','bounded_continuity']);
+  }
+});
+
+test('bounded continuity never fabricates current or high-stakes facts', () => {
+  const text=boundedContinuityTextV101({message:'Dime el precio actual y la ley vigente hoy para esta operación legal.'},{code:'ALL_PROVIDERS_FAILED'});
+  assert.match(text,/evidencia verificable|No voy a completar datos actuales/i);
+  assert.doesNotMatch(text,/\$\d|artículo \d|según la ley/i);
+});
+
+test('bounded continuity produces a valid non-empty assistant envelope instead of a transport error', () => {
+  const result=buildBoundedContinuityV101({body:{message:'Diseña una estrategia completa para mi producto.',mode:'executive'},userKey:'test',error:{code:'RUNTIME_DEADLINE'}});
+  assert.equal(result?.success,true);
+  assert.equal(result?.provider,'universal_core');
+  assert.equal(result?.model,'universal-core-assurance-v101');
+  assert.equal(result?.answer_assurance?.version,'answer-assurance/v101');
+  assert.equal(result?.answer_assurance?.finalSafeFallback,true);
+  assert.ok(String(result?.reply||'').length>80);
+});
+
+test('chat edge wires timeout recovery to emergency generation and bounded continuity', () => {
+  const source=readFileSync(new URL('../api/chat.js',import.meta.url),'utf8');
+  assert.match(source,/assuranceRecoveryPlanV101/);
+  assert.match(source,/allowResearch:!assurance\.deadline/);
+  assert.match(source,/emergencyGenerate/);
+  assert.match(source,/bounded-continuity-v101/);
+  assert.match(source,/X-WAE-Answer-Assurance/);
+  assert.doesNotMatch(source,/error\?\.code !== 'RUNTIME_DEADLINE' && recoverableRuntimeError/);
 });
 
 test('provider fallback no longer converts ordinary generation failure into automatic web recovery', () => {
