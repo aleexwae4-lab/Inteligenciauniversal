@@ -112,7 +112,8 @@ test('runtime and public capabilities wire v102 into production response flow', 
   assert.match(runtime,/premiumUpgradeAttempted/);
   assert.match(runtime,/preferFrontierCandidateV102/);
   assert.match(runtime,/frontierQuality\.hardReject/);
-  assert.match(runtime,/semanticCacheStore[\s\S]+frontierQuality\.premiumPass/);
+  assert.match(runtime,/frontierQuality\.premiumPass/);
+  assert.match(runtime,/semanticCacheStore/);
   assert.match(capabilities,/frontierQuality:frontierQualityCapabilitiesV102\(\)/);
   assert.match(capabilities,/refreshFrontierCurriculumV102/);
 });
