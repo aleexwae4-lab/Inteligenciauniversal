@@ -4,6 +4,8 @@ import legacyCapacityChat from './capacity-chat-v91.js';
 export const CAPACITY_CHAT_V105='capacity-chat/v105-conversation-routing-firewall';
 
 const GENERAL_MODES=new Set(['','general','auto']);
+const GENERATIVE_RX=/\b(crea|crear|genera|generar|redacta|redactar|escribe|escribir|elabora|elaborar|desarrolla|desarrollar|hazme|haz)\b/;
+const VERIFIED_DOMAIN_RX=/\b(hoy|actual|actualmente|reciente|latest|noticias|fuentes?|evidencia|investiga|investigacion|verifica|medic|salud|diagnostic|tratamiento|dosis|farmacol|legal|juridic|penal|delito|jurisprudencia|ley vigente|fiscal|tributar|inversion|credito|fraude)\b/;
 
 function normalize(value=''){
   return String(value||'')
@@ -35,7 +37,11 @@ export function conversationRoutingClassV105(body={}){
 
   if(/^(?:como estas|como te sientes|como andas|que tal|te sientes bien|estas bien|todo bien)$/.test(q))return'conversation';
 
-  if(/^(?:que puedes hacer|que sabes hacer|cuales son tus capacidades|que capacidades tienes|como puedes ayudarme|como funcionas|que tan inteligente eres)$/.test(q))return'capabilities';
+  if(/^(?:(?:hola|hey|buenas)\s+)?(?:que sabes|que sabes hacer|que puedes hacer|cuales son tus capacidades|que capacidades tienes|como puedes ayudarme|como funcionas|que tan inteligente eres)$/.test(q))return'capabilities';
+
+  // Ordinary creation requests are conversational generation jobs, not knowledge retrieval.
+  // Keep current/research/high-impact requests on the verified legacy evidence stack.
+  if(GENERATIVE_RX.test(q)&&!VERIFIED_DOMAIN_RX.test(q))return'creative';
 
   if(/^(?:gracias|muchas gracias|ok|okay|vale|perfecto|listo)$/.test(q))return'conversation';
 
@@ -46,6 +52,7 @@ function canonicalConversationMessage(body={}){
   const raw=String(body.message||body.task||body.prompt||body.query||'').trim();
   const q=normalize(raw);
   if(/^(?:te sientes bien|estas bien|todo bien)$/.test(q))return'¿Cómo estás?';
+  if(/^(?:(?:hola|hey|buenas)\s+)?(?:que sabes|que sabes hacer)$/.test(q))return'¿Qué puedes hacer?';
   return raw;
 }
 
