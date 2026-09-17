@@ -23,6 +23,18 @@ test('stable factual prompts stay on premium brain and keep Edge as post-failure
   assert.equal(edgeGenerativeRescueEligible('Dime el precio actual de Bitcoin','general'),false);
 });
 
+test('casual capability questions route to grounded Universal Core self-awareness',()=>{
+  assert.equal(conversationRoutingClassV105({message:'Hola que sabes?',mode:'general',provider:'auto'}),'capabilities');
+  assert.equal(conversationRoutingClassV105({message:'¿Qué sabes hacer?',mode:'general',provider:'auto'}),'capabilities');
+});
+
+test('ordinary creation prompts bypass factual retrieval but verified domains do not',()=>{
+  assert.equal(conversationRoutingClassV105({message:'Crea un contacto sobre que es la ciencia',mode:'general',provider:'auto'}),'creative');
+  assert.equal(conversationRoutingClassV105({message:'Crea un texto breve sobre qué es la ciencia',mode:'general',provider:'auto'}),'creative');
+  assert.equal(conversationRoutingClassV105({message:'Crea un informe con fuentes actuales sobre una reforma legal',mode:'general',provider:'auto'}),'legacy');
+  assert.equal(conversationRoutingClassV105({message:'Crea un resumen de un diagnóstico médico actual',mode:'general',provider:'auto'}),'legacy');
+});
+
 test('v86 blocks precise factual answers without evidence',()=>{
   const payload={
     reply:'La persona nació en 1978.',
