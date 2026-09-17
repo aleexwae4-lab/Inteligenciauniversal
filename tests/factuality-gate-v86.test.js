@@ -4,7 +4,7 @@ import capacityChatV86 from '../api/capacity-chat-v86.js';
 import nativeBrainHandler from '../api/native-brain.js';
 import { conversationRoutingClassV105 } from '../api/capacity-chat-v105.js';
 import { edgeGenerativeRescueEligible } from '../lib/intelligence-rescue.js';
-import { nativeLocalReply, nativeBrainStatus } from '../lib/native-brain-v1.js';
+import { nativeBrainReply, nativeLocalReply, nativeBrainStatus } from '../lib/native-brain-v1.js';
 import { classifyFactualityRequest, factualityDecision, factualityGateCapabilities } from '../lib/factuality-gate-v86.js';
 
 test('v86 live chat handler loads',()=>{
@@ -17,9 +17,19 @@ test('native brain handler and survival kernel are production-wired',()=>{
   assert.equal(status.version,'wae-native-brain/v1');
   assert.equal(status.ready,true);
   assert.equal(status.localKernel,true);
+  assert.equal(status.localFirst,true);
   assert.match(nativeLocalReply('¿Sabes cuántos planetas hay en el sistema solar?'),/8 planetas/i);
   assert.match(nativeLocalReply('¿Sabes qué es un termostato?'),/temperatura/i);
   assert.match(nativeLocalReply('12 * 7'),/84/);
+});
+
+test('native brain answers stable local knowledge before any inference provider',async()=>{
+  const result=await nativeBrainReply({message:'¿Sabes cuántos planetas hay en el sistema solar?',mode:'general'});
+  assert.equal(result.native_path,'local-kernel-first');
+  assert.equal(result.provider,'wae_native_kernel');
+  assert.equal(result.model,'native-knowledge-kernel-v1');
+  assert.equal(result.degraded,false);
+  assert.match(result.reply,/8 planetas/i);
 });
 
 test('v86 requires verification for current information',()=>{
