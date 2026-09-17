@@ -3,12 +3,15 @@ import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import {
   USER_CONTEXT_V92,
+  OPERATING_PROFILE_V104,
   normalizeUserPreferencesV92,
   userContextStateV92,
   userContextSystemInstructionV92,
   applyUserContextToBodyV92,
   publicUserContextV92
 } from '../lib/user-context-v92.js';
+import { extractExplicitUserProfileV104, ADAPTIVE_USER_MODEL_V104 } from '../lib/memory.js';
+import { getAgent, UNIVERSAL_HUMAN_COPILOT_V104 } from '../lib/agents.js';
 
 const read=path=>readFile(new URL(`../${path}`,import.meta.url),'utf8');
 
@@ -56,6 +59,50 @@ test('v92 bounds instruction size before model context',()=>{
   assert.equal(prefs.globalInstructions.length,8000);
   assert.equal(prefs.projectInstructions.length,8000);
   assert.equal(prefs.projectName.length,120);
+});
+
+test('v104 accepts an explicit professional operating profile without breaking v92 compatibility',()=>{
+  assert.equal(OPERATING_PROFILE_V104,'adaptive-user-profile/v104');
+  const prefs=normalizeUserPreferencesV92({
+    professionalRole:'ingeniero civil',
+    responsibilities:['supervisar obra','controlar costos'],
+    goals:['reducir retrasos'],
+    constraints:['sin aumentar plantilla'],
+    outputPreferences:['planes con responsables y fechas']
+  });
+  assert.equal(prefs.professionalRole,'ingeniero civil');
+  const state=userContextStateV92({preferences:prefs});
+  assert.equal(state.version,'user-context/v92');
+  assert.equal(state.operatingProfileVersion,OPERATING_PROFILE_V104);
+  assert.equal(state.hasOperatingProfile,true);
+  const instruction=userContextSystemInstructionV92(prefs);
+  assert.match(instruction,/ingeniero civil/);
+  assert.match(instruction,/reducir retrasos/);
+  assert.match(instruction,/datos declarados, no inferencias/i);
+});
+
+test('v104 adaptive memory learns only explicit useful profile signals',()=>{
+  assert.equal(ADAPTIVE_USER_MODEL_V104,'adaptive-user-model/v104');
+  const profile=extractExplicitUserProfileV104('Soy ingeniero mecánico. Mi objetivo es reducir tiempos de diagnóstico. Prefiero respuestas con checklist. Me encargo de supervisar mantenimiento.');
+  assert.ok(profile.professional_roles.some(x=>/ingeniero mecánico/i.test(x)));
+  assert.ok(profile.goals.some(x=>/reducir tiempos de diagnóstico/i.test(x)));
+  assert.ok(profile.preferences.some(x=>/checklist/i.test(x)));
+  assert.ok(profile.responsibilities.some(x=>/supervisar mantenimiento/i.test(x)));
+});
+
+test('v104 adaptive memory refuses sensitive profile extraction',()=>{
+  const profile=extractExplicitUserProfileV104('Mi objetivo es registrar mi religión católica. Prefiero guardar mi historial médico.');
+  assert.equal(profile.goals.length,0);
+  assert.equal(profile.preferences.length,0);
+});
+
+test('v104 universal copilot policy optimizes for reusable assets and human control',()=>{
+  assert.equal(UNIVERSAL_HUMAN_COPILOT_V104,'universal-human-copilot/v104');
+  const system=getAgent('general').system;
+  assert.match(system,/activo reutilizable/i);
+  assert.match(system,/control humano/i);
+  assert.match(system,/atributos sensibles/i);
+  assert.match(system,/capacidad cognitiva/i);
 });
 
 test('runtime and council consume private instructions without rewriting saved user message',async()=>{
