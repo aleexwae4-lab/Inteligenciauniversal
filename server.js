@@ -36,6 +36,7 @@ function mobilePremiumHandler(req,res) {
       if (!chunk.includes('mobile-v26.css')) chunk = chunk.replace('</head>', '<link rel="stylesheet" href="/mobile-v26.css?v=34"></head>');
       if (!chunk.includes('premium-v5.css')) chunk = chunk.replace('</head>', '<link rel="stylesheet" href="/premium-v5.css?v=43"></head>');
       if (!chunk.includes('productivity-v59.css')) chunk = chunk.replace('</head>', '<link rel="stylesheet" href="/productivity-v59.css?v=59"></head>');
+      if (!chunk.includes('data-canonical-brain-head')) chunk = chunk.replace('</head>', '<script src="/canonical-brain-v106.js?v=109&phase=head" data-canonical-brain-head="1"></script></head>');
       const scripts = [];
       if (!chunk.includes('fast-lane-v23.js')) scripts.push('<script src="/fast-lane-v23.js?v=34" defer></script>');
       if (!chunk.includes('mobile-v26.js')) scripts.push('<script src="/mobile-v26.js?v=97" defer></script>');
@@ -48,18 +49,17 @@ function mobilePremiumHandler(req,res) {
       if (!chunk.includes('learning-client-v29.js')) scripts.push('<script src="/learning-client-v29.js?v=34" defer></script>');
       if (!chunk.includes('premium-v5.js')) scripts.push('<script src="/premium-v5.js?v=43" defer></script>');
       if (!chunk.includes('productivity-v59.js')) scripts.push('<script src="/productivity-v59.js?v=59" defer></script>');
-      if (!chunk.includes('mobile-canonical-chat-v80.js')) scripts.push('<script src="/mobile-canonical-chat-v80.js?v=103" defer></script>');
-      if (!chunk.includes('canonical-brain-v106.js')) scripts.push('<script src="/canonical-brain-v106.js?v=108" data-canonical-brain-v106="1" defer></script>');
+      if (!chunk.includes('data-canonical-brain-tail')) scripts.push('<script src="/canonical-brain-v106.js?v=109&phase=tail" data-canonical-brain-tail="1" defer></script>');
       if (scripts.length) chunk = chunk.replace('</body>', `${scripts.join('')}</body>`);
       res.setHeader('Cache-Control','no-store, max-age=0, must-revalidate');
       res.setHeader('Pragma','no-cache');
       res.setHeader('Expires','0');
-      res.setHeader('X-WAE-Mobile-Release','universal-core-mobile-v108-native-brain');
-      res.setHeader('X-WAE-Mobile-Chat-Route','native-brain-first');
-      res.setHeader('X-WAE-Mobile-Fix','native-brain-v1-canonical-v108');
+      res.setHeader('X-WAE-Mobile-Release','universal-core-mobile-v109-native-brain');
+      res.setHeader('X-WAE-Mobile-Chat-Route','native-brain-v3-first');
+      res.setHeader('X-WAE-Mobile-Fix','canonical-head-tail-native-brain-v3');
       res.setHeader('X-WAE-Mobile-Response-Lifecycle','mobile-response-lifecycle/v97');
       res.setHeader('X-WAE-Mobile-Compatible','universal-core-mobile-v47-long-session');
-      res.setHeader('X-WAE-Mobile-Compatible-Fix','long-session-backpressure-v47 + native-brain-v1');
+      res.setHeader('X-WAE-Mobile-Compatible-Fix','long-session-backpressure-v47 + native-brain-v3');
       res.setHeader('X-WAE-Capacity-Release','capacity-governor-v48');
       res.setHeader('X-WAE-Premium-Release','universal-core-rich-v43');
       res.setHeader('X-WAE-Live-Data','live-data-mesh/v58');
@@ -67,7 +67,7 @@ function mobilePremiumHandler(req,res) {
       res.setHeader('X-WAE-Answer-Intelligence','answer-intelligence/v60');
       res.setHeader('X-WAE-Knowledge-Fabric','universal-knowledge-fabric/v1');
       res.setHeader('X-WAE-Context-Integrity','context-integrity/v103');
-      res.setHeader('X-WAE-Native-Brain','wae-native-brain/v1');
+      res.setHeader('X-WAE-Native-Brain','wae-native-brain/v3-edge-first');
     }
     return nativeEnd(chunk, encoding, callback);
   };
