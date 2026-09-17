@@ -94,14 +94,16 @@ test('v102 candidate selection prefers premium compliance and never trades away 
   }),false);
 });
 
-test('self-awareness v102 is grounded in the real capability kernel and quality curriculum', () => {
+test('self-awareness v103 is grounded in capability, quality, and context integrity', () => {
   const snapshot=selfAwarenessSnapshotV99({});
-  assert.equal(snapshot.version,'self-awareness/v102');
+  assert.equal(snapshot.version,'self-awareness/v103');
   assert.equal(snapshot.capabilityKernel.domainCount,38);
   assert.ok(snapshot.capabilityKernel.abilityCount>100);
   assert.equal(snapshot.capabilityKernel.availabilityAware,true);
   assert.equal(snapshot.qualityCurriculum.version,'frontier-quality-curriculum/v102');
   assert.equal(snapshot.qualityCurriculum.baseModelWeightsChanged,false);
+  assert.equal(snapshot.contextIntegrity.version,'context-integrity/v103');
+  assert.equal(snapshot.providerIdentityIsolated,true);
   assert.equal(snapshot.claimPolicy.globalNumberOneClaimAllowed,false);
 });
 
