@@ -9,6 +9,7 @@ import continuityHandler from './api/continuity.js';
 import performanceHandler from './api/performance.js';
 import healthHandler from './api/health.js';
 import capabilitiesHandler from './api/capabilities.js';
+import metaOSHandler from './api/meta-os.js';
 import capacityCertificationHandler from './api/capacity-certification.js';
 import executeHandler from './api/execute.js';
 import toolsHandler from './api/tools.js';
@@ -79,6 +80,7 @@ const apiRoutes = new Map([
   ['/api/performance', performanceHandler],
   ['/api/health', healthHandler],
   ['/api/capabilities', capabilitiesHandler],
+  ['/api/meta-os', metaOSHandler],
   ['/api/capacity-certification', capacityCertificationHandler],
   ['/api/execute', executeHandler],
   ['/api/tools', toolsHandler],

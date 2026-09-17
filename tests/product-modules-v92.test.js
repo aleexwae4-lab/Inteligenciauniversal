@@ -139,11 +139,14 @@ test('frontend module connects settings, projects, real attachments and device v
   assert.match(source,/url\.pathname==='\/api\/chat'/);
 });
 
-test('premium shell loads v92 JS and CSS without replacing the existing interface',async()=>{
+test('premium shell loads v92, v106 and adaptive workspace v107 without replacing the existing interface',async()=>{
   const source=await read('premium-v5.js');
   assert.match(source,/product-modules-v92\.css\?v=92/);
   assert.match(source,/product-modules-v92\.js\?v=92/);
-  assert.match(source,/loadGptExperience\(\);loadProductModules\(\);observe\(\)/);
+  assert.match(source,/feedback-history-v106\.js\?v=106/);
+  assert.match(source,/adaptive-workspace-v107\.css\?v=107/);
+  assert.match(source,/adaptive-workspace-v107\.js\?v=107/);
+  assert.match(source,/loadGptExperience\(\);loadProductModules\(\);loadFeedbackHistory\(\);loadAdaptiveWorkspace\(\);observe\(\)/);
 });
 
 test('parallel specialist council has a v92 private-context path',async()=>{
