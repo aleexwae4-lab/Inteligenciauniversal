@@ -1,4 +1,4 @@
-import { nativeBrainReply, nativeBrainStatus, NATIVE_BRAIN_VERSION } from '../lib/native-brain-v2.js';
+import { nativeBrainReply, nativeBrainStatus, NATIVE_BRAIN_VERSION } from '../lib/native-brain-v3.js';
 import { applyHeaders, originAllowed, allowRequest } from '../lib/security.js';
 
 export default async function nativeBrainHandler(req,res){
