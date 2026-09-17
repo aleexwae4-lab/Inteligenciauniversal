@@ -1,10 +1,11 @@
 import './lib/network-deadlines-v46.js';
 import { createServer } from 'node:http';
 import { createReadStream } from 'node:fs';
-import { stat } from 'node:fs/promises';
+import { stat, readFile } from 'node:fs/promises';
 import { extname, join, normalize, basename } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import chatHandler from './api/capacity-chat-v60.js';
+import chatwaeBridgeHandler from './api/chatwae-bridge-v113.js';
 import nativeBrainHandler from './api/native-brain.js';
 import continuityHandler from './api/continuity.js';
 import performanceHandler from './api/performance.js';
@@ -28,6 +29,7 @@ const ROOT = fileURLToPath(new URL('.', import.meta.url));
 const PORT = Number(process.env.PORT || 10000);
 const HOST = '0.0.0.0';
 const MAX_BODY_BYTES = Number(process.env.WAE_MAX_BODY_BYTES || 2_000_000);
+const CHATWAE_CLIENT_SCRIPT = '<script src="/chatwae-interface-bridge-v113.js?v=113" data-wae-chatwae-bridge="113"></script>';
 
 function mobilePremiumHandler(req,res) {
   const nativeEnd = res.end.bind(res);
@@ -51,16 +53,17 @@ function mobilePremiumHandler(req,res) {
       if (!chunk.includes('premium-v5.js')) scripts.push('<script src="/premium-v5.js?v=43" defer></script>');
       if (!chunk.includes('productivity-v59.js')) scripts.push('<script src="/productivity-v59.js?v=59" defer></script>');
       if (!chunk.includes('data-canonical-brain-tail')) scripts.push('<script src="/canonical-brain-v106.js?v=111&phase=tail" data-canonical-brain-tail="1" defer></script>');
+      if (!chunk.includes('data-wae-chatwae-bridge')) scripts.push(CHATWAE_CLIENT_SCRIPT);
       if (scripts.length) chunk = chunk.replace('</body>', `${scripts.join('')}</body>`);
       res.setHeader('Cache-Control','no-store, max-age=0, must-revalidate');
       res.setHeader('Pragma','no-cache');
       res.setHeader('Expires','0');
-      res.setHeader('X-WAE-Mobile-Release','universal-core-mobile-v111-hybrid-native');
-      res.setHeader('X-WAE-Mobile-Chat-Route','adaptive-local-webgpu-wasm-native-v4');
-      res.setHeader('X-WAE-Mobile-Fix','hybrid-local-llm-native-v4-canonical-v111');
+      res.setHeader('X-WAE-Mobile-Release','universal-core-mobile-v113-chatwae-bridge');
+      res.setHeader('X-WAE-Mobile-Chat-Route','chatwaeosgreen-server-first-v113');
+      res.setHeader('X-WAE-Mobile-Fix','chatwae-engine-bridge-v113');
       res.setHeader('X-WAE-Mobile-Response-Lifecycle','mobile-response-lifecycle/v97');
       res.setHeader('X-WAE-Mobile-Compatible','universal-core-mobile-v47-long-session');
-      res.setHeader('X-WAE-Mobile-Compatible-Fix','long-session-backpressure-v47 + local-webgpu-wasm');
+      res.setHeader('X-WAE-Mobile-Compatible-Fix','long-session-backpressure-v47 + chatwae-fallback');
       res.setHeader('X-WAE-Capacity-Release','capacity-governor-v48');
       res.setHeader('X-WAE-Premium-Release','universal-core-rich-v43');
       res.setHeader('X-WAE-Live-Data','live-data-mesh/v58');
@@ -68,8 +71,8 @@ function mobilePremiumHandler(req,res) {
       res.setHeader('X-WAE-Answer-Intelligence','answer-intelligence/v60');
       res.setHeader('X-WAE-Knowledge-Fabric','universal-knowledge-fabric/v1');
       res.setHeader('X-WAE-Context-Integrity','context-integrity/v103');
-      // Legacy regression marker: wae-native-brain/v4-resilient. Runtime header below reports the active brain.
       res.setHeader('X-WAE-Native-Brain','wae-native-brain/v5-quality-council');
+      res.setHeader('X-WAE-Primary-Conversation-Engine','chatwaeosgreen-v113');
       res.setHeader('X-WAE-Local-Brain','universal-core-local-brain/v2-hybrid');
     }
     return nativeEnd(chunk, encoding, callback);
@@ -80,6 +83,7 @@ function mobilePremiumHandler(req,res) {
 const apiRoutes = new Map([
   ['/api/chat', chatHandler],
   ['/api/fast-chat', chatHandler],
+  ['/api/chatwae-bridge', chatwaeBridgeHandler],
   ['/api/native-brain/chat', nativeBrainHandler],
   ['/api/native-brain/status', nativeBrainHandler],
   ['/api/continuity/chat/completions', continuityHandler],
@@ -198,7 +202,7 @@ async function serveFile(req, res, pathname) {
   res.setHeader('Content-Type', contentTypes[ext] || 'application/octet-stream');
   res.setHeader('X-Content-Type-Options', 'nosniff');
   res.setHeader('Referrer-Policy', 'same-origin');
-  if (name === 'sw.js' || name === 'mobile-canonical-chat-v80.js' || name === 'canonical-brain-v106.js' || name === 'universal-core-local-brain-v1.js' || name === 'universal-core-local-worker-v1.js' || name === 'universal-core-local-cpu-worker-v1.js' || ext === '.html') {
+  if (name === 'sw.js' || name === 'mobile-canonical-chat-v80.js' || name === 'canonical-brain-v106.js' || name === 'chatwae-interface-bridge-v113.js' || name === 'universal-core-local-brain-v1.js' || name === 'universal-core-local-worker-v1.js' || name === 'universal-core-local-cpu-worker-v1.js' || ext === '.html') {
     res.setHeader('Cache-Control','no-store, max-age=0, must-revalidate');
     res.setHeader('Pragma','no-cache');
     res.setHeader('Expires','0');
@@ -207,6 +211,17 @@ async function serveFile(req, res, pathname) {
   }
 
   if (req.method === 'HEAD') return res.end();
+  if (ext === '.html') {
+    try {
+      let html = await readFile(filePath, 'utf8');
+      if (!html.includes('data-wae-chatwae-bridge')) html = html.replace('</body>', `${CHATWAE_CLIENT_SCRIPT}</body>`);
+      res.setHeader('X-WAE-Primary-Conversation-Engine','chatwaeosgreen-v113');
+      return res.end(html);
+    } catch {
+      res.statusCode = 500;
+      return res.end('Internal Server Error');
+    }
+  }
   createReadStream(filePath)
     .on('error', () => {
       if (!res.headersSent) res.statusCode = 500;
