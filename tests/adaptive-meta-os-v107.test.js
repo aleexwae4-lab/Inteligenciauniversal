@@ -38,7 +38,7 @@ test('v107 converts long-horizon operating problems into project candidates',()=
   assert.notEqual(project.reason,'single_turn_sufficient');
 });
 
-test('v107 operating state composes profession, capabilities, agents, assets and value candidates',()=>{
+test('v107 operating state composes profession, kernel capabilities, agents, assets and value candidates',()=>{
   const state=buildAdaptiveMetaOSStateV107({
     message:'Construye una plataforma SaaS para mi despacho y prepara el roadmap, automatizaciones y estrategia de monetización',
     profile:{professional_roles:['abogado'],goals:['operar un despacho digital']}
@@ -47,6 +47,8 @@ test('v107 operating state composes profession, capabilities, agents, assets and
   assert.equal(state.executionLevel,'create');
   assert.equal(state.professionalPacks.some(x=>x.id==='legal_core'),true);
   assert.equal(state.professionalPacks.some(x=>x.id==='business_core'),true);
+  assert.equal(state.capabilityDomains.includes('conversation_reasoning'),true);
+  assert.equal(state.capabilityDomains.includes('software_engineering'),true);
   assert.equal(Array.isArray(state.orchestration.specialists),true);
   assert.equal(state.projectIntent.convert,true);
   assert.equal(state.valueMeasurementCandidates.some(x=>x.category==='knowledge_asset'),true);
@@ -81,4 +83,18 @@ test('v107 is wired into memory, capabilities and runtime route',async()=>{
   assert.match(capabilities,/personalValueIntelligence:/);
   assert.match(server,/\/api\/meta-os/);
   assert.match(api,/buildAdaptiveMetaOSStateV107/);
+});
+
+test('v107 workspace cockpit is syntactically valid and uses the same opaque user scope for chat and meta-os',async()=>{
+  const [workspace,premium,css]=await Promise.all([
+    read('adaptive-workspace-v107.js'),read('premium-v5.js'),read('adaptive-workspace-v107.css')
+  ]);
+  assert.doesNotThrow(()=>new Function(workspace));
+  assert.match(workspace,/USER_SCOPE_KEY='wae\.userScope\.v107'/);
+  assert.match(workspace,/url\.pathname==='\/api\/chat'/);
+  assert.match(workspace,/body\.userKey=body\.userKey\|\|userScope\(\)/);
+  assert.match(workspace,/upstreamFetch\('\/api\/meta-os'/);
+  assert.match(workspace,/data-tab="core"|dataset\.tab='core'/);
+  assert.match(premium,/loadAdaptiveWorkspace\(\)/);
+  assert.match(css,/wae107-panel/);
 });
