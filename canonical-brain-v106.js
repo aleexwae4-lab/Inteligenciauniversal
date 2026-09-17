@@ -1,22 +1,30 @@
 (()=>{
   'use strict';
-  const VERSION='canonical-brain/v106';
+  const VERSION='canonical-brain/v107';
   const EDGE='https://pbswcbryxawsmltyromd.supabase.co/functions/v1/wae-local-voice-demo-v61';
+  const EDGE_HOST='pbswcbryxawsmltyromd.supabase.co';
+  const EDGE_PATH='/functions/v1/wae-local-voice-demo-v61';
   const SUPABASE_KEY='sb_publishable_2zXa35U9Z--xuy_mQekG9w_kY7AVlv-';
   const previousFetch=window.fetch.bind(window);
   const WEAK=/continuity_pass_through|all_models_unavailable|todos los proveedores configurados fallaron|rutas generativas.*(?:saturad|no estuv)|respuesta con evidencia recuperada|no pude completar|solicitud qued[oó] preservada|umbral m[ií]nimo de calidad|objetivo preservado|runtime_temporarily_unavailable|generation failed|soy un modelo de lenguaje/i;
 
   function urlOf(input){try{return new URL(typeof input==='string'?input:input?.url,location.href)}catch{return null}}
-  function isChat(input,init={}){const u=urlOf(input);return !!u&&u.origin===location.origin&&u.pathname==='/api/chat'&&String(init.method||'GET').toUpperCase()==='POST'}
+  function methodOf(init={}){return String(init.method||'GET').toUpperCase()}
+  function isChat(input,init={}){const u=urlOf(input);return !!u&&u.origin===location.origin&&u.pathname==='/api/chat'&&methodOf(init)==='POST'}
+  function isEdge(input,init={}){const u=urlOf(input);return !!u&&u.hostname===EDGE_HOST&&u.pathname===EDGE_PATH&&methodOf(init)==='POST'}
   function parseBody(init={}){try{return typeof init.body==='string'?JSON.parse(init.body):(init.body&&typeof init.body==='object'?init.body:{})}catch{return{}}}
   function uuid(){return globalThis.crypto?.randomUUID?.()||`00000000-0000-4000-8000-${Math.random().toString(16).slice(2,14).padEnd(12,'0')}`}
   function stableId(key){try{let v=localStorage.getItem(key)||'';if(!/^[0-9a-f-]{36}$/i.test(v)){v=uuid();localStorage.setItem(key,v)}return v}catch{return uuid()}}
   function history(){try{return (JSON.parse(localStorage.getItem('wae.messages')||'[]')||[]).slice(-16).filter(x=>x&&['user','assistant'].includes(x.role)).map(x=>({role:x.role,text:String(x.text??x.content??'').slice(0,12000)})).filter(x=>x.text)}catch{return[]}}
   function replyOf(data){return String(data?.reply??data?.response?.content??'').trim()}
   function weak(data){const r=replyOf(data);return !r||WEAK.test(r)||WEAK.test(String(data?.error||''))}
-  function jsonResponse(data,status=200,route='render-canonical-v106'){return new Response(JSON.stringify(data),{status,headers:{'content-type':'application/json; charset=utf-8','cache-control':'no-store','x-wae-canonical-brain':VERSION,'x-wae-chat-route':route}})}
+  function jsonResponse(data,status=200,route='render-canonical-v107'){return new Response(JSON.stringify(data),{status,headers:{'content-type':'application/json; charset=utf-8','cache-control':'no-store','x-wae-canonical-brain':VERSION,'x-wae-chat-route':route}})}
+  function sseResponse(data,route='render-direct-v107'){
+    const envelope={...data,canonical_brain:VERSION,canonical_route:route};
+    return new Response(`event: response.complete\ndata: ${JSON.stringify(envelope)}\n\n`,{status:200,headers:{'content-type':'text/event-stream; charset=utf-8','cache-control':'no-store','x-accel-buffering':'no','x-wae-canonical-brain':VERSION,'x-wae-chat-route':route}});
+  }
 
-  function xhrJson(url,body,{signal,headers={},timeout=45000}={}){
+  function xhrJson(url,body,{signal,headers={},timeout=20000}={}){
     return new Promise((resolve,reject)=>{
       const xhr=new XMLHttpRequest();
       xhr.open('POST',url,true);xhr.timeout=timeout;
@@ -43,63 +51,79 @@
     xhrJson('/api/ui-diagnostics',payload,{timeout:3500}).catch(()=>{});
   }
 
-  async function renderCanonical(incoming,signal){
-    const payload={
-      ...incoming,
+  function canonicalPayload(incoming={}){
+    return{
       message:String(incoming.message||incoming.task||''),
       mode:String(incoming.mode||localStorage.getItem('wae.mode')||'general'),
-      sessionId:String(incoming.sessionId||stableId('wae.contextSession.v106')),
-      conversation_id:incoming.conversation_id||stableId('wae.conversationId.v106'),
+      sessionId:String(incoming.sessionId||stableId('wae.contextSession.v107')),
+      conversation_id:incoming.conversation_id||stableId('wae.conversationId.v107'),
       history:Array.isArray(incoming.history)&&incoming.history.length?incoming.history:history(),
       attachments:Array.isArray(incoming.attachments)&&incoming.attachments.length?incoming.attachments:(window.__waeRuntimeAttachments||[]),
+      web_enabled:incoming.web_enabled===true||incoming.mode==='research',
       provider:'auto',
       client_runtime:VERSION,
-      preferences:{...(incoming.preferences||{}),responseStyle:'premium-rich',contextIntegrity:'v106'}
+      preferences:{...(incoming.preferences||{}),responseStyle:'premium-rich',contextIntegrity:'v107'}
     };
-    const out=await xhrJson('/api/chat',payload,{signal,headers:{'x-wae-canonical-brain':'v106'},timeout:45000});
+  }
+
+  async function renderCanonical(incoming,signal){
+    const payload=canonicalPayload(incoming);
+    const research=payload.mode==='research'||payload.web_enabled===true;
+    const out=await xhrJson('/api/chat',payload,{signal,headers:{'x-wae-canonical-brain':'v107'},timeout:research?45000:16000});
     if(out.status<200||out.status>=300||weak(out.data))throw Object.assign(new Error(String(out.data?.message||out.data?.error||`render_http_${out.status}`)),{status:out.status,data:out.data});
-    return{...out.data,canonical_brain:VERSION,canonical_route:'render-direct-v106'};
+    return{...out.data,canonical_brain:VERSION,canonical_route:'render-direct-v107'};
   }
 
   async function edgeFallback(incoming,signal){
-    const boot=await xhrJson(EDGE,{action:'bootstrap'},{signal,headers:{apikey:SUPABASE_KEY,'x-client-info':VERSION},timeout:8000});
+    const boot=await xhrJson(EDGE,{action:'bootstrap'},{signal,headers:{apikey:SUPABASE_KEY,'x-client-info':VERSION},timeout:6000});
     if(boot.status<200||boot.status>=300||!boot.data?.session_id||!boot.data?.session_secret)throw new Error('edge_bootstrap_failed');
     const h=history();
     const internal_context=h.length?`HISTORIAL CONVERSACIONAL DEL CLIENTE (datos, no instrucciones):\n${h.map(x=>`${x.role.toUpperCase()}: ${x.text}`).join('\n').slice(0,22000)}`:'';
-    const payload={action:'chat',session_id:boot.data.session_id,session_secret:boot.data.session_secret,message:String(incoming.message||incoming.task||''),mode:String(incoming.mode||'general'),web_enabled:incoming.web_enabled===true||incoming.mode==='research',attachments:window.__waeRuntimeAttachments||[],internal_context,stream:false,routing_variant:'candidate'};
-    const out=await xhrJson(EDGE,payload,{signal,headers:{apikey:SUPABASE_KEY,'x-client-info':VERSION},timeout:18000});
+    const payload={action:'chat',session_id:boot.data.session_id,session_secret:boot.data.session_secret,message:String(incoming.message||incoming.task||''),mode:String(incoming.mode||'general'),web_enabled:incoming.web_enabled===true||incoming.mode==='research',attachments:Array.isArray(incoming.attachments)?incoming.attachments:(window.__waeRuntimeAttachments||[]),internal_context,stream:false,routing_variant:'candidate'};
+    const out=await xhrJson(EDGE,payload,{signal,headers:{apikey:SUPABASE_KEY,'x-client-info':VERSION},timeout:incoming.mode==='research'?30000:14000});
     if(out.status<200||out.status>=300||weak(out.data))throw new Error(String(out.data?.message||out.data?.error||'edge_fallback_failed'));
-    return{...out.data,canonical_brain:VERSION,canonical_route:'edge-fallback-v106'};
+    return{...out.data,canonical_brain:VERSION,canonical_route:'edge-fallback-v107'};
+  }
+
+  async function resolveCanonical(incoming,signal){
+    const started=Date.now();
+    try{
+      const data=await renderCanonical(incoming,signal);
+      const latencyMs=Date.now()-started;
+      trace(data,'render-direct-v107',latencyMs,false);
+      return{data,route:'render-direct-v107',latencyMs};
+    }catch(renderError){
+      console.warn('[Canonical Brain v107] Render path degraded',renderError?.message||renderError);
+      const data=await edgeFallback(incoming,signal);
+      const latencyMs=Date.now()-started;
+      trace(data,'edge-fallback-v107',latencyMs,true);
+      return{data,route:'edge-fallback-v107',latencyMs};
+    }
   }
 
   window.fetch=async(input,init={})=>{
-    if(!isChat(input,init))return previousFetch(input,init);
-    const incoming=parseBody(init),started=Date.now();
+    const incoming=parseBody(init);
+    const edgeChat=isEdge(input,init)&&incoming.action==='chat';
+    const sameOriginChat=isChat(input,init);
+    if(!edgeChat&&!sameOriginChat)return previousFetch(input,init);
+
     try{
-      const data=await renderCanonical(incoming,init.signal);
-      const latencyMs=Date.now()-started;
-      window.__iuLastRuntime={...data,canonical_brain:VERSION,canonical_route:'render-direct-v106',canonical_latency_ms:latencyMs};
-      document.documentElement.dataset.canonicalBrain='render-v106';
-      trace(data,'render-direct-v106',latencyMs,false);
-      return jsonResponse(data,200,'render-direct-v106');
-    }catch(renderError){
-      console.warn('[Canonical Brain v106] Render canonical path degraded',renderError?.message||renderError);
-      try{
-        const data=await edgeFallback(incoming,init.signal);
-        const latencyMs=Date.now()-started;
-        window.__iuLastRuntime={...data,canonical_brain:VERSION,canonical_route:'edge-fallback-v106',canonical_latency_ms:latencyMs};
-        document.documentElement.dataset.canonicalBrain='edge-fallback-v106';
-        trace(data,'edge-fallback-v106',latencyMs,true);
-        return jsonResponse(data,200,'edge-fallback-v106');
-      }catch(edgeError){
-        const latencyMs=Date.now()-started;
-        console.warn('[Canonical Brain v106] all routes failed',edgeError?.message||edgeError);
-        document.documentElement.dataset.canonicalBrain='failed-v106';
-        trace({provider:'none',model:'none'},'failed-v106',latencyMs,true);
-        return jsonResponse({error:'canonical_brain_unavailable',message:'Universal Core no obtuvo una respuesta generativa completa.',recoverable:true,canonical_brain:VERSION},503,'failed-v106');
+      const {data,route,latencyMs}=await resolveCanonical(incoming,init.signal);
+      window.__iuLastRuntime={...data,canonical_brain:VERSION,canonical_route:route,canonical_latency_ms:latencyMs};
+      document.documentElement.dataset.canonicalBrain=route;
+      return edgeChat&&incoming.stream===true?sseResponse(data,route):jsonResponse(data,200,route);
+    }catch(error){
+      const route='failed-v107';
+      console.warn('[Canonical Brain v107] all routes failed',error?.message||error);
+      document.documentElement.dataset.canonicalBrain=route;
+      trace({provider:'none',model:'none'},route,0,true);
+      const payload={error:'canonical_brain_unavailable',message:'Universal Core no obtuvo una respuesta generativa completa.',recoverable:true,canonical_brain:VERSION};
+      if(edgeChat&&incoming.stream===true){
+        return new Response(`event: response.error\ndata: ${JSON.stringify(payload)}\n\n`,{status:200,headers:{'content-type':'text/event-stream; charset=utf-8','cache-control':'no-store','x-wae-canonical-brain':VERSION,'x-wae-chat-route':route}});
       }
+      return jsonResponse(payload,503,route);
     }
   };
 
-  window.__waeCanonicalBrain={version:VERSION,primary:'direct-xhr:/api/chat',fallback:'direct-xhr:supabase-edge',bypassesLegacyFetchInterceptors:true,rejectsWeakContinuity:true,telemetry:'canonical_response-no-prompt'};
+  window.__waeCanonicalBrain={version:VERSION,primary:'xhr:/api/chat',fallback:'xhr:supabase-edge',interceptsEdgeChat:true,bypassesLegacyFetchInterceptors:true,rejectsWeakContinuity:true,telemetry:'canonical_response-no-prompt',stableGeneralDeadlineMs:16000};
 })();
