@@ -61,13 +61,17 @@ test('v92 bounds instruction size before model context',()=>{
 test('runtime and council consume private instructions without rewriting saved user message',async()=>{
   const [runtime,council,specialist,chat]=await Promise.all([read('lib/runtime.js'),read('lib/deliberation-plane.js'),read('lib/specialist-copilot-runtime-v91.js'),read('api/chat.js')]);
   assert.match(runtime,/userContextSystemInstructionV92\(payload\.preferences/);
-  assert.match(runtime,/const quick=userContextState\.affectsGeneration\?null/);
-  assert.match(runtime,/const cacheEligible=!userContextState\.affectsGeneration/);
+  assert.match(runtime,/userContextState\.affectsGeneration/);
+  assert.match(runtime,/contextualFollowup/);
+  assert.match(runtime,/casualCoreReply\(message\)/);
+  assert.match(runtime,/const cacheEligible=!contextualFollowup&&!userContextState\.affectsGeneration/);
   assert.match(runtime,/saveTurn\(userKey,sessionId,message,/);
   assert.match(council,/userContextSystemInstructionV92\(preferences/);
   assert.match(specialist,/userContextSystemInstructionV92\(body\.preferences/);
-  assert.match(chat,/!userContext\.affectsGeneration && protocolFastPathEligible/);
-  assert.match(chat,/userContext\.affectsGeneration\?null:conversationalHelpReply/);
+  assert.match(chat,/contextualFollowupV103/);
+  assert.match(chat,/protocolFastPathEligible\(runtimeBody\)/);
+  assert.match(chat,/conversationalHelpReply\(runtimeBody\)/);
+  assert.match(chat,/!contextualFollowup/);
 });
 
 test('frontend module connects settings, projects, real attachments and device voices',async()=>{
