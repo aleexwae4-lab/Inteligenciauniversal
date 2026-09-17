@@ -33,6 +33,16 @@
     });
   }
 
+  function trace(data,route,latencyMs,degraded=false){
+    const payload={
+      event:'canonical_response',at:new Date().toISOString(),release:VERSION,page:location.pathname,displayMode:matchMedia?.('(display-mode: standalone)')?.matches?'standalone':'browser',
+      route,provider:String(data?.provider||''),model:String(data?.model||''),latencyMs:Number(latencyMs)||0,replyLength:replyOf(data).length,degraded:degraded===true||data?.degraded===true,
+      viewport:{width:innerWidth||null,height:innerHeight||null,vvWidth:visualViewport?.width||null,vvHeight:visualViewport?.height||null,vvOffsetTop:visualViewport?.offsetTop||null},
+      valueLength:0,writable:true
+    };
+    xhrJson('/api/ui-diagnostics',payload,{timeout:3500}).catch(()=>{});
+  }
+
   async function renderCanonical(incoming,signal){
     const payload={
       ...incoming,
@@ -64,26 +74,32 @@
 
   window.fetch=async(input,init={})=>{
     if(!isChat(input,init))return previousFetch(input,init);
-    const incoming=parseBody(init);
+    const incoming=parseBody(init),started=Date.now();
     try{
       const data=await renderCanonical(incoming,init.signal);
-      window.__iuLastRuntime={...data,canonical_brain:VERSION,canonical_route:'render-direct-v106'};
+      const latencyMs=Date.now()-started;
+      window.__iuLastRuntime={...data,canonical_brain:VERSION,canonical_route:'render-direct-v106',canonical_latency_ms:latencyMs};
       document.documentElement.dataset.canonicalBrain='render-v106';
+      trace(data,'render-direct-v106',latencyMs,false);
       return jsonResponse(data,200,'render-direct-v106');
     }catch(renderError){
       console.warn('[Canonical Brain v106] Render canonical path degraded',renderError?.message||renderError);
       try{
         const data=await edgeFallback(incoming,init.signal);
-        window.__iuLastRuntime={...data,canonical_brain:VERSION,canonical_route:'edge-fallback-v106'};
+        const latencyMs=Date.now()-started;
+        window.__iuLastRuntime={...data,canonical_brain:VERSION,canonical_route:'edge-fallback-v106',canonical_latency_ms:latencyMs};
         document.documentElement.dataset.canonicalBrain='edge-fallback-v106';
+        trace(data,'edge-fallback-v106',latencyMs,true);
         return jsonResponse(data,200,'edge-fallback-v106');
       }catch(edgeError){
+        const latencyMs=Date.now()-started;
         console.warn('[Canonical Brain v106] all routes failed',edgeError?.message||edgeError);
         document.documentElement.dataset.canonicalBrain='failed-v106';
+        trace({provider:'none',model:'none'},'failed-v106',latencyMs,true);
         return jsonResponse({error:'canonical_brain_unavailable',message:'Universal Core no obtuvo una respuesta generativa completa.',recoverable:true,canonical_brain:VERSION},503,'failed-v106');
       }
     }
   };
 
-  window.__waeCanonicalBrain={version:VERSION,primary:'direct-xhr:/api/chat',fallback:'direct-xhr:supabase-edge',bypassesLegacyFetchInterceptors:true,rejectsWeakContinuity:true};
+  window.__waeCanonicalBrain={version:VERSION,primary:'direct-xhr:/api/chat',fallback:'direct-xhr:supabase-edge',bypassesLegacyFetchInterceptors:true,rejectsWeakContinuity:true,telemetry:'canonical_response-no-prompt'};
 })();
