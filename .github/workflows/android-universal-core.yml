@@ -1,0 +1,65 @@
+name: Android Universal Core
+
+on:
+  pull_request:
+    paths:
+      - 'android/**'
+      - 'mobile-brain-v110.js'
+      - 'premium-v5.js'
+      - 'tests/mobile-native-v110.test.js'
+      - '.github/workflows/android-universal-core.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'android/**'
+      - 'mobile-brain-v110.js'
+      - 'premium-v5.js'
+      - 'tests/mobile-native-v110.test.js'
+      - '.github/workflows/android-universal-core.yml'
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Verify Universal Core mobile contracts
+        run: node --check mobile-brain-v110.js && node --check premium-v5.js && node --test tests/mobile-native-v110.test.js
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Install Android 16 SDK
+        run: sdkmanager "platforms;android-36" "build-tools;36.0.0"
+
+      - name: Set up Gradle 9.6
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '9.6.0'
+
+      - name: Build debug APK and release bundle
+        run: gradle -p android :app:assembleDebug :app:bundleRelease --stacktrace
+
+      - name: Upload debug APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: universal-core-debug-apk
+          path: android/app/build/outputs/apk/debug/app-debug.apk
+          if-no-files-found: error
+
+      - name: Upload release AAB
+        uses: actions/upload-artifact@v4
+        with:
+          name: universal-core-release-aab-unsigned
+          path: android/app/build/outputs/bundle/release/app-release.aab
+          if-no-files-found: error
