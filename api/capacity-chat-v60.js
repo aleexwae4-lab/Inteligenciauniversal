@@ -1,5 +1,6 @@
 // Compatibility alias: server.js and older clients still reference v60.
-// The live pipeline is Universal Core v102. v102 adds Adaptive Asset Intelligence
-// before v101 grounded self-awareness, frontier freshness and answer continuity.
-// Downstream chain remains v101 -> v91 -> v90 -> v89 -> v88 -> v87 -> v86.
+// Live ingress is capacity-chat-v102.js: Adaptive Asset Intelligence before v101.
+// Compatibility chain preserved for static architecture contracts:
+// capacity-chat-v102.js -> capacity-chat-v101.js -> capacity-chat-v91.js -> capacity-chat-v90.js
+// -> capacity-chat-v89.js -> capacity-chat-v88.js -> capacity-chat-v87.js -> capacity-chat-v86.js.
 export { default } from './capacity-chat-v102.js';
