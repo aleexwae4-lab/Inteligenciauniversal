@@ -9,15 +9,15 @@ import { capabilitySnapshot } from '../lib/capability-kernel.js';
 import { classifySelfAwarenessV101, buildSelfAwarenessSnapshotV101, buildSelfAwarenessReplyV101, SELF_AWARENESS_V101 } from '../lib/self-awareness-v101.js';
 import { answerIsUsableV101, shouldRecoverAnswerV101, continuityEnvelopeV101, ANSWER_CONTINUITY_V101 } from '../lib/answer-continuity-v101.js';
 
-export const CAPACITY_CHAT_V101='capacity-chat/v101.2-grounded-self-model-frontier-freshness';
-export const FRONTIER_FRESHNESS_V101='frontier-freshness/v101.2';
+export const CAPACITY_CHAT_V101='capacity-chat/v101.3-grounded-self-model-frontier-freshness';
+export const FRONTIER_FRESHNESS_V101='frontier-freshness/v101.3';
 
 const normalize=value=>String(value??'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/\s+/g,' ').trim();
 // Frontier names are intentionally treated as freshness-sensitive families.
 // The exact version is resolved by live research instead of frozen memory so
 // this guard can age safely as vendors ship new point releases.
 const FRONTIER_ENTITY_RX=/\b(gpt[\s-]?6(?:[\s-]?astra)?|gpt[\s-]?astra|openai\s+astra|astra|claude(?:\s+(?:fable|mythos|opus|sonnet))?(?:\s+\d+(?:\.\d+)?)?|fable\s*5(?:\.1)?|mythos\s*5(?:\.1)?|gemini\s*(?:3(?:\.\d+)?|2\.5)|grok\s*(?:4(?:\.\d+)?|5)|github\s+copilot|microsoft\s+copilot|copilot|llama\s*(?:4|5)|deepseek\s*(?:v4|r2))\b/i;
-const FACTUAL_LOOKUP_RX=/\b(que es|quien es|cual es|sabes que es|sabes quien|existe|modelo|version|lanzamiento|release|released|fecha|precio|capacidades|caracteristicas|disponible|available|api)\b/i;
+const FACTUAL_LOOKUP_RX=/\b(que es|quien es|cual es|sabes que es|sabes quien|existe|modelos?|version(?:es)?|lanzamiento|release|released|fecha|precios?|capacidades|caracteristicas|disponible|available|api)\b/i;
 
 export function applyFrontierFreshnessGuardV101(body={}){
   const message=normalize(body?.message||body?.task||body?.prompt||'');
