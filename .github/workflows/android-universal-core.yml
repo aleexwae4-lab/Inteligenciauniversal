@@ -18,11 +18,6 @@ on:
       - '.github/workflows/android-universal-core.yml'
   workflow_dispatch:
 
-env:
-  ANDROID_HOME: /usr/local/lib/android/sdk
-  ANDROID_SDK_ROOT: /usr/local/lib/android/sdk
-  SDKMANAGER: /usr/local/lib/android/sdk/cmdline-tools/latest/bin/sdkmanager
-
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -42,13 +37,13 @@ jobs:
           java-version: '17'
 
       - name: Verify Android SDK manager
-        run: test -x "$SDKMANAGER" && "$SDKMANAGER" --version
+        run: test -x /usr/local/lib/android/sdk/cmdline-tools/latest/bin/sdkmanager && /usr/local/lib/android/sdk/cmdline-tools/latest/bin/sdkmanager --version
 
       - name: Accept Android SDK licenses
-        run: yes | "$SDKMANAGER" --licenses >/dev/null || true
+        run: yes | /usr/local/lib/android/sdk/cmdline-tools/latest/bin/sdkmanager --licenses >/dev/null || true
 
       - name: Install Android 16 SDK
-        run: "$SDKMANAGER" "platform-tools" "platforms;android-36" "build-tools;36.0.0"
+        run: /usr/local/lib/android/sdk/cmdline-tools/latest/bin/sdkmanager "platform-tools" "platforms;android-36" "build-tools;36.0.0"
 
       - name: Set up Gradle 9.6
         uses: gradle/actions/setup-gradle@v4
@@ -56,6 +51,9 @@ jobs:
           gradle-version: '9.6.0'
 
       - name: Build debug APK and release bundle
+        env:
+          ANDROID_HOME: /usr/local/lib/android/sdk
+          ANDROID_SDK_ROOT: /usr/local/lib/android/sdk
         run: gradle -p android :app:assembleDebug :app:bundleRelease --stacktrace
 
       - name: Upload debug APK
