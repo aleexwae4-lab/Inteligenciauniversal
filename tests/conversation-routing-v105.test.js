@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { conversationRoutingClassV105 } from '../api/capacity-chat-v105.js';
+import { edgeGenerativeRescueEligible, researchRescueEligible } from '../lib/intelligence-rescue.js';
 
 const route=(message,extra={})=>conversationRoutingClassV105({message,mode:'general',provider:'auto',...extra});
 
@@ -24,10 +25,17 @@ test('capability questions use the modern self-awareness path',()=>{
   assert.equal(route('¿Qué tan inteligente eres?'),'capabilities');
 });
 
-test('real factual questions remain on the knowledge/research stack',()=>{
+test('real factual questions remain on the full premium knowledge stack',()=>{
   assert.equal(route('¿Qué es la fotosíntesis?'),'legacy');
   assert.equal(route('¿Quién fue Marie Curie?'),'legacy');
+  assert.equal(route('¿Sabes qué es un termostato?'),'legacy');
   assert.equal(route('Investiga las novedades de Node.js'),'legacy');
+});
+
+test('stable factual rescue recognizes thermostat phrasing only after primary failure',()=>{
+  assert.equal(edgeGenerativeRescueEligible('¿Sabes qué es un termostato?','general'),true);
+  assert.equal(researchRescueEligible('¿Sabes qué es un termostato?','general'),true);
+  assert.equal(edgeGenerativeRescueEligible('Dime el precio actual de Bitcoin','general'),false);
 });
 
 test('explicit research, attachments and providers preserve legacy routing',()=>{
