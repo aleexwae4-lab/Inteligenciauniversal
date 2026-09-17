@@ -101,3 +101,27 @@ test('native brain v5 elimina la selección first-value y conserva kernel determ
   assert.equal(result.native_brain,NATIVE_BRAIN_VERSION);
   assert.match(result.reply,/84/);
 });
+
+test('la interfaz visible usa native brain v5 de servidor antes del cerebro local',()=>{
+  const canonical=readFileSync(new URL('../canonical-brain-v106.js',import.meta.url),'utf8');
+  const interfaceBrain=readFileSync(new URL('../mobile-brain-v110.js',import.meta.url),'utf8');
+  assert.match(canonical,/canonical-brain\/v112-server-first/);
+  assert.match(canonical,/xhrJson\('\/api\/native-brain\/chat'/);
+  assert.match(canonical,/serverFirst:true/);
+  assert.match(canonical,/localPrimary:false/);
+  assert.match(interfaceBrain,/interface-brain\/v112-server-first/);
+  assert.match(interfaceBrain,/xhr\.open\('POST','\/api\/native-brain\/chat'/);
+  assert.match(interfaceBrain,/contextExplicit:true/);
+  assert.match(interfaceBrain,/localPrimary:false/);
+});
+
+test('la interfaz envía continuidad explícita y no duplica el turno actual en history',()=>{
+  const canonical=readFileSync(new URL('../canonical-brain-v106.js',import.meta.url),'utf8');
+  const interfaceBrain=readFileSync(new URL('../mobile-brain-v110.js',import.meta.url),'utf8');
+  for(const source of [canonical,interfaceBrain]){
+    assert.match(source,/conversation_id:conversationId/);
+    assert.match(source,/sessionId/);
+    assert.match(source,/history:/);
+    assert.match(source,/(?:items|list)\.at\(-1\).*role==='user'/s);
+  }
+});
