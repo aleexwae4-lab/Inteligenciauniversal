@@ -29,6 +29,9 @@ export function conversationRoutingClassV105(body={}){
   const q=normalize(raw);
   if(!GENERAL_MODES.has(mode)||hasExternalIntent(body)||!raw)return'legacy';
 
+  // Current, research and high-impact factual requests retain the governed evidence stack.
+  if(VERIFIED_DOMAIN_RX.test(q))return'legacy';
+
   if(!q&&/[?¿]+/.test(raw))return'conversation';
 
   if(/\b(quien eres(?: tu)?|que eres(?: tu)?|que es universal core|quien eres tu como (?:ia|inteligencia artificial)|que eres como (?:ia|inteligencia artificial))\b/.test(q))return'identity';
@@ -39,13 +42,13 @@ export function conversationRoutingClassV105(body={}){
 
   if(/^(?:(?:hola|hey|buenas)\s+)?(?:que sabes|que sabes hacer|que puedes hacer|cuales son tus capacidades|que capacidades tienes|como puedes ayudarme|como funcionas|que tan inteligente eres)$/.test(q))return'capabilities';
 
-  // Ordinary creation requests are conversational generation jobs, not knowledge retrieval.
-  // Keep current/research/high-impact requests on the verified legacy evidence stack.
-  if(GENERATIVE_RX.test(q)&&!VERIFIED_DOMAIN_RX.test(q))return'creative';
+  if(GENERATIVE_RX.test(q))return'creative';
 
   if(/^(?:gracias|muchas gracias|ok|okay|vale|perfecto|listo)$/.test(q))return'conversation';
 
-  return'legacy';
+  // Stable factual questions, explanations and ordinary conversation use the premium
+  // generative brain by default. Retrieval is an augmentation, not the primary answerer.
+  return'premium';
 }
 
 function canonicalConversationMessage(body={}){
