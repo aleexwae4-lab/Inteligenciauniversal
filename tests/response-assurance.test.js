@@ -5,6 +5,7 @@ import chatHandler from '../api/chat.js';
 import { extractCoreUserQuery, adaptiveResponseContract, shouldEvidenceRescue, edgeRequestPolicy } from '../lib/providers.js';
 import { researchRescueEligible, rescueMission } from '../lib/intelligence-rescue.js';
 import { answerAssuranceEligibleV101, assuranceRecoveryPlanV101, boundedContinuityTextV101, buildBoundedContinuityV101 } from '../lib/answer-assurance-v101.js';
+import { contextualFollowupV103, contextIntegrityInstructionV103, identityGroundingReportV103, contextualCoherenceReportV103 } from '../lib/context-integrity-v103.js';
 
 test('extractCoreUserQuery removes routing, memory and tool context', () => {
   const input='Investiga y verifica con evidencia web reciente antes de responder. Distingue hechos verificados de inferencias y cita las fuentes disponibles.\n\n¿Qué es una API REST?\n\nMEMORIA RECUPERADA (contexto previo potencialmente relevante):\n1. dato viejo\n\nEVIDENCIA DE HERRAMIENTAS (usa solo lo observado; no inventes ejecuciones):\n[web_search] OK';
@@ -59,15 +60,28 @@ test('chat serves grounded intelligence self-awareness before provider routing',
   const req={method:'POST',headers:{},socket:{remoteAddress:'127.0.0.44'},body:{message:'¿Qué tan inteligente eres?',mode:'general'}};
   await chatHandler(req,res);
   assert.equal(res.statusCode,200);
-  assert.equal(headers['x-wae-fast-path'],'grounded-self-awareness-v99');
+  assert.equal(headers['x-wae-fast-path'],'grounded-self-awareness-v103');
   assert.equal(headers['x-wae-answer-assurance'],'v101');
+  assert.equal(headers['x-wae-context-integrity'],'v103');
   assert.equal(res.payload?.provider,'universal_core');
   assert.equal(res.payload?.fast_lane,true);
   assert.match(res.payload?.reply||'',/pruebas|mide|competitivo/i);
   assert.equal(res.payload?.self_awareness?.answerAssurance?.version,'answer-assurance/v101');
+  assert.equal(res.payload?.self_awareness?.contextIntegrity?.version,'context-integrity/v103');
   assert.equal(res.payload?.self_awareness?.claimPolicy?.globalNumberOneClaimAllowed,false);
   assert.equal(Array.isArray(res.payload?.web_sources),true);
   assert.equal(res.payload.web_sources.length,0);
+});
+
+test('hardware self-awareness never adopts provider identity', async () => {
+  const {headers,res}=fakeResponse();
+  const req={method:'POST',headers:{},socket:{remoteAddress:'127.0.0.49'},body:{message:'Tu tienes GPUs?',mode:'general'}};
+  await chatHandler(req,res);
+  assert.equal(res.statusCode,200);
+  assert.equal(headers['x-wae-fast-path'],'grounded-self-awareness-v103');
+  assert.equal(res.payload?.provider,'universal_core');
+  assert.match(res.payload?.reply||'',/Universal Core|WAE OS Enterprise/i);
+  assert.doesNotMatch(res.payload?.reply||'',/soy.*Google|soy.*NVIDIA|pertenezco.*Google|pertenezco.*NVIDIA/i);
 });
 
 test('casual feeling greeting is answered locally and never leaks web recovery', async () => {
@@ -100,12 +114,12 @@ test('capabilities prompt uses grounded self-awareness and exposes verified cont
   const req={method:'POST',headers:{},socket:{remoteAddress:'127.0.0.46'},body:{message:'Cuales son tus capacidades?',mode:'general'}};
   await chatHandler(req,res);
   assert.equal(res.statusCode,200);
-  assert.equal(headers['x-wae-fast-path'],'grounded-self-awareness-v99');
+  assert.equal(headers['x-wae-fast-path'],'grounded-self-awareness-v103');
   assert.equal(res.payload?.provider,'universal_core');
   assert.equal(res.payload?.fast_lane,true);
   assert.equal(Array.isArray(res.payload?.web_sources),true);
   assert.equal(res.payload.web_sources.length,0);
-  assert.match(res.payload?.reply||'',/Razonamiento|Investigación|Ingeniería|Continuidad v101/i);
+  assert.match(res.payload?.reply||'',/Razonamiento|Investigación|Ingeniería|Continuidad v101|Context Integrity v103/i);
   assert.equal(res.payload?.self_awareness?.capabilities?.answerAssurance,true);
   assert.equal(res.payload?.self_awareness?.answerAssurance?.absoluteQualityGuarantee,false);
   assert.doesNotMatch(res.payload?.reply||'',/cdc|swine|google/i);
@@ -116,9 +130,30 @@ test('competitor comparison is fail-closed and benchmark-scoped', async () => {
   const req={method:'POST',headers:{},socket:{remoteAddress:'127.0.0.48'},body:{message:'¿Universal Core supera a GPT Astra?',mode:'general'}};
   await chatHandler(req,res);
   assert.equal(res.statusCode,200);
-  assert.equal(headers['x-wae-fast-path'],'grounded-self-awareness-v99');
+  assert.equal(headers['x-wae-fast-path'],'grounded-self-awareness-v103');
   assert.equal(res.payload?.self_awareness?.claimPolicy?.benchmarkScopedEvidenceOnly,true);
   assert.match(res.payload?.reply||'',/no debo afirmar|CERTIFIED|pruebas medibles/i);
+});
+
+test('v103 recognizes short dependent turns and anchors them to the last assistant message', () => {
+  const history=[
+    {role:'user',text:'Tu tienes GPUs?'},
+    {role:'assistant',text:'No poseo GPUs físicas propias. Puedo usar infraestructura de cómputo habilitada por el runtime.'}
+  ];
+  assert.equal(contextualFollowupV103('Sí',history),true);
+  const instruction=contextIntegrityInstructionV103({message:'Sí',history});
+  assert.match(instruction,/continuación dependiente del contexto/i);
+  assert.match(instruction,/GPUs físicas propias/i);
+  const drift=contextualCoherenceReportV103({message:'Sí',history,answer:'Entendido. Ajustaré la extensión de mis respuestas.'});
+  assert.equal(drift.required,true);
+  assert.equal(drift.pass,false);
+});
+
+test('v103 blocks provider-brand identity drift on infrastructure questions', () => {
+  const report=identityGroundingReportV103({question:'Tu tienes GPUs?',answer:'Como modelo, soy software que se ejecuta en centros de datos de Google.'});
+  assert.equal(report.selfQuestion,true);
+  assert.equal(report.providerIdentityDrift,true);
+  assert.equal(report.pass,false);
 });
 
 test('answer assurance v101 treats runtime deadline as recoverable without research tail', () => {
@@ -163,6 +198,7 @@ test('chat edge wires timeout recovery to emergency generation and bounded conti
   assert.match(source,/emergencyGenerate/);
   assert.match(source,/bounded-continuity-v101/);
   assert.match(source,/X-WAE-Answer-Assurance/);
+  assert.match(source,/contextualFollowupV103/);
   assert.doesNotMatch(source,/error\?\.code !== 'RUNTIME_DEADLINE' && recoverableRuntimeError/);
 });
 
@@ -195,6 +231,16 @@ test('mobile v47 bridges Edge chat to Render with single-attempt backpressure', 
   assert.doesNotMatch(bridge,/RETRYABLE_STATUS/);
 });
 
+test('mobile canonical v103 preserves explicit history and stable conversation identity', () => {
+  const source=readFileSync(new URL('../mobile-canonical-chat-v80.js',import.meta.url),'utf8');
+  assert.match(source,/mobile-canonical-chat\/v103-context/);
+  assert.match(source,/history,/);
+  assert.match(source,/wae\.contextSession\.v103/);
+  assert.match(source,/wae\.conversationId\.v103/);
+  assert.match(source,/storedHistory/);
+  assert.match(source,/rotateConversation/);
+});
+
 test('mobile boot loads v97 lifecycle, telemetry and v47 backpressure before bootstrap and voice layers', () => {
   const source=readFileSync(new URL('../server.js',import.meta.url),'utf8');
   const fast=source.indexOf("fast-lane-v23.js?v=34");
@@ -210,6 +256,7 @@ test('mobile boot loads v97 lifecycle, telemetry and v47 backpressure before boo
   assert.match(source,/mobile-response-lifecycle\/v97/);
   assert.match(source,/universal-core-mobile-v47-long-session/);
   assert.match(source,/long-session-backpressure-v47/);
+  assert.match(source,/context-integrity\/v103/);
   assert.doesNotMatch(source,/mobile-runtime-v34\.js\?v=44/);
   assert.doesNotMatch(source,/mobile-voice-v27\.js/);
 });
