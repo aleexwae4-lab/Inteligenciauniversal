@@ -47,23 +47,24 @@ function mobilePremiumHandler(req,res) {
       if (!chunk.includes('learning-client-v29.js')) scripts.push('<script src="/learning-client-v29.js?v=34" defer></script>');
       if (!chunk.includes('premium-v5.js')) scripts.push('<script src="/premium-v5.js?v=43" defer></script>');
       if (!chunk.includes('productivity-v59.js')) scripts.push('<script src="/productivity-v59.js?v=59" defer></script>');
-      if (!chunk.includes('mobile-canonical-chat-v80.js')) scripts.push('<script src="/mobile-canonical-chat-v80.js?v=80" defer></script>');
+      if (!chunk.includes('mobile-canonical-chat-v80.js')) scripts.push('<script src="/mobile-canonical-chat-v80.js?v=103" defer></script>');
       if (scripts.length) chunk = chunk.replace('</body>', `${scripts.join('')}</body>`);
       res.setHeader('Cache-Control','no-store, max-age=0, must-revalidate');
       res.setHeader('Pragma','no-cache');
       res.setHeader('Expires','0');
-      res.setHeader('X-WAE-Mobile-Release','universal-core-mobile-v80-visible-chat');
-      res.setHeader('X-WAE-Mobile-Chat-Route','same-origin-json-and-sse-first');
-      res.setHeader('X-WAE-Mobile-Fix','context-history-projects-v59');
+      res.setHeader('X-WAE-Mobile-Release','universal-core-mobile-v103-context-integrity');
+      res.setHeader('X-WAE-Mobile-Chat-Route','same-origin-context-history-first');
+      res.setHeader('X-WAE-Mobile-Fix','context-integrity-v103-stable-session-history');
       res.setHeader('X-WAE-Mobile-Response-Lifecycle','mobile-response-lifecycle/v97');
-      res.setHeader('X-WAE-Mobile-Compatible','universal-core-mobile-v47-long-session');
-      res.setHeader('X-WAE-Mobile-Compatible-Fix','long-session-backpressure-v47');
+      res.setHeader('X-WAE-Mobile-Compatible','universal-core-mobile-v103');
+      res.setHeader('X-WAE-Mobile-Compatible-Fix','context-history-identity-v103');
       res.setHeader('X-WAE-Capacity-Release','capacity-governor-v48');
       res.setHeader('X-WAE-Premium-Release','universal-core-rich-v43');
       res.setHeader('X-WAE-Live-Data','live-data-mesh/v58');
       res.setHeader('X-WAE-Productivity','productivity/v59');
       res.setHeader('X-WAE-Answer-Intelligence','answer-intelligence/v60');
       res.setHeader('X-WAE-Knowledge-Fabric','universal-knowledge-fabric/v1');
+      res.setHeader('X-WAE-Context-Integrity','context-integrity/v103');
     }
     return nativeEnd(chunk, encoding, callback);
   };
@@ -190,7 +191,7 @@ async function serveFile(req, res, pathname) {
   res.setHeader('Content-Type', contentTypes[ext] || 'application/octet-stream');
   res.setHeader('X-Content-Type-Options', 'nosniff');
   res.setHeader('Referrer-Policy', 'same-origin');
-  if (name === 'sw.js' || ext === '.html') {
+  if (name === 'sw.js' || name === 'mobile-canonical-chat-v80.js' || ext === '.html') {
     res.setHeader('Cache-Control','no-store, max-age=0, must-revalidate');
     res.setHeader('Pragma','no-cache');
     res.setHeader('Expires','0');
