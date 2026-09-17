@@ -18,6 +18,11 @@ on:
       - '.github/workflows/android-universal-core.yml'
   workflow_dispatch:
 
+env:
+  ANDROID_HOME: /usr/local/lib/android/sdk
+  ANDROID_SDK_ROOT: /usr/local/lib/android/sdk
+  SDKMANAGER: /usr/local/lib/android/sdk/cmdline-tools/latest/bin/sdkmanager
+
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -36,11 +41,14 @@ jobs:
           distribution: temurin
           java-version: '17'
 
+      - name: Verify Android SDK manager
+        run: test -x "$SDKMANAGER" && "$SDKMANAGER" --version
+
       - name: Accept Android SDK licenses
-        run: yes | sdkmanager --licenses >/dev/null || true
+        run: yes | "$SDKMANAGER" --licenses >/dev/null || true
 
       - name: Install Android 16 SDK
-        run: sdkmanager "platform-tools" "platforms;android-36" "build-tools;36.0.0"
+        run: "$SDKMANAGER" "platform-tools" "platforms;android-36" "build-tools;36.0.0"
 
       - name: Set up Gradle 9.6
         uses: gradle/actions/setup-gradle@v4
