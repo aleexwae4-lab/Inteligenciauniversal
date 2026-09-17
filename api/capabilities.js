@@ -18,6 +18,7 @@ import { continuousImprovementCapabilities, getContinuousImprovementStatus } fro
 import { evalTrainingCapabilitiesV95 } from '../lib/eval-training-loop-v95.js';
 import { selfAwarenessCapabilitiesV99, selfAwarenessSnapshotV99 } from '../lib/self-awareness-v99.js';
 import { frontierQualityCapabilitiesV102, refreshFrontierCurriculumV102 } from '../lib/frontier-quality-curriculum-v102.js';
+import { digitalAssetMemoryCapabilitiesV105 } from '../lib/digital-asset-memory-v105.js';
 import { answerIntelligenceCapabilities } from '../lib/answer-intelligence-v60.js';
 import { qualityReliabilityCapabilities } from '../lib/quality-reliability-v61.js';
 import { performanceRouterCapabilities, providerMeshSnapshot } from '../lib/provider-mesh-v63.js';
@@ -59,6 +60,7 @@ export default async function handler(req,res){
     reasoningProfiles:['auto','deep'],
     selfAwareness:{...selfAwarenessCapabilitiesV99(),snapshot:selfAwarenessSnapshotV99(coreContext||{})},
     frontierQuality:frontierQualityCapabilitiesV102(),
+    digitalAssetMemory:digitalAssetMemoryCapabilitiesV105(),
     answerIntelligence:answerIntelligenceCapabilities(),
     qualityReliability:qualityReliabilityCapabilities(),
     latencyGovernor:latencyGovernorCapabilitiesV90(),
