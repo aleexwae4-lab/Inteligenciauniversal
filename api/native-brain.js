@@ -1,4 +1,4 @@
-import { nativeBrainReply, nativeBrainStatus } from '../lib/native-brain-v1.js';
+import { nativeBrainReply, nativeBrainStatus, NATIVE_BRAIN_VERSION } from '../lib/native-brain-v2.js';
 import { applyHeaders, originAllowed, allowRequest } from '../lib/security.js';
 
 export default async function nativeBrainHandler(req,res){
@@ -9,11 +9,11 @@ export default async function nativeBrainHandler(req,res){
   if(!allowRequest(req))return res.status(429).json({error:'rate_limited'});
   try{
     const result=await nativeBrainReply(req.body||{});
-    res.setHeader('X-WAE-Native-Brain','wae-native-brain/v1');
+    res.setHeader('X-WAE-Native-Brain',NATIVE_BRAIN_VERSION);
     res.setHeader('X-WAE-Native-Path',String(result.native_path||'unknown'));
     return res.status(200).json(result);
   }catch(error){
     const status=Number(error?.statusCode)||500;
-    return res.status(status).json({error:String(error?.message||'native_brain_error'),recoverable:status>=500,native_brain:'wae-native-brain/v1'});
+    return res.status(status).json({error:String(error?.message||'native_brain_error'),recoverable:status>=500,native_brain:NATIVE_BRAIN_VERSION});
   }
 }
