@@ -7,6 +7,9 @@ const GENERAL_MODES=new Set(['','general','auto']);
 
 const CURRENT_OR_RESEARCH_RX=/\b(hoy|ahora|actual(?:es|idad|izado|izada)?|reciente|recientes|ultim[oa]s?|latest|today|current|noticias|news|precio|cotizacion|jurisprudencia|reforma|ley vigente|verifica|verificar|fuentes?|evidencia|investiga|investigacion|research|paper|papers|estado del arte|benchmark actual|tendencia actual)\b/i;
 const HIGH_IMPACT_RX=/\b(medic\w*|diagnost\w*|tratamiento\w*|dosis|farmac\w*|legal\w*|juridic\w*|penal\w*|delito\w*|fiscal\w*|tributar\w*|inversion\w*|credito\w*|fraude\w*|seguridad critica|high[- ]risk)\b/i;
+const CODE_RX=/```|\b(codigo|programa(?:r|cion)?|typescript|javascript|python|sql|api|backend|frontend|debug|bug|refactor|github|deploy|supabase|render|vercel|router|runtime|middleware|endpoint|servidor|server|node|react|vite|prisma)\b/i;
+const DESIGN_RX=/\b(disena|ux|ui|interfaz|experiencia|flujo|pantalla|responsive|movil|branding|producto visual)\b/i;
+const ANALYSIS_RX=/\b(analiza|analisis|audita|auditar|revisa|evaluar|evalua|diagnostico|estrategia|riesgo|roi|prioridad|decision|compara|arquitectura|causa raiz|optimiza|optimizar|endurece|endurecer|certifica|certificar)\b/i;
 
 function normalize(value=''){
   return String(value||'')
@@ -35,12 +38,9 @@ function explicitSpecialistIntent(body={}){
 }
 
 function highImpactIntent(raw='',q=''){
-  // High-impact domains remain on the verified evidence stack. A plain mention
-  // is not enough for harmless meta/product discussions, so require either a
-  // concrete advisory/action verb or an explicit high-risk phrase.
   if(/\b(seguridad critica|high[- ]risk)\b/i.test(q))return true;
   if(!HIGH_IMPACT_RX.test(q))return false;
-  return /\b(analiza|evalua|diagnostica|recomienda|tratamiento|dosis|prescribe|asesora|estrategia legal|demanda|denuncia|defensa|inversion|credito|tributar|fiscal|riesgo|fraude)\b/i.test(raw);
+  return /\b(analiza|evalua|diagnostica|recomienda|tratamiento|dosis|prescribe|asesora|estrategia legal|demanda|denuncia|defensa|inversion|credito|tributar|fiscal|riesgo|fraude)\b/i.test(normalize(raw));
 }
 
 export function universalRoutingClassV106(body={}){
@@ -58,18 +58,31 @@ export function universalRoutingClassV106(body={}){
   if(/^(?:que puedes hacer|que sabes hacer|cuales son tus capacidades|que capacidades tienes|como puedes ayudarme|como funcionas|que tan inteligente eres)$/.test(q))return'capabilities';
   if(/^(?:gracias|muchas gracias|ok|okay|vale|perfecto|listo)$/.test(q))return'conversation';
 
-  // Current facts, explicit research/evidence and high-impact advice keep the
-  // evidence-first legacy stack. Stable knowledge, reasoning, writing, coding,
-  // planning and normal conversation use the modern Universal Core runtime.
   if(CURRENT_OR_RESEARCH_RX.test(q)||highImpactIntent(raw,q))return'legacy';
   return'universal';
 }
 
-function canonicalConversationMessage(body={}){
+function canonicalUniversalMessage(body={}){
   const raw=String(body.message||body.task||body.prompt||body.query||'').trim();
   const q=normalize(raw);
   if(/^(?:te sientes bien|estas bien|todo bien)$/.test(q))return'¿Cómo estás?';
+
+  // The old chat handler had a broad canned "puedes ayudarme con X" shortcut.
+  // Rewrite only that conversational wrapper so the actual topic reaches the
+  // full runtime instead of being answered with a generic acknowledgement.
+  const help=raw.match(/^\s*[¿?¡!]*\s*(?:me\s+)?(?:puedes|podr[ií]as)\s+ayudar(?:me)?\s+(?:con|en|a)\s+(.+?)\s*[?¿]*\s*$/i);
+  if(help?.[1])return `Ayúdame con ${help[1].trim().replace(/[?¿]+$/,'')}.`;
   return raw;
+}
+
+export function inferredUniversalModeV106(body={}){
+  const requested=String(body.mode||body.agent||'general').toLowerCase();
+  if(!GENERAL_MODES.has(requested))return requested;
+  const q=normalize(body.message||body.task||body.prompt||body.query||'');
+  if(CODE_RX.test(q))return'code';
+  if(DESIGN_RX.test(q))return'design';
+  if(ANALYSIS_RX.test(q))return'analysis';
+  return'general';
 }
 
 export default async function capacityChatV106(req,res){
@@ -81,9 +94,12 @@ export default async function capacityChatV106(req,res){
   if(route==='legacy')return legacyCapacityChat(req,res);
 
   const original=req.body;
+  const inferredMode=inferredUniversalModeV106(body);
+  res.setHeader('X-WAE-Universal-Mode',inferredMode);
   req.body={
     ...body,
-    message:canonicalConversationMessage(body),
+    message:canonicalUniversalMessage(body),
+    mode:inferredMode,
     universal_router:CAPACITY_CHAT_V106,
     universal_runtime_first:true
   };
