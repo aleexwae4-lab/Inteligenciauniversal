@@ -8,6 +8,7 @@ import { selectProviderRoute, observeProviderOutcome } from '../lib/provider-mes
 import { councilEligible, deliberateMission } from '../lib/deliberation-plane.js';
 import { runWithRequestSignal } from '../lib/network-deadlines-v46.js';
 import { userContextStateV92 } from '../lib/user-context-v92.js';
+import { classifySelfAwarenessV99, buildSelfAwarenessReplyV99, selfAwarenessSnapshotV99 } from '../lib/self-awareness-v99.js';
 
 function normalizeFastPath(value='') {
   return String(value || '')
@@ -133,6 +134,26 @@ export default async function handler(req,res) {
   res.setHeader('X-WAE-Response-Budget-Ms',String(budget));
   res.setHeader('X-WAE-Long-Session','abortable-v47');
   res.setHeader('X-WAE-Answer-Assurance','v101');
+
+  const awareness=userContext.affectsGeneration?{eligible:false}:classifySelfAwarenessV99(runtimeBody);
+  if(awareness.eligible){
+    const reply=buildSelfAwarenessReplyV99({kind:awareness.kind});
+    const snapshot=selfAwarenessSnapshotV99();
+    res.setHeader('X-WAE-Fast-Path','grounded-self-awareness-v99');
+    return res.status(200).json({
+      success:true,
+      reply,
+      speech_text:reply,
+      response:{content:reply,speechText:reply,metadata:{fastLane:true,fastLaneVersion:'grounded-self-awareness/v99',selfAwareness:snapshot}},
+      provider:'universal_core',
+      model:'universal-core-self-awareness-v99',
+      fast_lane:true,
+      fast_lane_version:'grounded-self-awareness/v99',
+      web_sources:[],
+      self_awareness:snapshot,
+      input_interpretation:publicIntent(intent)
+    });
+  }
 
   if (!userContext.affectsGeneration && protocolFastPathEligible(runtimeBody)) {
     const protocolBody={...runtimeBody,message:canonicalProtocolPrompt(runtimeBody.message || runtimeBody.task || '')};
