@@ -5,6 +5,7 @@ import { planSpecialistCopilots, publicSpecialistPlan, runSpecialistCouncilV91, 
 import { runSpecialistSinglePassV91, shouldRunSpecialistSinglePassV91 } from '../lib/specialist-copilot-runtime-v91.js';
 import { runSpecialistCouncilV92 } from '../lib/specialist-council-v92.js';
 import { userContextStateV92 } from '../lib/user-context-v92.js';
+import { recallUserProfileV104, ADAPTIVE_USER_MODEL_V104 } from '../lib/memory.js';
 
 export const CAPACITY_CHAT_V91='capacity-chat/v91-specialist-copilot-arsenal';
 
@@ -25,8 +26,40 @@ function bufferedResponse(real){
   return{proxy,get code(){return code},get payload(){return payload},get hasJson(){return hasJson}};
 }
 
+function specialistHintsFromProfile(profile){
+  const text=[...(profile?.professional_roles||[]),...(profile?.responsibilities||[])].join(' ').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase();
+  if(!text)return[];
+  const hints=[];
+  const add=(...ids)=>{for(const id of ids)if(!hints.includes(id)&&hints.length<6)hints.push(id)};
+  if(/software|programador|desarrollador|sistemas|informatic|comput/.test(text))add('software_architect','backend_engineer','ai_engineer');
+  if(/ingenier[oa] mecanic|mecanico/.test(text))add('mechanical_engineer','automotive');
+  if(/ingenier[oa] civil|construccion|obra/.test(text))add('civil_engineer','project_program','risk_analyst');
+  if(/ingenier[oa] electric|electronic/.test(text))add('electrical_engineer','risk_analyst');
+  if(/\bingenier/.test(text)&&!hints.length)add('project_program','risk_analyst');
+  if(/abogad|juridic|legal|notari|perito/.test(text))add('legal_research','contracts','compliance');
+  if(/maestr|profesor|docent|educador/.test(text))add('educator','academic_research');
+  if(/medic|doctor|enfermer|dentist|veterinari|farmaceut/.test(text))add('medical_evidence','academic_research');
+  if(/gobernador|alcald|funcionari|servidor publico|administracion publica/.test(text))add('ceo_strategy','operations','economist','legal_research','communications');
+  if(/empresari|emprendedor|\bceo\b|director|gerente/.test(text))add('ceo_strategy','operations','cfo_finance','growth');
+  if(/contador|financier|auditor/.test(text))add('cfo_finance','risk_analyst','compliance');
+  if(/marketing|mercadotec|growth|ventas/.test(text))add('growth','sales','brand_strategy','copywriter');
+  if(/diseñador|ux|producto/.test(text))add('product_designer','ux_research','conversion_ux');
+  if(/investigador|cientific/.test(text))add('academic_research','statistician');
+  if(/estudiante/.test(text))add('educator','academic_research');
+  if(/periodista|editor|escritor/.test(text))add('writer_editor','academic_research','communications');
+  if(/fotograf/.test(text))add('photography','creative_director');
+  return hints;
+}
+
+function planningBodyWithProfile(body,profile){
+  const profileHints=specialistHintsFromProfile(profile);
+  const explicit=Array.isArray(body.specialists)?body.specialists.filter(Boolean):[];
+  const specialists=[...new Set([...explicit,...profileHints])].slice(0,8);
+  return specialists.length?{...body,specialists}:body;
+}
+
 function publicPlan(plan={},active=false,path='delegated'){
-  return{...publicSpecialistPlan(plan),active,path};
+  return{...publicSpecialistPlan(plan),active,path,adaptive_profile_applied:plan?.adaptiveProfileApplied===true,adaptive_profile_version:plan?.adaptiveProfileApplied===true?ADAPTIVE_USER_MODEL_V104:undefined};
 }
 
 function decorate(payload={},plan={},active=false,path='delegated'){
@@ -45,6 +78,7 @@ function setHeaders(res,plan={},path='delegated'){
   res.setHeader('X-WAE-Specialist-Copilots',SPECIALIST_COPILOT_VERSION);
   res.setHeader('X-WAE-Specialist-Path',path);
   res.setHeader('X-WAE-Specialist-Count',String(plan?.specialists?.length||0));
+  res.setHeader('X-WAE-Adaptive-Profile',plan?.adaptiveProfileApplied===true?'v104':'none');
 }
 
 function authorize(req,res){
@@ -65,7 +99,11 @@ async function delegate(req,res,plan,path='evidence-or-runtime-delegated'){
 
 export default async function capacityChatV91(req,res){
   const body=req.body&&typeof req.body==='object'?req.body:{};
-  const plan=planSpecialistCopilots(body);
+  const key=String(body.userKey||body.user_id||body.userId||body.sessionId||body.session_id||getClientIp(req)||'anonymous').slice(0,160);
+  const profile=await recallUserProfileV104(key).catch(()=>null);
+  const plannedBody=planningBodyWithProfile(body,profile);
+  const rawPlan=planSpecialistCopilots(plannedBody);
+  const plan={...rawPlan,adaptiveProfileApplied:specialistHintsFromProfile(profile).length>0};
 
   // High-impact topics stay on the evidence/verification stack. The specialist
   // planner is still surfaced as routing context, but an ungrounded direct
@@ -77,7 +115,6 @@ export default async function capacityChatV91(req,res){
   if(!council&&!single)return delegate(req,res,plan);
   if(!authorize(req,res))return;
 
-  const key=String(body.userKey||body.user_id||body.userId||body.sessionId||body.session_id||getClientIp(req)||'anonymous').slice(0,160);
   const slot=tryAcquireChatSlot(`${key}:specialists`.slice(0,180));
   if(!slot.ok){
     const retry=Math.max(1,Math.ceil(slot.retryAfterMs/1000));
@@ -88,7 +125,7 @@ export default async function capacityChatV91(req,res){
   try{
     let result=null,path='';
     if(council){
-      const personalized=userContextStateV92(body).affectsGeneration===true;
+      const personalized=userContextStateV92(body).affectsGeneration===true||plan.adaptiveProfileApplied===true;
       result=personalized?await runSpecialistCouncilV92({body,plan}).catch(()=>null):await runSpecialistCouncilV91({body,plan}).catch(()=>null);
       path=personalized?'parallel-specialist-council-v92-context':'parallel-specialist-council-v91';
     }else if(single){result=await runSpecialistSinglePassV91({body,plan}).catch(()=>null);path='single-pass-specialist-v91'}
@@ -107,6 +144,7 @@ export function capacityChatV91Capabilities(){
   return{
     release:CAPACITY_CHAT_V91,
     specialists:SPECIALIST_COPILOT_VERSION,
-    policy:{minimumNecessarySpecialists:true,singlePassByDefault:true,parallelCouncilOnlyWhenExplicit:true,currentFactsDelegateToVerifiedEvidencePipeline:true,highImpactDelegatesToVerifiedEvidencePipeline:true,explicitProviderContractPreserved:true,noUniversalSuperiorityClaimWithoutBenchmark:true}
+    adaptiveUserModel:ADAPTIVE_USER_MODEL_V104,
+    policy:{minimumNecessarySpecialists:true,singlePassByDefault:true,parallelCouncilOnlyWhenExplicit:true,explicitProfessionalProfileCanBiasSpecialistSelection:true,currentFactsDelegateToVerifiedEvidencePipeline:true,highImpactDelegatesToVerifiedEvidencePipeline:true,explicitProviderContractPreserved:true,noUniversalSuperiorityClaimWithoutBenchmark:true}
   };
 }
