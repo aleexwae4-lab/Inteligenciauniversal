@@ -4,23 +4,36 @@ import capacityChatV86 from '../api/capacity-chat-v86.js';
 import nativeBrainHandler from '../api/native-brain.js';
 import { conversationRoutingClassV105 } from '../api/capacity-chat-v105.js';
 import { edgeGenerativeRescueEligible } from '../lib/intelligence-rescue.js';
-import { nativeBrainReply, nativeLocalReply, nativeBrainStatus } from '../lib/native-brain-v1.js';
+import { nativeLocalReply } from '../lib/native-brain-v1.js';
+import { nativeBrainReply, nativeBrainStatus, inferNativeIntent, NATIVE_BRAIN_VERSION } from '../lib/native-brain-v2.js';
 import { classifyFactualityRequest, factualityDecision, factualityGateCapabilities } from '../lib/factuality-gate-v86.js';
 
 test('v86 live chat handler loads',()=>{
   assert.equal(typeof capacityChatV86,'function');
 });
 
-test('native brain handler and survival kernel are production-wired',()=>{
+test('native brain v2 generalist runtime is production-wired',()=>{
   assert.equal(typeof nativeBrainHandler,'function');
   const status=nativeBrainStatus();
-  assert.equal(status.version,'wae-native-brain/v1');
+  assert.equal(status.version,NATIVE_BRAIN_VERSION);
   assert.equal(status.ready,true);
   assert.equal(status.localKernel,true);
-  assert.equal(status.localFirst,true);
+  assert.equal(status.universalRouting,true);
+  for(const lane of ['local-kernel','memory-context','knowledge-fabric','tool-fabric','inference-fabric','emergency-inference','rescue-fabric'])assert.equal(status.lanes.includes(lane),true);
   assert.match(nativeLocalReply('¿Sabes cuántos planetas hay en el sistema solar?'),/8 planetas/i);
   assert.match(nativeLocalReply('¿Sabes qué es un termostato?'),/temperatura/i);
   assert.match(nativeLocalReply('12 * 7'),/84/);
+});
+
+test('native brain v2 classifies broad families instead of hard-coded questions',()=>{
+  assert.equal(inferNativeIntent('Escribe un cuento breve sobre Marte').creative,true);
+  assert.equal(inferNativeIntent('Resume y mejora este texto').transform,true);
+  assert.equal(inferNativeIntent('Depura este backend en TypeScript').mode,'code');
+  assert.equal(inferNativeIntent('Diseña la interfaz móvil de este producto').mode,'design');
+  assert.equal(inferNativeIntent('Analiza el riesgo y el ROI de esta estrategia').mode,'analysis');
+  assert.equal(inferNativeIntent('Investiga las noticias actuales sobre este mercado').mode,'research');
+  assert.equal(inferNativeIntent('¿Cuál es la dosis actual de este medicamento?').requiresEvidence,true);
+  assert.equal(inferNativeIntent('¿Esto es legal actualmente en México?').requiresEvidence,true);
 });
 
 test('native brain answers stable local knowledge before any inference provider',async()=>{
@@ -29,6 +42,7 @@ test('native brain answers stable local knowledge before any inference provider'
   assert.equal(result.provider,'wae_native_kernel');
   assert.equal(result.model,'native-knowledge-kernel-v1');
   assert.equal(result.degraded,false);
+  assert.equal(result.native_brain,NATIVE_BRAIN_VERSION);
   assert.match(result.reply,/8 planetas/i);
 });
 
