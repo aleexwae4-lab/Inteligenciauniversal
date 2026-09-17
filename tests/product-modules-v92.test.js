@@ -143,7 +143,7 @@ test('premium shell loads v92 JS and CSS without replacing the existing interfac
   const source=await read('premium-v5.js');
   assert.match(source,/product-modules-v92\.css\?v=92/);
   assert.match(source,/product-modules-v92\.js\?v=92/);
-  assert.match(source,/loadGptExperience\(\);loadProductModules\(\);observe\(\)/);
+  assert.match(source,/loadGptExperience\(\);loadProductModules\(\);loadFeedbackHistory\(\);observe\(\)/);
 });
 
 test('parallel specialist council has a v92 private-context path',async()=>{
