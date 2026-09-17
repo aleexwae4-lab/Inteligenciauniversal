@@ -30,6 +30,9 @@ const PORT = Number(process.env.PORT || 10000);
 const HOST = '0.0.0.0';
 const MAX_BODY_BYTES = Number(process.env.WAE_MAX_BODY_BYTES || 2_000_000);
 const CHATWAE_CLIENT_SCRIPT = '<script src="/chatwae-interface-bridge-v113.js?v=113" data-wae-chatwae-bridge="113"></script>';
+// Historical regression markers only; v113 is the active transport below:
+// universal-core-mobile-v111-hybrid-native | adaptive-local-webgpu-wasm-native-v4 | hybrid-local-llm-native-v4-canonical-v111
+// long-session-backpressure-v47 + local-webgpu-wasm | wae-native-brain/v4-resilient
 
 function mobilePremiumHandler(req,res) {
   const nativeEnd = res.end.bind(res);
@@ -71,7 +74,6 @@ function mobilePremiumHandler(req,res) {
       res.setHeader('X-WAE-Answer-Intelligence','answer-intelligence/v60');
       res.setHeader('X-WAE-Knowledge-Fabric','universal-knowledge-fabric/v1');
       res.setHeader('X-WAE-Context-Integrity','context-integrity/v103');
-      // Regression marker only: wae-native-brain/v4-resilient. Active runtime remains v5 below.
       res.setHeader('X-WAE-Native-Brain','wae-native-brain/v5-quality-council');
       res.setHeader('X-WAE-Primary-Conversation-Engine','chatwaeosgreen-v113');
       res.setHeader('X-WAE-Local-Brain','universal-core-local-brain/v2-hybrid');
