@@ -22,10 +22,19 @@ test('development cost question gives auditable engineering range instead of ref
   assert.doesNotMatch(out.reply,/^No es posible|no hay datos oficiales/i);
 });
 
-test('simple general oversized answers are compacted for mobile and voice',()=>{
+test('premium rich mobile answers are preserved instead of force-compacted',()=>{
+  const long=['Conclusión útil.',...Array.from({length:12},(_,i)=>`Punto útil ${i+1}. Esta es una explicación relevante y concreta sobre el tema solicitado, con suficiente contenido para conservar profundidad.`)].join('\n\n');
+  const input={success:true,reply:long,speech_text:long,response:{content:long,speechText:long,metadata:{}}};
+  const out=modernizePayload(input,{message:'¿Qué opinas de esto?',mode:'general',preferences:{responseStyle:'premium-rich'}});
+  assert.equal(out.reply,long);
+  assert.equal(out.response.content,long);
+  assert.notEqual(out.response.metadata.compacted,true);
+});
+
+test('simple general oversized answers compact only when explicitly requested',()=>{
   const long=['No es posible determinar una cifra exacta sin información adicional.',...Array.from({length:12},(_,i)=>`Punto útil ${i+1}. Esta es una explicación relevante y concreta sobre el tema solicitado, con suficiente contenido para probar el gobernador de longitud.`)].join('\n\n');
   const input={success:true,reply:long,speech_text:long,response:{content:long,speechText:long,metadata:{}}};
-  const out=modernizePayload(input,{message:'¿Qué opinas de esto?',mode:'general'});
+  const out=modernizePayload(input,{message:'¿Qué opinas de esto?',mode:'general',preferences:{responseStyle:'compact'}});
   assert.ok(out.reply.length<=1200);
   assert.equal(out.speech_text,out.reply);
   assert.equal(out.response.content,out.reply);
@@ -43,6 +52,6 @@ test('deep analysis requests are never compacted',()=>{
 test('safety boundary refusals are preserved',()=>{
   const refusal='No puedo ayudar a construir un arma ni proporcionar instrucciones para dañar a una persona. '+ 'Contexto seguro. '.repeat(150);
   const input={reply:refusal,response:{content:refusal}};
-  const out=modernizePayload(input,{message:'Pregunta general',mode:'general'});
+  const out=modernizePayload(input,{message:'Pregunta general',mode:'general',preferences:{responseStyle:'compact'}});
   assert.equal(out.reply,refusal);
 });
