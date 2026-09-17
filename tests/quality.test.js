@@ -1,6 +1,8 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
 import { inferCognitivePolicy, evaluateAnswer, routingPrefix } from '../lib/quality.js';
+import { nativeBrainReply, nativeBrainStatus, NATIVE_BRAIN_VERSION } from '../lib/native-brain-v5.js';
 
 test('detecta investigación actual automáticamente',()=>{
   const p=inferCognitivePolicy('¿Cuál es la reforma fiscal más reciente en México?','general');
@@ -77,4 +79,25 @@ test('misma comparación puede aprobar cuando cumple la tabla verificable',()=>{
   assert.equal(q.requirementCoverage.pass,true);
   assert.ok(q.signals.requirements>=1);
   assert.equal(q.pass,true);
+});
+
+test('native brain v5 activa consejo de calidad, memoria contextual y autorreparación',()=>{
+  const status=nativeBrainStatus();
+  assert.equal(status.version,NATIVE_BRAIN_VERSION);
+  assert.equal(status.qualityCouncil,true);
+  assert.equal(status.selfRepair,true);
+  assert.equal(status.memoryAwareRouting,true);
+  assert.equal(status.contextDependentFollowups,true);
+  for(const lane of ['quality-council','memory-context','quality-self-repair','verified-rescue'])assert.equal(status.lanes.includes(lane),true);
+});
+
+test('native brain v5 elimina la selección first-value y conserva kernel determinista',async()=>{
+  const source=readFileSync(new URL('../lib/native-brain-v5.js',import.meta.url),'utf8');
+  assert.match(source,/Promise\.allSettled\(candidates\)/);
+  assert.match(source,/repairInstruction\(originalQuality\)/);
+  assert.doesNotMatch(source,/Promise\.any\(\[knowledge,reference,generation\]\)/);
+  const result=await nativeBrainReply({message:'12 * 7',mode:'general',userKey:'quality-test'});
+  assert.equal(result.native_path,'local-kernel-first');
+  assert.equal(result.native_brain,NATIVE_BRAIN_VERSION);
+  assert.match(result.reply,/84/);
 });
