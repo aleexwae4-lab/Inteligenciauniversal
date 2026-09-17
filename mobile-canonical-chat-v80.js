@@ -16,9 +16,12 @@
     }catch{return uuid()}
   }
   function rotateConversation(){
-    const value=uuid();
-    try{localStorage.setItem(ID_KEYS.conversation,value)}catch{}
-    return value;
+    const conversation=uuid(),session=uuid();
+    try{
+      localStorage.setItem(ID_KEYS.conversation,conversation);
+      localStorage.setItem(ID_KEYS.session,session);
+    }catch{}
+    return{conversation,session};
   }
   const fallbackSession=(()=>({session_id:uuid(),session_secret:`local-${uuid()}-${uuid()}`}))();
 
@@ -154,6 +157,7 @@
     explicitHistory:true,
     stableSession:true,
     stableConversation:true,
+    newConversationRotatesMemoryScope:true,
     rejectsContinuityPassThrough:true,
     bootstrapFailOpenToCanonical:true
   };
