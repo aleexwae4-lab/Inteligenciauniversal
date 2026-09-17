@@ -18,9 +18,14 @@ test('v86 requires verification for current information',()=>{
 
 test('stable factual prompts stay on premium brain and keep Edge as post-failure rescue',()=>{
   const message='¿Sabes qué es un termostato?';
-  assert.equal(conversationRoutingClassV105({message,mode:'general',provider:'auto'}),'legacy');
+  assert.equal(conversationRoutingClassV105({message,mode:'general',provider:'auto'}),'premium');
   assert.equal(edgeGenerativeRescueEligible(message,'general'),true);
   assert.equal(edgeGenerativeRescueEligible('Dime el precio actual de Bitcoin','general'),false);
+});
+
+test('ordinary explanations default to premium generation',()=>{
+  assert.equal(conversationRoutingClassV105({message:'Explícame cómo funciona la fotosíntesis',mode:'general',provider:'auto'}),'premium');
+  assert.equal(conversationRoutingClassV105({message:'Dime por qué el cielo se ve azul',mode:'general',provider:'auto'}),'premium');
 });
 
 test('casual capability questions route to grounded Universal Core self-awareness',()=>{
