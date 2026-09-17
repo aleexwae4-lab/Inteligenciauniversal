@@ -56,8 +56,8 @@ function mobilePremiumHandler(req,res) {
       res.setHeader('X-WAE-Mobile-Chat-Route','same-origin-context-history-first');
       res.setHeader('X-WAE-Mobile-Fix','context-integrity-v103-stable-session-history');
       res.setHeader('X-WAE-Mobile-Response-Lifecycle','mobile-response-lifecycle/v97');
-      res.setHeader('X-WAE-Mobile-Compatible','universal-core-mobile-v103');
-      res.setHeader('X-WAE-Mobile-Compatible-Fix','context-history-identity-v103');
+      res.setHeader('X-WAE-Mobile-Compatible','universal-core-mobile-v47-long-session');
+      res.setHeader('X-WAE-Mobile-Compatible-Fix','long-session-backpressure-v47 + context-history-identity-v103');
       res.setHeader('X-WAE-Capacity-Release','capacity-governor-v48');
       res.setHeader('X-WAE-Premium-Release','universal-core-rich-v43');
       res.setHeader('X-WAE-Live-Data','live-data-mesh/v58');
