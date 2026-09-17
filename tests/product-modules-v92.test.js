@@ -144,6 +144,24 @@ test('premium shell loads v92 JS and CSS without replacing the existing interfac
   assert.match(source,/product-modules-v92\.css\?v=92/);
   assert.match(source,/product-modules-v92\.js\?v=92/);
   assert.match(source,/loadGptExperience\(\);loadProductModules\(\);loadFeedbackHistory\(\);observe\(\)/);
+  assert.doesNotMatch(source,/reference-interface-v108/);
+  assert.doesNotMatch(source,/loadReferenceInterface/);
+});
+
+test('canonical mobile renderer preserves the recorded Universal Core visual contract',async()=>{
+  const [mobile,server]=await Promise.all([read('api/mobile.js'),read('server.js')]);
+  assert.match(server,/if \(url\.pathname === '\/' && isMobileRequest\(req, url\)\)[\s\S]*mobilePremiumHandler\(req, res\)/);
+  assert.match(mobile,/<strong>Universal Core<\/strong>/);
+  assert.match(mobile,/id="coreState">operativo<\/b>/);
+  assert.match(mobile,/\.orb\{width:44px;height:44px/);
+  assert.match(mobile,/\.welcome h1\{font-size:28px/);
+  assert.match(mobile,/<h1>¿En qué trabajamos\?<\/h1>/);
+  assert.match(mobile,/Analiza, crea, investiga, programa y organiza desde una sola conversación\./);
+  assert.match(mobile,/>Analizar<\/button>/);
+  assert.match(mobile,/>Construir<\/button>/);
+  assert.match(mobile,/>Investigar<\/button>/);
+  assert.match(mobile,/\.composer\{max-width:820px[\s\S]*border-radius:24px/);
+  assert.match(mobile,/placeholder="Pregunta lo que quieras"/);
 });
 
 test('parallel specialist council has a v92 private-context path',async()=>{
