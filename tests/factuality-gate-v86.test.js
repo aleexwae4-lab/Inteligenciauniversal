@@ -1,31 +1,34 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
 import capacityChatV86 from '../api/capacity-chat-v86.js';
 import nativeBrainHandler from '../api/native-brain.js';
 import { conversationRoutingClassV105 } from '../api/capacity-chat-v105.js';
 import { edgeGenerativeRescueEligible } from '../lib/intelligence-rescue.js';
 import { nativeLocalReply } from '../lib/native-brain-v1.js';
-import { nativeBrainReply, nativeBrainStatus, inferNativeIntent, NATIVE_BRAIN_VERSION } from '../lib/native-brain-v2.js';
+import { inferNativeIntent } from '../lib/native-brain-v2.js';
+import { nativeBrainReply, nativeBrainStatus, NATIVE_BRAIN_VERSION } from '../lib/native-brain-v4.js';
 import { classifyFactualityRequest, factualityDecision, factualityGateCapabilities } from '../lib/factuality-gate-v86.js';
 
 test('v86 live chat handler loads',()=>{
   assert.equal(typeof capacityChatV86,'function');
 });
 
-test('native brain v2 generalist runtime is production-wired',()=>{
+test('native brain v4 resilient runtime is production-wired',()=>{
   assert.equal(typeof nativeBrainHandler,'function');
   const status=nativeBrainStatus();
   assert.equal(status.version,NATIVE_BRAIN_VERSION);
   assert.equal(status.ready,true);
-  assert.equal(status.localKernel,true);
   assert.equal(status.universalRouting,true);
-  for(const lane of ['local-kernel','memory-context','knowledge-fabric','tool-fabric','inference-fabric','emergency-inference','rescue-fabric'])assert.equal(status.lanes.includes(lane),true);
+  assert.equal(status.primaryInference,'auto');
+  assert.match(status.architecture,/resilient.*knowledge.*race/i);
+  for(const lane of ['local-kernel','stable-knowledge-race','memory-context','knowledge-fabric','inference-fabric-auto','stable-reference','emergency-inference','verified-rescue'])assert.equal(status.lanes.includes(lane),true);
   assert.match(nativeLocalReply('¿Sabes cuántos planetas hay en el sistema solar?'),/8 planetas/i);
   assert.match(nativeLocalReply('¿Sabes qué es un termostato?'),/temperatura/i);
   assert.match(nativeLocalReply('12 * 7'),/84/);
 });
 
-test('native brain v2 classifies broad families instead of hard-coded questions',()=>{
+test('native brain classifies broad families instead of hard-coded questions',()=>{
   assert.equal(inferNativeIntent('Escribe un cuento breve sobre Marte').creative,true);
   assert.equal(inferNativeIntent('Resume y mejora este texto').transform,true);
   assert.equal(inferNativeIntent('Depura este backend en TypeScript').mode,'code');
@@ -36,7 +39,7 @@ test('native brain v2 classifies broad families instead of hard-coded questions'
   assert.equal(inferNativeIntent('¿Esto es legal actualmente en México?').requiresEvidence,true);
 });
 
-test('native brain answers stable local knowledge before any inference provider',async()=>{
+test('native brain answers deterministic stable knowledge before any inference provider',async()=>{
   const result=await nativeBrainReply({message:'¿Sabes cuántos planetas hay en el sistema solar?',mode:'general'});
   assert.equal(result.native_path,'local-kernel-first');
   assert.equal(result.provider,'wae_native_kernel');
@@ -44,6 +47,31 @@ test('native brain answers stable local knowledge before any inference provider'
   assert.equal(result.degraded,false);
   assert.equal(result.native_brain,NATIVE_BRAIN_VERSION);
   assert.match(result.reply,/8 planetas/i);
+});
+
+test('native brain v4 cannot regress to Edge-only first-value inference',()=>{
+  const source=readFileSync(new URL('../lib/native-brain-v4.js',import.meta.url),'utf8');
+  assert.match(source,/generateWithFallback\(\{provider:'auto'/);
+  assert.doesNotMatch(source,/generateWithFallback\(\{provider:'wae_edge'/);
+  assert.match(source,/Promise\.any\(\[knowledge,reference,generation\]\)/);
+  assert.match(source,/stableReferenceFallback/);
+  assert.match(source,/stable-knowledge-race/);
+});
+
+test('mobile native brain includes CPU WASM survival when WebGPU is unavailable',()=>{
+  const local=readFileSync(new URL('../universal-core-local-brain-v1.js',import.meta.url),'utf8');
+  const cpu=readFileSync(new URL('../universal-core-local-cpu-worker-v1.js',import.meta.url),'utf8');
+  const canonical=readFileSync(new URL('../canonical-brain-v106.js',import.meta.url),'utf8');
+  const server=readFileSync(new URL('../server.js',import.meta.url),'utf8');
+  assert.match(local,/universal-core-local-brain\/v2-hybrid/);
+  assert.match(local,/backend='wasm'/);
+  assert.match(local,/universal-core-local-cpu-worker-v1\.js\?v=1/);
+  assert.match(cpu,/SmolLM-135M-Instruct-ONNX/);
+  assert.match(cpu,/dtype:'q4'/);
+  assert.match(canonical,/canonical-brain\/v111-hybrid/);
+  assert.match(canonical,/local-native-cpu-wasm-v111/);
+  assert.match(server,/wae-native-brain\/v4-resilient/);
+  assert.match(server,/universal-core-mobile-v111-hybrid-native/);
 });
 
 test('v86 requires verification for current information',()=>{
@@ -78,10 +106,7 @@ test('ordinary creation prompts bypass factual retrieval but verified domains do
 });
 
 test('v86 blocks precise factual answers without evidence',()=>{
-  const payload={
-    reply:'La persona nació en 1978.',
-    answer_intelligence:{gate:'UNVERIFIED',source_count:0,cited_source_count:0,factual_claims:1,citation_coverage:0}
-  };
+  const payload={reply:'La persona nació en 1978.',answer_intelligence:{gate:'UNVERIFIED',source_count:0,cited_source_count:0,factual_claims:1,citation_coverage:0}};
   const decision=factualityDecision(payload,{message:'¿Cuándo nació esa persona?'});
   assert.equal(decision.accept,false);
   assert.equal(decision.requires_repair,true);
@@ -90,33 +115,21 @@ test('v86 blocks precise factual answers without evidence',()=>{
 });
 
 test('v86 accepts source-backed precise facts only when evidence is actually cited',()=>{
-  const payload={
-    reply:'La persona nació en 1978 [K1].',
-    web_sources:[{key:'K1',url:'https://example.com/source'}],
-    answer_intelligence:{gate:'PASS',source_count:1,cited_source_count:1,factual_claims:1,citation_coverage:1}
-  };
+  const payload={reply:'La persona nació en 1978 [K1].',web_sources:[{key:'K1',url:'https://example.com/source'}],answer_intelligence:{gate:'PASS',source_count:1,cited_source_count:1,factual_claims:1,citation_coverage:1}};
   const decision=factualityDecision(payload,{message:'¿Cuándo nació esa persona?'});
   assert.equal(decision.accept,true);
   assert.equal(decision.requires_repair,false);
 });
 
 test('v86 does not accept decorative sources with no citation binding',()=>{
-  const payload={
-    reply:'La persona nació en 1978.',
-    web_sources:[{key:'K1',url:'https://example.com/source'}],
-    answer_intelligence:{gate:'PASS',source_count:1,cited_source_count:0,factual_claims:0,citation_coverage:1}
-  };
+  const payload={reply:'La persona nació en 1978.',web_sources:[{key:'K1',url:'https://example.com/source'}],answer_intelligence:{gate:'PASS',source_count:1,cited_source_count:0,factual_claims:0,citation_coverage:1}};
   const decision=factualityDecision(payload,{message:'¿Cuándo nació esa persona?'});
   assert.equal(decision.accept,false);
   assert.equal(decision.reasons.includes('evidence_present_but_uncited'),true);
 });
 
 test('v86 blocks under-cited material factual output even when sources exist',()=>{
-  const payload={
-    reply:'Dato uno [K1]. Dato dos sin cita.',
-    web_sources:[{key:'K1',url:'https://example.com/source'}],
-    answer_intelligence:{gate:'REVIEW',source_count:1,cited_source_count:1,factual_claims:2,citation_coverage:.5}
-  };
+  const payload={reply:'Dato uno [K1]. Dato dos sin cita.',web_sources:[{key:'K1',url:'https://example.com/source'}],answer_intelligence:{gate:'REVIEW',source_count:1,cited_source_count:1,factual_claims:2,citation_coverage:.5}};
   const decision=factualityDecision(payload,{message:'¿Quién fundó la empresa y cuándo ocurrió?'});
   assert.equal(decision.accept,false);
   assert.equal(decision.reasons.includes('answer_gate_review'),true);
