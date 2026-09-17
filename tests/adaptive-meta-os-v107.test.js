@@ -40,13 +40,14 @@ test('v107 converts long-horizon operating problems into project candidates',()=
 
 test('v107 operating state composes profession, kernel capabilities, agents, assets and value candidates',()=>{
   const state=buildAdaptiveMetaOSStateV107({
-    message:'Construye una plataforma SaaS para mi despacho y prepara el roadmap, automatizaciones y estrategia de monetización',
+    message:'Construye el backend de una plataforma SaaS para mi despacho y prepara el roadmap, automatizaciones y estrategia de monetización',
     profile:{professional_roles:['abogado'],goals:['operar un despacho digital']}
   });
   assert.equal(state.version,ADAPTIVE_META_OS_V107);
   assert.equal(state.executionLevel,'create');
   assert.equal(state.professionalPacks.some(x=>x.id==='legal_core'),true);
   assert.equal(state.professionalPacks.some(x=>x.id==='business_core'),true);
+  assert.equal(state.professionalPacks.some(x=>x.id==='developer_core'),true);
   assert.equal(state.capabilityDomains.includes('conversation_reasoning'),true);
   assert.equal(state.capabilityDomains.includes('software_engineering'),true);
   assert.equal(Array.isArray(state.orchestration.specialists),true);
