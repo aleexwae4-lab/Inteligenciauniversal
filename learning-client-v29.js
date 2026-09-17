@@ -5,14 +5,16 @@
   const EDGE=`${SUPABASE_URL}/functions/v1/wae-local-voice-demo-v61`;
   const SID='iu.sessionId',SECRET='iu.sessionSecret',CID='iu.conversationId';
   const RATED='iu.learning.rated.v29';
-  let bootPromise=null,lastStatus=null;
+  const FEEDBACK_CONTRACT='useful-feedback/v106';
+  let bootPromise=null,lastStatus=null,historyPromise=null,lastHistoryCid='';
 
   const toast=m=>window.toast?.(m);
   const readRated=()=>{try{return JSON.parse(localStorage.getItem(RATED)||'{}')}catch{return{}}};
   const writeRated=x=>localStorage.setItem(RATED,JSON.stringify(x));
   const session=()=>({session_id:localStorage.getItem(SID)||'',session_secret:localStorage.getItem(SECRET)||''});
+  const normalize=v=>String(v??'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[`*_#>|~\[\](){}:;,.!?¿¡"']/g,' ').replace(/\s+/g,' ').trim();
   async function edge(payload){
-    const r=await fetch(EDGE,{method:'POST',headers:{'content-type':'application/json','apikey':SUPABASE_KEY,'x-client-info':'wae-learning-client/2.9'},body:JSON.stringify(payload),cache:'no-store'});
+    const r=await fetch(EDGE,{method:'POST',headers:{'content-type':'application/json','apikey':SUPABASE_KEY,'x-client-info':'wae-learning-client/106'},body:JSON.stringify(payload),cache:'no-store'});
     const data=await r.json().catch(()=>({}));
     if(!r.ok)throw new Error(data.error||`learning_${r.status}`);
     return data;
@@ -35,6 +37,7 @@
   function assistantTurns(){return [...document.querySelectorAll('.turn.assistant,.message.assistant')].filter(x=>x.id!=='typingMessage');}
   function actionsFor(turn){return turn.querySelector('.actions,.answer-actions');}
   function bodyFor(turn){return turn.querySelector('.assistant-body,.rich-answer');}
+  function compatible(a,b){a=normalize(a);b=normalize(b);if(!a||!b)return false;if(a===b)return true;const n=Math.min(220,a.length,b.length);return n>=40&&(a.slice(0,n)===b.slice(0,n)||a.includes(b.slice(0,Math.min(120,b.length)))||b.includes(a.slice(0,Math.min(120,a.length))))}
   function hydrateLatest(data=latestRuntime()){
     const turns=assistantTurns();if(!turns.length)return;
     const turn=turns[turns.length-1];
@@ -42,6 +45,30 @@
     if(data?.conversation_id)turn.dataset.iuConversationId=String(data.conversation_id);
     else if(localStorage.getItem(CID))turn.dataset.iuConversationId=localStorage.getItem(CID);
     addActions(turn);
+  }
+  async function hydrateHistoricalIds(force=false){
+    const cid=localStorage.getItem(CID)||'';if(!cid)return 0;
+    const turns=assistantTurns();if(!turns.length)return 0;
+    if(!force&&cid===lastHistoryCid&&turns.every(t=>t.dataset.iuMessageId))return turns.length;
+    if(historyPromise)return historyPromise;
+    historyPromise=(async()=>{
+      const s=await bootstrap();
+      const data=await edge({action:'get_conversation',...s,conversation_id:cid});
+      const messages=(Array.isArray(data.messages)?data.messages:[]).filter(m=>m?.role==='assistant'&&m?.id);
+      const remaining=[...messages];let bound=0;
+      for(let ti=turns.length-1;ti>=0;ti--){
+        const turn=turns[ti];if(turn.dataset.iuMessageId)continue;
+        const visible=bodyFor(turn)?.textContent||'';let match=-1;
+        for(let mi=remaining.length-1;mi>=0;mi--){if(compatible(visible,remaining[mi]?.content||'')){match=mi;break}}
+        if(match<0)continue;
+        const [m]=remaining.splice(match,1);
+        turn.dataset.iuMessageId=String(m.id);turn.dataset.iuConversationId=String(m.conversation_id||cid);turn.dataset.iuFeedbackBinding='exact-v106';syncButtons(turn);bound++;
+      }
+      lastHistoryCid=cid;document.documentElement.dataset.feedbackHistoryBinding=bound?'exact-v106':'partial';
+      window.dispatchEvent(new CustomEvent('wae:feedback-history-bound',{detail:{version:FEEDBACK_CONTRACT,bound,total:turns.length,conversation_id:cid}}));
+      return bound;
+    })().catch(e=>{console.warn('[Universal Core Feedback History]',e?.message||e);return 0}).finally(()=>{historyPromise=null});
+    return historyPromise;
   }
   function readinessOf(data){return data?.preferences?.learned_profile?.training_readiness||{};}
   function readinessCopy(r){
@@ -53,19 +80,21 @@
     return{label:'Recolectando señales reales',pct:0,meta:'Aprende sólo de respuestas aprobadas; no usa el feedback como fuente factual.'};
   }
   async function rate(turn,rating){
-    const messageId=turn.dataset.iuMessageId||'';
-    const conversationId=turn.dataset.iuConversationId||localStorage.getItem(CID)||'';
-    if(!messageId&&!conversationId){toast('Esta respuesta todavía no tiene señal de aprendizaje');return}
-    const key=messageId||`conversation:${conversationId}`;
+    let messageId=turn.dataset.iuMessageId||'';
+    let conversationId=turn.dataset.iuConversationId||localStorage.getItem(CID)||'';
+    if(!messageId){await hydrateHistoricalIds(true);messageId=turn.dataset.iuMessageId||'';conversationId=turn.dataset.iuConversationId||conversationId}
+    if(!messageId){toast('No marqué esta respuesta: no pude vincularla de forma exacta con el historial.');return}
+    const key=messageId;
     const rated=readRated();
     try{
       const s=await bootstrap();
-      const result=await edge({action:'feedback',...s,message_id:messageId||undefined,conversation_id:conversationId||undefined,rating,reason:rating>0?'explicit_approval':'needs_improvement'});
+      const result=await edge({action:'feedback',...s,message_id:messageId,conversation_id:conversationId||undefined,rating,reason:rating>0?'explicit_approval':'needs_improvement',feedback_contract:FEEDBACK_CONTRACT,client_event_id:globalThis.crypto?.randomUUID?.()||undefined});
       rated[key]=rating;writeRated(rated);turn.dataset.iuRated=String(rating);syncButtons(turn);
       document.documentElement.dataset.learning='active';
       const status=await refreshStatus().catch(()=>null),r=status?readinessOf(status):{};
       const copy=readinessCopy(r);
       toast(rating>0?`Aprendizaje registrado · ${copy.label}`:'Señal de mejora registrada');
+      return result;
     }catch(e){console.warn('[Universal Core Learning]',e?.message||e);toast('No pude registrar el aprendizaje en este intento')}
   }
   function syncButtons(turn){
@@ -81,9 +110,9 @@
     const good=document.createElement('button');good.type='button';good.dataset.rating='1';good.textContent='Útil';good.setAttribute('aria-label','Marcar respuesta como útil');good.addEventListener('click',()=>rate(turn,1));
     const bad=document.createElement('button');bad.type='button';bad.dataset.rating='-1';bad.className='negative';bad.textContent='Mejorar';bad.setAttribute('aria-label','Marcar respuesta para mejorar');bad.addEventListener('click',()=>rate(turn,-1));
     box.append(good,bad);actions.appendChild(box);
-    const rated=readRated(),key=turn.dataset.iuMessageId||`conversation:${turn.dataset.iuConversationId||''}`;if(rated[key])turn.dataset.iuRated=String(rated[key]);syncButtons(turn);
+    const rated=readRated(),key=turn.dataset.iuMessageId||'';if(key&&rated[key])turn.dataset.iuRated=String(rated[key]);syncButtons(turn);
   }
-  function scan(){for(const turn of assistantTurns())addActions(turn);hydrateLatest()}
+  function scan(){for(const turn of assistantTurns())addActions(turn);hydrateLatest();void hydrateHistoricalIds()}
   function installStatusRow(){
     if(document.getElementById('iuLearningRow'))return;
     const sheet=document.querySelector('.sheet'),drawer=document.querySelector('#drawer');
@@ -96,9 +125,10 @@
     if(el)el.textContent=copy.label;if(bar)bar.style.width=`${copy.pct}%`;if(meta)meta.textContent=copy.meta;
     window.dispatchEvent(new CustomEvent('wae:learning-status',{detail:{...data,readiness:r}}));return data;
   }
-  window.addEventListener('wae:stream-event',e=>{if(e.detail?.event==='response.complete')hydrateLatest(e.detail.data||{})});
+  window.addEventListener('wae:stream-event',e=>{if(e.detail?.event==='response.complete'){hydrateLatest(e.detail.data||{});void hydrateHistoricalIds(true)}});
   window.addEventListener('wae:enhancement-ready',()=>scan());
+  window.addEventListener('wae:feedback-history-ready',()=>void hydrateHistoricalIds(true));
   function install(){injectStyle();installStatusRow();scan();const root=document.querySelector('#messages');if(root)new MutationObserver(scan).observe(root,{childList:true,subtree:true});setTimeout(()=>refreshStatus().catch(()=>{}),700)}
   document.readyState==='loading'?document.addEventListener('DOMContentLoaded',install,{once:true}):install();
-  window.__waeLearning={rate,refresh:refreshStatus,get status(){return lastStatus},get readiness(){return readinessOf(lastStatus)},version:'adaptive-training-v29-promotion-gated'};
+  window.__waeLearning={rate,refresh:refreshStatus,hydrateHistory:hydrateHistoricalIds,get status(){return lastStatus},get readiness(){return readinessOf(lastStatus)},version:'adaptive-training-v106-exact-message'};
 })();
