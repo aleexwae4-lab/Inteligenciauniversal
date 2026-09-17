@@ -67,7 +67,7 @@ function mobilePremiumHandler(req,res) {
       res.setHeader('X-WAE-Productivity','productivity/v59');
       res.setHeader('X-WAE-Answer-Intelligence','answer-intelligence/v60');
       res.setHeader('X-WAE-Knowledge-Fabric','universal-knowledge-fabric/v1');
-      res.setHeader('X-WAE-Context-Integrity','context-integrity/v110');
+      res.setHeader('X-WAE-Context-Integrity','context-integrity/v103');
       res.setHeader('X-WAE-Native-Brain','wae-native-brain/v3-edge-first');
       res.setHeader('X-WAE-Local-Brain','universal-core-local-brain/v1');
     }
