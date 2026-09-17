@@ -122,6 +122,6 @@ test('la interfaz envía continuidad explícita y no duplica el turno actual en 
     assert.match(source,/conversation_id:conversationId/);
     assert.match(source,/sessionId/);
     assert.match(source,/history:/);
-    assert.match(source,/items?\.at\(-1\).*role==='user'/s);
+    assert.match(source,/(?:items|list)\.at\(-1\).*role==='user'/s);
   }
 });
