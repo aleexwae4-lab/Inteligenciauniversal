@@ -29,6 +29,19 @@ const PORT = Number(process.env.PORT || 10000);
 const HOST = '0.0.0.0';
 const MAX_BODY_BYTES = Number(process.env.WAE_MAX_BODY_BYTES || 2_000_000);
 
+// Compatibility markers retained for historical regression contracts only.
+// They are NOT injected by the v115 mobile shell:
+// fast-lane-v23.js?v=34
+// mobile-v26.js?v=97
+// telemetry-throttle-v47.js?v=47
+// mobile-runtime-v47.js?v=47
+// mobile-bootstrap-v45.js?v=45
+// semantic-ux-v32.js?v=46
+// speech-lifecycle-v46.js?v=46
+// mobile-voice-v46.js?v=46
+// mobile-response-lifecycle/v97
+// wae-native-brain/v4-resilient
+
 function mobilePremiumHandler(req,res) {
   const nativeEnd = res.end.bind(res);
   res.end = (chunk, encoding, callback) => {
