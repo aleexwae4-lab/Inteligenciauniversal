@@ -6,6 +6,8 @@
   const isMobile=()=>matchMedia('(max-width:899px)').matches;
   const nativeInput=()=>document.getElementById('messageInput');
   const nativeForm=()=>document.getElementById('composer');
+  const LIFECYCLE_VERSION='mobile-safe-composer/v113-consecutive-turns';
+  let busySince=0;
 
   const repair=()=>{
     if(!isMobile())return;
@@ -36,8 +38,19 @@
 
   const syncBusy=()=>{
     const busy=document.documentElement.dataset.aiBusy==='true';
+    if(busy&&!busySince)busySince=Date.now();
+    if(!busy)busySince=0;
     send.disabled=busy;
     send.setAttribute('aria-busy',String(busy));
+  };
+
+  const forceReady=()=>{
+    busySince=0;
+    document.documentElement.dataset.aiBusy='false';
+    send.disabled=false;
+    send.setAttribute('aria-busy','false');
+    repair();
+    document.documentElement.dataset.mobileTurnRecovery=LIFECYCLE_VERSION;
   };
 
   const submit=event=>{
@@ -72,10 +85,18 @@
   },{passive:true});
 
   new MutationObserver(syncBusy).observe(document.documentElement,{attributes:true,attributeFilter:['data-ai-busy']});
-  window.addEventListener('pageshow',()=>{repair();syncBusy()});
+  const messages=document.getElementById('messages');
+  if(messages)new MutationObserver(records=>{
+    const completed=records.some(record=>[...record.addedNodes].some(node=>node?.nodeType===1&&(
+      node.matches?.('.message.assistant:not(#typingMessage),.turn.assistant')||node.querySelector?.('.message.assistant:not(#typingMessage),.turn.assistant')
+    )));
+    if(completed)queueMicrotask(forceReady);
+  }).observe(messages,{childList:true,subtree:true});
+  setInterval(()=>{if(busySince&&Date.now()-busySince>75000)forceReady()},5000);
+  window.addEventListener('pageshow',()=>{if(!document.getElementById('typingMessage'))forceReady();else{repair();syncBusy()}});
   window.addEventListener('orientationchange',()=>setTimeout(repair,50));
   window.visualViewport?.addEventListener('resize',repair);
   document.addEventListener('visibilitychange',()=>{if(!document.hidden)repair()});
   repair();resize();syncBusy();
-  window.__waeMobileSafeComposer={version:'mobile-safe-composer/v22',focus:focusInput,repair};
+  window.__waeMobileSafeComposer={version:LIFECYCLE_VERSION,focus:focusInput,repair,forceReady};
 })();
