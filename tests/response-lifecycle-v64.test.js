@@ -58,7 +58,7 @@ test('v113 mobile composer self-recovers from stale busy state after an assistan
 
 
 test('v114 commits the final answer into the live visible mobile turn',()=>{
-  assert.match(mobilePage,/visible-answer-commit\\/v114/);
+  assert.match(mobilePage,/visible-answer-commit\/v114/);
   assert.match(mobilePage,/function liveParts\(\)/);
   assert.match(mobilePage,/turn\.dataset\.turnId=turnId/);
   assert.match(mobilePage,/enforceVisibleAnswer\(assistant,reply,speech\)/);
