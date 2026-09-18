@@ -7,6 +7,7 @@ const mobile=readFileSync(new URL('../mobile-runtime-v47.js',import.meta.url),'u
 const index=readFileSync(new URL('../index.html',import.meta.url),'utf8');
 const app=readFileSync(new URL('../app.js',import.meta.url),'utf8');
 const mobileComposer=readFileSync(new URL('../mobile-safe-composer.js',import.meta.url),'utf8');
+const mobilePage=readFileSync(new URL('../api/mobile.js',import.meta.url),'utf8');
 
 test('v64 lifecycle wraps the active runtime before app chat execution',()=>{
   const runtime=index.indexOf('./runtime-client.js');
@@ -53,4 +54,21 @@ test('v113 mobile composer self-recovers from stale busy state after an assistan
   assert.match(mobileComposer,/forceReady/);
   assert.match(mobileComposer,/75000/);
   assert.match(mobileComposer,/message\.assistant:not\(#typingMessage\),\.turn\.assistant/);
+});
+
+
+test('v114 commits the final answer into the live visible mobile turn',()=>{
+  assert.match(mobilePage,/universal-core-mobile-v114-visible-answer-commit/);
+  assert.match(mobilePage,/function liveParts\(\)/);
+  assert.match(mobilePage,/turn\.dataset\.turnId=turnId/);
+  assert.match(mobilePage,/enforceVisibleAnswer\(assistant,reply,speech\)/);
+  assert.match(mobilePage,/visible_answer_audit/);
+  assert.match(mobilePage,/turnConnected:after\.connected/);
+});
+
+test('v114 response_rendered telemetry verifies visible text instead of assuming DOM commit',()=>{
+  assert.match(mobilePage,/visibleTextLength:audit\.textLength/);
+  assert.match(mobilePage,/typingCount:audit\.typingCount/);
+  assert.match(mobilePage,/actionsVisible:audit\.actionsVisible/);
+  assert.match(mobilePage,/replyLength:reply\.length/);
 });
