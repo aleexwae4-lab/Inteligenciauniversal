@@ -100,6 +100,7 @@ const apiRoutes = new Map([
   ['/api/web/research', webIntelligenceHandler],
   ['/api/web/sources', webIntelligenceHandler],
   ['/api/web/health', webIntelligenceHandler],
+  ['/api/web/metrics', webIntelligenceHandler],
   ['/api/mobile', mobilePremiumHandler],
   ['/api/ui-diagnostics', uiDiagnosticsHandler],
 ]);
