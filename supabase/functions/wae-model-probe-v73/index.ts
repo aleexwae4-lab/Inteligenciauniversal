@@ -12,7 +12,7 @@ function retryAfter(r:Response){const h=r.headers.get('retry-after');if(!h)retur
 function contentOf(p:any){const v=p?.choices?.[0]?.message?.content;if(typeof v==='string')return v.trim();if(Array.isArray(v))return v.map((x:any)=>typeof x==='string'?x:typeof x?.text==='string'?x.text:'').filter(Boolean).join('\n').trim();return''}
 function promotable(m:any){const meta=obj(m?.metadata);return m?.discovery_managed===true&&String(m?.access_tier||'')==='FREE'&&String(m?.provider||'')==='openrouter'&&String(m?.model_name||'').endsWith(':free')&&num(meta.quality_score,0)>=80&&!/(safety|guard)/i.test(String(m?.model_name||''))}
 
-function publicKey(){return Deno.env.get('SUPABASE_PUBLISHABLE_KEY')||Deno.env.get('SUPABASE_ANON_KEY')||''}
+function publicKey(){let keys:string[]=[];try{keys=Object.values(JSON.parse(Deno.env.get('SUPABASE_PUBLISHABLE_KEYS')||'{}')).filter((x:any)=>typeof x==='string'&&x.trim()) as string[]}catch{}return keys.find(x=>x.startsWith('sb_publishable_'))||Deno.env.get('SUPABASE_PUBLISHABLE_KEY')||keys[0]||Deno.env.get('SUPABASE_ANON_KEY')||''}
 function allowedStatelessOrigin(origin:string|null){
   if(!origin)return false;
   try{
