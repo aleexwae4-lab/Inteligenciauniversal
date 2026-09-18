@@ -13,7 +13,7 @@ jobs:
     timeout-minutes: 10
     env:
       EDGE_URL: https://pbswcbryxawsmltyromd.supabase.co/functions/v1/wae-local-voice-demo-v61
-      ORIGIN: https://wae-inteligencia-universal.onrender.com
+      ORIGIN: https://wae-inteligencia-universal-vt3h.onrender.com
     steps:
       - name: Cross-conversation memory recall
         shell: bash
