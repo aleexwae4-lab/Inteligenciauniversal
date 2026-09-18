@@ -20,12 +20,14 @@ test('mobile safe composer bypasses premium hit testing and bridges to native su
   assert.match(css,/z-index:2147483647!important/);
   assert.match(css,/pointer-events:auto!important/);
   assert.match(css,/\.drawer:not\(\.open\),\.workspace:not\(\.open\),\.v7-panel:not\(\.open\)/);
-  assert.match(js,/mobile-safe-composer\/v22/);
+  assert.match(js,/mobile-safe-composer\/v113-consecutive-turns/);
   assert.match(js,/form\.requestSubmit\(\)/);
   assert.match(js,/target\.value=text/);
   assert.match(js,/input\.focus/);
   assert.match(js,/input\.disabled=false/);
   assert.match(js,/input\.readOnly=false/);
+  assert.match(js,/forceReady/);
+  assert.match(js,/data-ai-busy/);
 });
 
 test('PWA v34 keeps the mobile safe composer offline while refreshing runtime network-first',async()=>{
