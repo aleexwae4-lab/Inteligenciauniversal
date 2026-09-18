@@ -26,7 +26,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 18
     env:
-      APP_URL: https://wae-inteligencia-universal.onrender.com
+      APP_URL: https://wae-inteligencia-universal-vt3h.onrender.com
       EDGE_URL: https://pbswcbryxawsmltyromd.supabase.co/functions/v1/wae-local-voice-demo-v61
       EDGE_VERSION: 1.9.1-context-isolation-v55
       EDGE_ROUTER: wae-adaptive-router-v22

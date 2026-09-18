@@ -13,7 +13,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 18
     env:
-      APP_URL: https://wae-inteligencia-universal.onrender.com
+      APP_URL: https://wae-inteligencia-universal-vt3h.onrender.com
       KERNEL_VERSION: universal-capability-kernel/v36
       EXECUTION_VERSION: universal-execution-plane/v65-github-intelligence
       RECEIPT_SCHEMA: universal-execution-receipt/v1

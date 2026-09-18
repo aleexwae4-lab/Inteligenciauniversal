@@ -36,7 +36,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 180
     env:
-      UNIVERSAL_CORE_URL: https://wae-inteligencia-universal.onrender.com
+      UNIVERSAL_CORE_URL: https://wae-inteligencia-universal-vt3h.onrender.com
       WAE_RUNTIME_BRIDGE_TOKEN: ${{ secrets.WAE_RUNTIME_BRIDGE_TOKEN }}
       BENCHMARK_TARGET_ID: universal_core
       BENCHMARK_REFERENCE_ID: ${{ inputs.expected_reference_id }}

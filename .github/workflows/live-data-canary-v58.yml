@@ -13,7 +13,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 5
     env:
-      APP_URL: https://wae-inteligencia-universal.onrender.com
+      APP_URL: https://wae-inteligencia-universal-vt3h.onrender.com
       LIVE_VERSION: live-data-mesh/v58
     steps:
       - name: Probe live evidence mesh

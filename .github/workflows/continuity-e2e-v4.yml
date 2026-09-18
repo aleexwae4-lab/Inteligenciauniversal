@@ -12,7 +12,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 8
     env:
-      APP: https://wae-inteligencia-universal.onrender.com
+      APP: https://wae-inteligencia-universal-vt3h.onrender.com
     steps:
       - name: Verify current Render health
         shell: bash
