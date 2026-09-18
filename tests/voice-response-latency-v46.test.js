@@ -51,10 +51,15 @@ test('server preserves semantic voice order after v47 backpressure runtime',()=>
 
 test('server network layer bounds flaky Supabase Edge and supports request cancellation',()=>{
   const source=read('lib/network-deadlines-v46.js');
-  assert.match(source,/1_800/);
-  assert.match(source,/12_000/);
+  assert.match(source,/EDGE_BOOTSTRAP_MS[\s\S]*8_000/);
+  assert.match(source,/EDGE_CHAT_MS[\s\S]*14_000/);
+  assert.match(source,/EDGE_COMPLEX_CHAT_MS[\s\S]*24_000/);
   assert.match(source,/8_000/);
   assert.match(source,/CIRCUIT_MS = 15_000/);
+  assert.match(source,/operation:'bootstrap'/);
+  assert.match(source,/circuit:null/);
+  assert.match(source,/supabase-edge-chat/);
+  assert.match(source,/supabase-edge-control/);
   assert.match(source,/NETWORK_DEADLINE/);
   assert.match(source,/NETWORK_CIRCUIT_OPEN/);
   assert.match(source,/AsyncLocalStorage/);

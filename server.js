@@ -24,6 +24,7 @@ import liveDataHandler from './api/live-data.js';
 import knowledgeHandler from './api/knowledge.js';
 import webIntelligenceHandler from './api/web-intelligence.js';
 import { handlePremiumBackend, isPremiumBackendPath } from './backend-v73/app.js';
+import { warmProviderConnections } from './lib/providers.js';
 
 const ROOT = fileURLToPath(new URL('.', import.meta.url));
 const PORT = Number(process.env.PORT || 10000);
@@ -253,4 +254,7 @@ server.keepAliveTimeout = 5_000;
 
 server.listen(PORT, HOST, () => {
   console.log(`[WAE Universal Runtime] listening on http://${HOST}:${PORT}`);
+  // Warm the shared Edge session as soon as Render marks the process ready so
+  // the first user turn does not pay a cold bootstrap round trip.
+  void warmProviderConnections();
 });

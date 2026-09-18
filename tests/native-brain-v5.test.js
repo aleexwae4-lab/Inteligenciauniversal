@@ -31,6 +31,11 @@ test('quality recovery is wired into generated answers',()=>{
   assert.match(source,/revision_not_better/);
 });
 
+test('native generation budget fits the client envelope and no longer rejects a viable Edge response at 7.6 seconds',()=>{
+  assert.match(source,/COMPLEX_MODES\.has\(intent\.mode\)\?27_000:17_000/);
+  assert.doesNotMatch(source,/\?14000:7600/);
+});
+
 test('context-dependent followups bypass context-free factual council',()=>{
   assert.match(source,/function contextDependent/);
   assert.match(source,/!needsContext/);
