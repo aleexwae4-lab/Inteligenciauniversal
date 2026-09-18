@@ -13,7 +13,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 18
     env:
-      APP_URL: https://wae-inteligencia-universal.onrender.com
+      APP_URL: https://wae-inteligencia-universal-vt3h.onrender.com
       MOBILE_UA: Mozilla/5.0 (Linux; Android 13; Mobile) AppleWebKit/537.36 Chrome/152.0.0.0 Mobile Safari/537.36
     steps:
       - name: Wait for v81 provider-health release on Render
