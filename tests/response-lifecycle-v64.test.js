@@ -72,3 +72,11 @@ test('v114 response_rendered telemetry verifies visible text instead of assuming
   assert.match(mobilePage,/actionsVisible:audit\.actionsVisible/);
   assert.match(mobilePage,/replyLength:reply\.length/);
 });
+
+
+test('v114 settles the currently connected mobile composer and core state',()=>{
+  assert.match(mobilePage,/document\.getElementById\('send'\)\|\|send/);
+  assert.match(mobilePage,/document\.getElementById\('input'\)\|\|input/);
+  assert.match(mobilePage,/document\.getElementById\('coreState'\)\|\|coreState/);
+  assert.match(mobilePage,/liveCore\.textContent='operativo'/);
+});
