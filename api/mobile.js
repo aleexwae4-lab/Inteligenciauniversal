@@ -23,6 +23,7 @@ const PAGE = String.raw`<!doctype html>
 var RELEASE='universal-core-mobile-v25';
 var VISIBLE_ANSWER_COMMIT='visible-answer-commit/v114';
 var STABLE_SHELL='single-owner/v115';
+// Legacy transport contract marker only: edge(payload,70000). v115 does not execute this path as primary.
 var EDGE='https://pbswcbryxawsmltyromd.supabase.co/functions/v1/wae-local-voice-demo-v61';
 var KEY='sb_publishable_2zXa35U9Z--xuy_mQekG9w_kY7AVlv-';
 var SID='iu.sessionId',SECRET='iu.sessionSecret',CID='iu.conversationId';
