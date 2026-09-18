@@ -12,14 +12,67 @@ function retryAfter(r:Response){const h=r.headers.get('retry-after');if(!h)retur
 function contentOf(p:any){const v=p?.choices?.[0]?.message?.content;if(typeof v==='string')return v.trim();if(Array.isArray(v))return v.map((x:any)=>typeof x==='string'?x:typeof x?.text==='string'?x.text:'').filter(Boolean).join('\n').trim();return''}
 function promotable(m:any){const meta=obj(m?.metadata);return m?.discovery_managed===true&&String(m?.access_tier||'')==='FREE'&&String(m?.provider||'')==='openrouter'&&String(m?.model_name||'').endsWith(':free')&&num(meta.quality_score,0)>=80&&!/(safety|guard)/i.test(String(m?.model_name||''))}
 
+function publicKey(){return Deno.env.get('SUPABASE_PUBLISHABLE_KEY')||Deno.env.get('SUPABASE_ANON_KEY')||''}
+function allowedStatelessOrigin(origin:string|null){
+  if(!origin)return false;
+  try{
+    const host=new URL(origin).hostname;
+    return (host.endsWith('.onrender.com')&&host.includes('wae-inteligencia-universal'))||(host.endsWith('.vercel.app')&&host.includes('inteligenciauniversal'));
+  }catch{return false}
+}
+function statelessAuthorized(req:Request){
+  const key=publicKey(),sent=req.headers.get('apikey')||'';
+  return !!key&&sent===key&&allowedStatelessOrigin(req.headers.get('origin'));
+}
+function normalizedChatMessages(body:J){
+  const out:{role:string;content:string}[]=[];
+  const system=str(body.system,24000);if(system)out.push({role:'system',content:system});
+  const raw=Array.isArray(body.messages)?body.messages:[];
+  for(const item of raw.slice(-12)){
+    const x=obj(item),role=str(x.role,20).toLowerCase(),content=str(x.content,12000);
+    if(['user','assistant','system'].includes(role)&&content)out.push({role,content});
+  }
+  const message=str(body.message,24000);
+  if(message&&!out.some((x,i)=>i===out.length-1&&x.role==='user'&&x.content===message))out.push({role:'user',content:message});
+  return out.slice(-14);
+}
+async function statelessGroq(body:J){
+  const apiKey=Deno.env.get('GROQ_API_KEY')||'',model=Deno.env.get('GROQ_STATELESS_MODEL')||'groq/compound';
+  if(!apiKey)return json(503,{success:false,error:'stateless_provider_unconfigured',provider:'groq',version:V});
+  const messages=normalizedChatMessages(body);
+  if(!messages.some(m=>m.role==='user'))return json(422,{success:false,error:'message_required',version:V});
+  const started=Date.now();
+  try{
+    const r=await fetch('https://api.groq.com/openai/v1/chat/completions',{
+      method:'POST',
+      headers:{authorization:`Bearer ${apiKey}`,'content-type':'application/json'},
+      body:JSON.stringify({model,messages,temperature:.18,max_tokens:Math.max(256,Math.min(3200,num(body.max_tokens,1800)))}),
+      signal:AbortSignal.timeout(Math.max(8000,Math.min(35000,num(body.timeout_ms,26000))))
+    });
+    const raw=await r.text();let p:any={};try{p=JSON.parse(raw)}catch{}
+    if(!r.ok)return json(r.status===429?429:502,{success:false,error:'stateless_provider_failed',provider:'groq',model,http_status:r.status,detail:str(p?.error?.message||raw,280),latency_ms:Date.now()-started,version:V});
+    const reply=contentOf(p);
+    if(!reply)return json(502,{success:false,error:'stateless_empty_reply',provider:'groq',model,latency_ms:Date.now()-started,version:V});
+    return json(200,{success:true,reply,provider:'groq',model,stateless:true,degraded:false,latency_ms:Date.now()-started,usage:p?.usage??null,version:V});
+  }catch(e){
+    return json(503,{success:false,error:'stateless_transport_failure',provider:'groq',model,detail:e instanceof Error?str(e.message,220):'unknown',latency_ms:Date.now()-started,version:V});
+  }
+}
+
 Deno.serve(async req=>{try{
  if(req.method!=='POST')return json(405,{success:false,error:'method_not_allowed',version:V});
+ const body=obj(await req.json().catch(()=>({}))),action=str(body.action,40).toLowerCase();
+ if(action==='stateless_health'||action==='stateless_chat'){
+   if(!statelessAuthorized(req))return json(403,{success:false,error:'stateless_denied',version:V});
+   if(action==='stateless_health')return json(200,{success:true,ready:Boolean(Deno.env.get('GROQ_API_KEY')),provider:'groq',model:Deno.env.get('GROQ_STATELESS_MODEL')||'groq/compound',stateless:true,version:V});
+   return await statelessGroq(body);
+ }
  const base=Deno.env.get('SUPABASE_URL')||'',key=secret(),workerToken=req.headers.get('x-wae-worker-token')||'';
  if(!base||!key)return json(500,{success:false,error:'configuration_missing',version:V});
  if(!workerToken)return json(401,{success:false,error:'worker_token_required',version:V});
  const db=createClient(base,key,{auth:{persistSession:false,autoRefreshToken:false,detectSessionInUrl:false}});
  const validRes=await db.rpc('wae_validate_worker_token',{p_token:workerToken});if(validRes.error||validRes.data!==true)return json(403,{success:false,error:'invalid_worker_token',version:V});
- const body=obj(await req.json().catch(()=>({}))),requested=str(body.model_id);
+ const requested=str(body.model_id);
  let modelRes:any;
  if(requested){let q:any=db.from('wae_ai_models').select('*').eq('id',requested).in('status',['active','pending_configuration']);if(body.force!==true)q=q.eq('enabled',true);modelRes=await q.maybeSingle()}
  else modelRes=await db.from('wae_ai_models').select('*').eq('enabled',true).in('status',['active','pending_configuration']).neq('provider','browser_webllm').order('last_health_check_at',{ascending:true,nullsFirst:true}).order('priority',{ascending:true}).limit(1).maybeSingle();
