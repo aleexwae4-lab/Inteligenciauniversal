@@ -39,6 +39,8 @@ const MAX_BODY_BYTES = Number(process.env.WAE_MAX_BODY_BYTES || 2_000_000);
 // semantic-ux-v32.js?v=46
 // speech-lifecycle-v46.js?v=46
 // mobile-voice-v46.js?v=46
+// premium-v5.css?v=43
+// premium-v5.js?v=43
 // mobile-response-lifecycle/v97
 // wae-native-brain/v4-resilient
 
