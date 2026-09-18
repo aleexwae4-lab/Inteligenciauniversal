@@ -20,7 +20,8 @@ const PAGE = String.raw`<!doctype html>
 <script>
 (function(){
 'use strict';
-var RELEASE='universal-core-mobile-v114-visible-answer-commit';
+var RELEASE='universal-core-mobile-v25';
+var VISIBLE_ANSWER_COMMIT='visible-answer-commit/v114';
 var EDGE='https://pbswcbryxawsmltyromd.supabase.co/functions/v1/wae-local-voice-demo-v61';
 var KEY='sb_publishable_2zXa35U9Z--xuy_mQekG9w_kY7AVlv-';
 var SID='iu.sessionId',SECRET='iu.sessionSecret',CID='iu.conversationId';
