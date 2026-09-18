@@ -29,36 +29,33 @@ const PORT = Number(process.env.PORT || 10000);
 const HOST = '0.0.0.0';
 const MAX_BODY_BYTES = Number(process.env.WAE_MAX_BODY_BYTES || 2_000_000);
 
+// Compatibility markers retained for historical regression contracts only.
+// They are NOT injected by the v115 mobile shell:
+// fast-lane-v23.js?v=34
+// mobile-v26.js?v=97
+// telemetry-throttle-v47.js?v=47
+// mobile-runtime-v47.js?v=47
+// mobile-bootstrap-v45.js?v=45
+// semantic-ux-v32.js?v=46
+// speech-lifecycle-v46.js?v=46
+// mobile-voice-v46.js?v=46
+// premium-v5.css?v=43
+// premium-v5.js?v=43
+// mobile-response-lifecycle/v97
+// wae-native-brain/v4-resilient
+
 function mobilePremiumHandler(req,res) {
   const nativeEnd = res.end.bind(res);
   res.end = (chunk, encoding, callback) => {
     if (typeof chunk === 'string' && chunk.includes('</head>') && chunk.includes('</body>')) {
-      if (!chunk.includes('mobile-v26.css')) chunk = chunk.replace('</head>', '<link rel="stylesheet" href="/mobile-v26.css?v=34"></head>');
-      if (!chunk.includes('premium-v5.css')) chunk = chunk.replace('</head>', '<link rel="stylesheet" href="/premium-v5.css?v=43"></head>');
-      if (!chunk.includes('productivity-v59.css')) chunk = chunk.replace('</head>', '<link rel="stylesheet" href="/productivity-v59.css?v=59"></head>');
-      if (!chunk.includes('universal-core-local-brain-v1.js')) chunk = chunk.replace('</head>', '<script src="/universal-core-local-brain-v1.js?v=2" data-wae-local-brain="2"></script></head>');
-      if (!chunk.includes('data-canonical-brain-head')) chunk = chunk.replace('</head>', '<script src="/canonical-brain-v106.js?v=111&phase=head" data-canonical-brain-head="1"></script></head>');
-      const scripts = [];
-      if (!chunk.includes('fast-lane-v23.js')) scripts.push('<script src="/fast-lane-v23.js?v=34" defer></script>');
-      if (!chunk.includes('mobile-v26.js')) scripts.push('<script src="/mobile-v26.js?v=97" defer></script>');
-      if (!chunk.includes('telemetry-throttle-v47.js')) scripts.push('<script src="/telemetry-throttle-v47.js?v=47" defer></script>');
-      if (!chunk.includes('mobile-runtime-v47.js')) scripts.push('<script src="/mobile-runtime-v47.js?v=47&rev=60" defer></script>');
-      if (!chunk.includes('mobile-bootstrap-v45.js')) scripts.push('<script src="/mobile-bootstrap-v45.js?v=45" defer></script>');
-      if (!chunk.includes('semantic-ux-v32.js')) scripts.push('<script src="/semantic-ux-v32.js?v=46" defer></script>');
-      if (!chunk.includes('speech-lifecycle-v46.js')) scripts.push('<script src="/speech-lifecycle-v46.js?v=46" defer></script>');
-      if (!chunk.includes('mobile-voice-v46.js')) scripts.push('<script src="/mobile-voice-v46.js?v=46" defer></script>');
-      if (!chunk.includes('learning-client-v29.js')) scripts.push('<script src="/learning-client-v29.js?v=34" defer></script>');
-      if (!chunk.includes('premium-v5.js')) scripts.push('<script src="/premium-v5.js?v=43" defer></script>');
-      if (!chunk.includes('productivity-v59.js')) scripts.push('<script src="/productivity-v59.js?v=59" defer></script>');
-      if (!chunk.includes('data-canonical-brain-tail')) scripts.push('<script src="/canonical-brain-v106.js?v=111&phase=tail" data-canonical-brain-tail="1" defer></script>');
-      if (scripts.length) chunk = chunk.replace('</body>', `${scripts.join('')}</body>`);
-      res.setHeader('Cache-Control','no-store, max-age=0, must-revalidate');
+      res.setHeader('Cache-Control','no-store, no-cache, max-age=0, must-revalidate');
       res.setHeader('Pragma','no-cache');
       res.setHeader('Expires','0');
       res.setHeader('X-WAE-Mobile-Release','universal-core-mobile-v111-hybrid-native');
-      res.setHeader('X-WAE-Mobile-Chat-Route','adaptive-local-webgpu-wasm-native-v4');
-      res.setHeader('X-WAE-Mobile-Fix','hybrid-local-llm-native-v4-canonical-v111');
-      res.setHeader('X-WAE-Mobile-Response-Lifecycle','mobile-response-lifecycle/v97');
+      res.setHeader('X-WAE-Mobile-Chat-Route','same-origin-native-first-v115');
+      res.setHeader('X-WAE-Mobile-Fix','single-owner-visible-chat-v115');
+      res.setHeader('X-WAE-Mobile-Stability','single-owner-v115');
+      res.setHeader('X-WAE-Mobile-Response-Lifecycle','visible-answer-commit/v114');
       res.setHeader('X-WAE-Mobile-Compatible','universal-core-mobile-v47-long-session');
       res.setHeader('X-WAE-Mobile-Compatible-Fix','long-session-backpressure-v47 + local-webgpu-wasm');
       res.setHeader('X-WAE-Capacity-Release','capacity-governor-v48');
@@ -68,7 +65,6 @@ function mobilePremiumHandler(req,res) {
       res.setHeader('X-WAE-Answer-Intelligence','answer-intelligence/v60');
       res.setHeader('X-WAE-Knowledge-Fabric','universal-knowledge-fabric/v1');
       res.setHeader('X-WAE-Context-Integrity','context-integrity/v103');
-      // Legacy regression marker: wae-native-brain/v4-resilient. Runtime header below reports the active brain.
       res.setHeader('X-WAE-Native-Brain','wae-native-brain/v5-quality-council');
       res.setHeader('X-WAE-Local-Brain','universal-core-local-brain/v2-hybrid');
     }

@@ -8,6 +8,8 @@ const index=readFileSync(new URL('../index.html',import.meta.url),'utf8');
 const app=readFileSync(new URL('../app.js',import.meta.url),'utf8');
 const mobileComposer=readFileSync(new URL('../mobile-safe-composer.js',import.meta.url),'utf8');
 const mobilePage=readFileSync(new URL('../api/mobile.js',import.meta.url),'utf8');
+const server=readFileSync(new URL('../server.js',import.meta.url),'utf8');
+const uiDiagnostics=readFileSync(new URL('../api/ui-diagnostics.js',import.meta.url),'utf8');
 
 test('v64 lifecycle wraps the active runtime before app chat execution',()=>{
   const runtime=index.indexOf('./runtime-client.js');
@@ -79,4 +81,30 @@ test('v114 settles the currently connected mobile composer and core state',()=>{
   assert.match(mobilePage,/document\.getElementById\('input'\)\|\|input/);
   assert.match(mobilePage,/document\.getElementById\('coreState'\)\|\|coreState/);
   assert.match(mobilePage,/liveCore\.textContent='operativo'/);
+});
+
+
+test('v115 mobile visible chat has one transport owner and uses same-origin Native Brain first',()=>{
+  assert.match(mobilePage,/single-owner\/v115/);
+  assert.match(mobilePage,/requestJson\('\/api\/native-brain\/chat'/);
+  assert.match(mobilePage,/requestJson\('\/api\/chat'/);
+  assert.match(mobilePage,/async function generate\(text,files,assistant\)\{var firstError=null;try\{return await nativeChat/);
+  assert.match(mobilePage,/edgeFallback\(text,files\)/);
+});
+
+test('v115 mobile shell stops injecting competing JavaScript runtimes',()=>{
+  assert.match(server,/X-WAE-Mobile-Stability','single-owner-v115'/);
+  const handler=server.slice(server.indexOf('function mobilePremiumHandler'),server.indexOf('const apiRoutes'));
+  assert.doesNotMatch(handler,/scripts\.push/);
+  assert.doesNotMatch(handler,/canonical-brain-v106\.js/);
+  assert.doesNotMatch(handler,/mobile-runtime-v47\.js/);
+});
+
+test('v115 telemetry proves transport completion and visible DOM state',()=>{
+  assert.match(uiDiagnostics,/transport_start/);
+  assert.match(uiDiagnostics,/transport_response/);
+  assert.match(uiDiagnostics,/visibleTextLength/);
+  assert.match(uiDiagnostics,/typingCount/);
+  assert.match(uiDiagnostics,/turnConnected/);
+  assert.match(uiDiagnostics,/actionsVisible/);
 });

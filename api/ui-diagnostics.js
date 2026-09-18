@@ -1,6 +1,7 @@
 const ALLOWED_EVENTS = new Set([
   'page_loaded','pointerdown','touchstart','focus','input','submit','request_start','request_end','response_rendered','error','unhandledrejection','sw_state',
-  'voice_request','voice_start','voice_fallback','voice_end','canonical_response'
+  'voice_request','voice_start','voice_fallback','voice_end','canonical_response',
+  'transport_start','transport_response','transport_error','visible_answer_audit','runtime_ready'
 ]);
 
 function safeString(value, max = 220) {
@@ -46,6 +47,12 @@ export default async function uiDiagnosticsHandler(req, res) {
     latencyMs: Math.max(0, Math.min(180000, Number(body.latencyMs) || 0)),
     replyLength: Math.max(0, Math.min(100000, Number(body.replyLength) || 0)),
     degraded: body.degraded === true,
+    transport: safeString(body.transport, 80),
+    turnId: safeString(body.turnId, 100),
+    visibleTextLength: Math.max(0, Math.min(100000, Number(body.visibleTextLength) || 0)),
+    typingCount: Math.max(0, Math.min(1000, Number(body.typingCount) || 0)),
+    turnConnected: body.turnConnected === true,
+    actionsVisible: body.actionsVisible === true,
     ua: safeString(req.headers['user-agent'], 260),
   };
 
