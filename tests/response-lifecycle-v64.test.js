@@ -5,6 +5,8 @@ import {readFileSync} from 'node:fs';
 const fast=readFileSync(new URL('../fast-lane-v23.js',import.meta.url),'utf8');
 const mobile=readFileSync(new URL('../mobile-runtime-v47.js',import.meta.url),'utf8');
 const index=readFileSync(new URL('../index.html',import.meta.url),'utf8');
+const app=readFileSync(new URL('../app.js',import.meta.url),'utf8');
+const mobileComposer=readFileSync(new URL('../mobile-safe-composer.js',import.meta.url),'utf8');
 
 test('v64 lifecycle wraps the active runtime before app chat execution',()=>{
   const runtime=index.indexOf('./runtime-client.js');
@@ -36,4 +38,19 @@ test('recoverable mobile failures are not cached as definitive answers',()=>{
   assert.equal(writes.length,1);
   assert.match(mobile,/successOnlyCache:true/);
   assert.match(mobile,/recoverableFailuresRetryable:true/);
+});
+
+
+test('v113 releases busy state after every completed turn and focuses the visible mobile composer',()=>{
+  assert.match(app,/turn-lifecycle\/v113/);
+  assert.match(app,/document\.documentElement\.dataset\.aiBusy=String\(!!active\)/);
+  assert.match(app,/mobileSafeInput/);
+  assert.match(app,/finally\{releaseTurnUI\(\)\}/);
+});
+
+test('v113 mobile composer self-recovers from stale busy state after an assistant response',()=>{
+  assert.match(mobileComposer,/mobile-safe-composer\/v113-consecutive-turns/);
+  assert.match(mobileComposer,/forceReady/);
+  assert.match(mobileComposer,/75000/);
+  assert.match(mobileComposer,/message\.assistant:not\(#typingMessage\),\.turn\.assistant/);
 });
