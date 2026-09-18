@@ -10,6 +10,7 @@ import { LIBRARY_INTELLIGENCE_VERSION } from '../lib/library-intelligence-v52.js
 import { UNIVERSAL_CONTEXT_VERSION, getUniversalSelfDescription } from '../lib/universal-context-v52.js';
 import { universalKnowledgeCapabilities } from '../lib/universal-knowledge-mesh-v89.js';
 import { sourceRegistryHealth } from '../lib/knowledge/source-registry-v1.js';
+import { webIntelligenceHealth } from '../lib/web/research-v1.js';
 import { knowledgeExpansionCapabilitiesV90 } from '../lib/knowledge-expansion-v90.js';
 import { latencyGovernorCapabilitiesV90 } from '../lib/latency-governor-v90.js';
 import { specialistCopilotCapabilitiesV91 } from '../lib/specialist-copilot-arsenal-v91.js';
@@ -67,6 +68,7 @@ export default async function handler(req,res){
     specialistCopilots:specialistCopilotCapabilitiesV91(),
     knowledgeExpansion:{...knowledgeExpansionCapabilitiesV90(),endpoint:'/api/knowledge/expansion'},
     universalKnowledge:{...universalKnowledgeCapabilities(),registry:sourceRegistryHealth(),endpoint:'/api/knowledge/universal',searchEndpoint:'/api/knowledge/search',researchEndpoint:'/api/knowledge/research',expansionEndpoint:'/api/knowledge/expansion'},
+    universalWebIntelligence:{...webIntelligenceHealth(),endpoint:'/api/web/research',searchEndpoint:'/api/web/search',sourcesEndpoint:'/api/web/sources',healthEndpoint:'/api/web/health',metricsEndpoint:'/api/web/metrics'},
     gpuFabric:gpuFabricSnapshot(),
     scaleControl:{...scaleControlCapabilities(),snapshot:scaleControlSnapshot()},
     capacityCertification:{...capacityCertificationCapabilities(),endpoint:'/api/capacity-certification',actions:['evaluate','certify_and_record']},
