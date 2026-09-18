@@ -22,6 +22,7 @@ import mobileHandler from './api/mobile.js';
 import uiDiagnosticsHandler from './api/ui-diagnostics.js';
 import liveDataHandler from './api/live-data.js';
 import knowledgeHandler from './api/knowledge.js';
+import webIntelligenceHandler from './api/web-intelligence.js';
 import { handlePremiumBackend, isPremiumBackendPath } from './backend-v73/app.js';
 
 const ROOT = fileURLToPath(new URL('.', import.meta.url));
@@ -95,6 +96,10 @@ const apiRoutes = new Map([
   ['/api/knowledge/research', knowledgeHandler],
   ['/api/knowledge/sources', knowledgeHandler],
   ['/api/knowledge/health', knowledgeHandler],
+  ['/api/web/search', webIntelligenceHandler],
+  ['/api/web/research', webIntelligenceHandler],
+  ['/api/web/sources', webIntelligenceHandler],
+  ['/api/web/health', webIntelligenceHandler],
   ['/api/mobile', mobilePremiumHandler],
   ['/api/ui-diagnostics', uiDiagnosticsHandler],
 ]);
