@@ -98,6 +98,7 @@ const apiRoutes = new Map([
   ['/api/knowledge/health', knowledgeHandler],
   ['/api/web/search', webIntelligenceHandler],
   ['/api/web/research', webIntelligenceHandler],
+  ['/api/web/retrieve', webIntelligenceHandler],
   ['/api/web/sources', webIntelligenceHandler],
   ['/api/web/health', webIntelligenceHandler],
   ['/api/web/metrics', webIntelligenceHandler],
