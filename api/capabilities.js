@@ -68,7 +68,7 @@ export default async function handler(req,res){
     specialistCopilots:specialistCopilotCapabilitiesV91(),
     knowledgeExpansion:{...knowledgeExpansionCapabilitiesV90(),endpoint:'/api/knowledge/expansion'},
     universalKnowledge:{...universalKnowledgeCapabilities(),registry:sourceRegistryHealth(),endpoint:'/api/knowledge/universal',searchEndpoint:'/api/knowledge/search',researchEndpoint:'/api/knowledge/research',expansionEndpoint:'/api/knowledge/expansion'},
-    universalWebIntelligence:{...webIntelligenceHealth(),endpoint:'/api/web/research',searchEndpoint:'/api/web/search',sourcesEndpoint:'/api/web/sources',healthEndpoint:'/api/web/health'},
+    universalWebIntelligence:{...webIntelligenceHealth(),endpoint:'/api/web/research',searchEndpoint:'/api/web/search',sourcesEndpoint:'/api/web/sources',healthEndpoint:'/api/web/health',metricsEndpoint:'/api/web/metrics'},
     gpuFabric:gpuFabricSnapshot(),
     scaleControl:{...scaleControlCapabilities(),snapshot:scaleControlSnapshot()},
     capacityCertification:{...capacityCertificationCapabilities(),endpoint:'/api/capacity-certification',actions:['evaluate','certify_and_record']},
