@@ -1,0 +1,42 @@
+/* Answer readability on Android. Desktop remains a real semantic table. */
+@media(max-width:600px){
+ #messages .iu-rich .iu-table-scroll{
+   max-width:100%!important;width:100%!important;min-width:0!important;
+   overflow:visible!important;overflow-x:clip!important;
+   border:0!important;background:transparent!important;border-radius:0!important;
+   margin:12px 0!important;
+ }
+ #messages .iu-rich .iu-table-scroll table{
+   display:block!important;width:100%!important;min-width:0!important;max-width:100%!important;
+   font-size:.79rem!important;white-space:normal!important;border:0!important;
+ }
+ #messages .iu-rich .iu-table-scroll thead{
+   position:absolute!important;width:1px!important;height:1px!important;
+   margin:-1px!important;overflow:hidden!important;clip:rect(0,0,0,0)!important;
+   white-space:nowrap!important;border:0!important;
+ }
+ #messages .iu-rich .iu-table-scroll tbody{display:grid!important;gap:7px!important;min-width:0!important}
+ #messages .iu-rich .iu-table-scroll tr{
+   display:grid!important;gap:0!important;max-width:100%!important;min-width:0!important;
+   padding:4px 10px!important;border:1px solid rgba(97,218,156,.2)!important;
+   border-radius:11px!important;background:#10211a!important;
+ }
+ #messages .iu-rich .iu-table-scroll td{
+   display:grid!important;grid-template-columns:minmax(0,.85fr) minmax(0,1.15fr)!important;
+   gap:8px!important;align-items:start!important;width:auto!important;max-width:100%!important;
+   min-width:0!important;padding:8px 0!important;margin:0!important;
+   border-bottom:1px solid rgba(97,218,156,.12)!important;
+   overflow-wrap:anywhere!important;word-break:normal!important;
+   white-space:normal!important;
+ }
+ #messages .iu-rich .iu-table-scroll td:last-child{border:0!important}
+ #messages .iu-rich .iu-table-scroll td::before{
+   content:attr(data-label);display:block;min-width:0;max-width:100%;
+   color:#94cdb1;font-weight:740;font-size:.69rem;line-height:1.4;overflow-wrap:anywhere;
+ }
+ #messages .iu-rich .iu-table-scroll td>*{min-width:0;max-width:100%}
+}
+@media(max-width:380px){
+ #messages .iu-rich .iu-table-scroll td{grid-template-columns:minmax(0,.72fr) minmax(0,1.28fr)!important;gap:5px!important;font-size:.72rem!important}
+ #messages .iu-rich .iu-table-scroll td::before{font-size:.63rem}
+}
