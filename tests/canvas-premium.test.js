@@ -74,11 +74,19 @@ test('Canvas generation uses validated blueprints rather than truncating full HT
  assert.match(code,/WAECanvasBuilder/);
  assert.match(code,/blueprintPrompt/);
  assert.doesNotMatch(code,/Máximo 1900 caracteres/);
- assert.match(html,/canvas-builder-v1\.js\?v=17/);
+ assert.match(html,/canvas-builder-v1\.js\?v=18/);
 });
 
 test('preview guard is registered before generated HTML handlers can navigate',()=>{
  const js=read('canvas-premium-v2.js');
  assert.match(js,/match\+guard/);
  assert.match(js,/stopImmediatePropagation/);
+});
+
+test('Canvas provider retries are bounded and an honest local draft is available when both fail',()=>{
+ const canvas=read('canvas-premium-v2.js'),providers=read('lib/providers.js');
+ assert.match(canvas,/attempt===0\?48000:28000/);
+ assert.match(canvas,/Borrador local \(sin IA\)/);
+ assert.match(canvas,/WAECanvasBuilder\.draft/);
+ assert.match(providers,/Preserve specialist guidance even for the first turn/);
 });
