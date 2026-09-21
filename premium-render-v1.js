@@ -8,7 +8,7 @@ const notify=(s)=>window.toast&&window.toast(s);
 const AUTO_KEY='iu.premium.voice.auto.v1';
 let auto=localStorage.getItem(AUTO_KEY)!=='off';
 let allowAuto=false;
-const voice={token:0,active:null,paused:false};
+const voice={token:0,active:null,paused:false,utterances:[]};
 const synth=window.speechSynthesis;
 const supported=!!(synth&&window.SpeechSynthesisUtterance);
 
@@ -57,13 +57,13 @@ function rich(raw){
 function rawOf(article){return article.dataset.iuRaw||article.querySelector('p')?.textContent||''}
 function speechText(raw){return text(raw).replace(/\[([^\]]+)\]\(https?:\/\/[^)]+\)/g,'$1').replace(/https?:\/\/\S+/g,'').replace(/[\x60*_#>|~]/g,'').replace(/\s+/g,' ').trim().slice(0,9000)}
 function resetVoice(){
-  voice.token++;voice.active=null;voice.paused=false;
+  voice.token++;voice.active=null;voice.paused=false;voice.utterances=[];
   if(supported)try{synth.cancel()}catch(_){}
   QA('.iu-voice').forEach(b=>{b.textContent='▶';b.title='Escuchar respuesta';b.setAttribute('aria-label','Escuchar respuesta');b.setAttribute('aria-pressed','false')});
 }
 function speak(article,button){
   if(!supported){notify('La voz no está disponible en este navegador');return}
-  if(voice.active===article&&synth.speaking&&!voice.paused){
+  if(voice.active===article&&(synth.speaking||synth.pending)&&!voice.paused){
     try{synth.pause();voice.paused=true;button.textContent='▶';button.title='Reanudar voz';button.setAttribute('aria-label','Reanudar voz');button.setAttribute('aria-pressed','false')}catch(_){}
     return;
   }
@@ -74,19 +74,32 @@ function speak(article,button){
   resetVoice();const content=speechText(rawOf(article));if(!content)return;
   const token=voice.token;voice.active=article;voice.paused=false;
   button.textContent='⏸';button.title='Pausar voz';button.setAttribute('aria-label','Pausar voz');button.setAttribute('aria-pressed','true');
-  const chunks=window.WAESpeechChunks?window.WAESpeechChunks(content,280):[content];
-  let at=0;
-  function next(){
-    if(token!==voice.token||voice.active!==article)return;
-    if(at>=chunks.length){resetVoice();return}
-    const utter=new SpeechSynthesisUtterance(chunks[at++]);utter.lang='es-MX';const voicePrefs=window.WAESettings?.get?.()||{};utter.rate=Number(voicePrefs.rate)||1;utter.pitch=Number(voicePrefs.pitch)||1;
-    const spanish=synth.getVoices().find(v=>/^es[-_]/i.test(v.lang)&&/mx/i.test(v.lang))||synth.getVoices().find(v=>/^es/i.test(v.lang));
-    const selected=synth.getVoices().find(v=>v.voiceURI===voicePrefs.voiceURI);if(selected)utter.voice=selected;else if(spanish)utter.voice=spanish;
-    utter.onend=()=>{if(token===voice.token)next()};
-    utter.onerror=()=>{if(token===voice.token){resetVoice();notify('No se pudo reproducir la voz')}};
-    try{synth.speak(utter)}catch(_){resetVoice();notify('No se pudo iniciar la voz')}
-  }
-  next();
+  // Avoid browser TTS restarts after every 280 characters. Most answers now use one utterance.
+  const chunks=window.WAESpeechChunks?window.WAESpeechChunks(content,1350):[content];
+  const prefs=window.WAESettings?.get?.()||{};
+  const allVoices=synth.getVoices();
+  const selected=allVoices.find(v=>v.voiceURI===prefs.voiceURI);
+  const spanish=allVoices.find(v=>/^es[-_]/i.test(v.lang)&&/mx/i.test(v.lang))||allVoices.find(v=>/^es/i.test(v.lang));
+  const utterances=chunks.map((chunk,index)=>{
+    const utter=new SpeechSynthesisUtterance(chunk);
+    utter.lang='es-MX';
+    utter.rate=Number(prefs.rate)||1;
+    utter.pitch=Number(prefs.pitch)||1;
+    if(selected)utter.voice=selected;else if(spanish)utter.voice=spanish;
+    utter.onend=()=>{
+      if(token!==voice.token)return;
+      if(index===chunks.length-1)resetVoice();
+    };
+    utter.onerror=()=>{
+      if(token!==voice.token)return;
+      resetVoice();notify('No se pudo reproducir la voz');
+    };
+    return utter;
+  });
+  // Keep references alive on Android and queue ahead instead of waiting for each onend.
+  voice.utterances=utterances;
+  try{utterances.forEach(utter=>synth.speak(utter))}
+  catch(_){resetVoice();notify('No se pudo iniciar la voz')}
 }
 async function copyValue(s){
   if(navigator.clipboard&&window.isSecureContext){await navigator.clipboard.writeText(s);return}

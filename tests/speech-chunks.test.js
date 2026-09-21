@@ -30,3 +30,26 @@ test('TTS respects natural punctuation and preserves accents, numbers and long t
  const long='á'.repeat(320);
  assert.equal(chunk(long).join(' '),long,'long unspaced tokens must stay intact');
 });
+
+test('a normal response is read as ONE utterance, without gaps between sentences',()=>{
+ const chunk=loadChunker();
+ const sentence='Los vehículos circulan con normalidad por la ciudad, sin interrupciones innecesarias. ';
+ const input=sentence.repeat(11).trim();
+ assert.ok(input.length>280&&input.length<1350);
+ const result=Array.from(chunk(input,1350));
+ assert.deepEqual(result,[input]);
+});
+test('long responses require substantially fewer TTS restarts, without losing any words',()=>{
+ const chunk=loadChunker();
+ const input='Estos vehículos eléctricos requieren un diagnóstico profesional. '.repeat(110).trim();
+ const segments=Array.from(chunk(input,1350));
+ assert.equal(segments.join(' '),input);
+ assert.ok(segments.length<=Math.ceil(input.length/1000)+1);
+ assert.ok(segments.every(s=>s.length<=1350));
+});
+test('frontend queues speech at once and does not restart the engine after every chunk',()=>{
+ const script=readFileSync(new URL('../premium-render-v1.js',import.meta.url),'utf8');
+ assert.match(script,/WAESpeechChunks\(content,1350\)/);
+ assert.match(script,/utterances\.forEach\(utter=>synth\.speak\(utter\)\)/);
+ assert.doesNotMatch(script,/utter\.onend=\(\)=>\{if\(token===voice\.token\)next\(\)/);
+});
