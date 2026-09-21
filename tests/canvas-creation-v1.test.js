@@ -50,7 +50,8 @@ test('production QA rejects apparent complete files that contain dead CTAs or ex
 });
 
 test('security hardening removes external resource loading and strips embeds', () => {
-  const candidate=validHtml.replace('</head>', '<link rel="stylesheet" href="https://example.org/style.css"><style>@import url(https://example.org/a.css);</style></head>')
+  const candidate=validHtml.replace('</main>','<section>'+'Contenido auténtico. '.repeat(150)+'</section></main>')
+    .replace('</head>', '<link rel="stylesheet" href="https://example.org/style.css"><style>@import url(https://example.org/a.css);</style></head>')
     .replace('</main>', '<object data="x"></object><embed src="https://example.org/x"></main>');
   const safe=hardenCanvasHtml(candidate);
   assert.ok(!safe.includes('example.org'));
