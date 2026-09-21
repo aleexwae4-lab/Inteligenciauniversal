@@ -1,5 +1,5 @@
-const CACHE='wae-universal-render-premium-v1';
-const ASSETS=['./','./index.html','./styles.css','./polish-v2.css','./premium-render-v1.css?v=1','./runtime-client.js','./app.js','./polish-v2.js','./premium-render-v1.js?v=1','./manifest.webmanifest','./assets/logo.svg','./assets/logo-v2.svg'];
+const CACHE='wae-universal-render-premium-v2';
+const ASSETS=['./','./index.html','./styles.css','./polish-v2.css','./premium-render-v1.css?v=2','./runtime-client.js','./app.js','./polish-v2.js','./premium-render-v1.js?v=2','./manifest.webmanifest','./assets/logo.svg','./assets/logo-v2.svg'];
 self.addEventListener('install',event=>{event.waitUntil(caches.open(CACHE).then(cache=>cache.addAll(ASSETS)));self.skipWaiting()});
 self.addEventListener('activate',event=>{event.waitUntil(caches.keys().then(keys=>Promise.all(keys.filter(key=>key!==CACHE).map(key=>caches.delete(key)))).then(()=>self.clients.claim()))});
 self.addEventListener('fetch',event=>{
