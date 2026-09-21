@@ -59,7 +59,7 @@ async function build(){
   const t=thread(snapshot.id);
   const refining=!isStarter(snapshot);
   if(refining&&snapshot.html.length>100000){state('El proyecto supera 100 KB. Exporta una copia o reduce su tamaño antes de pedir una revisión.',true);return}
-  busy=true;send.disabled=true;entry.disabled=true;
+  busy=true;send.disabled=true;entry.disabled=true;['#wfProjects','#wfNewProject','#wfImportCanvas'].forEach(q=>{const el=$(q);if(el)el.disabled=true});
   entry.value='';remember('user',instruction);
   state(refining?'Consultando al agente para mejorar el producto existente…':'Consultando al agente para construir tu primer producto…');
   const controller=new AbortController();
@@ -89,7 +89,7 @@ async function build(){
     remember('assistant',message+' Conservé la versión anterior del producto.');
     state(message,true);
   }finally{
-    clearTimeout(timeout);busy=false;send.disabled=false;entry.disabled=false;entry.focus();
+    clearTimeout(timeout);busy=false;send.disabled=false;entry.disabled=false;['#wfProjects','#wfNewProject','#wfImportCanvas'].forEach(q=>{const el=$(q);if(el)el.disabled=false});entry.focus();
   }
 }
 function changeProject(){
