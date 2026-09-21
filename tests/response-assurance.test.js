@@ -241,6 +241,17 @@ test('mobile canonical v103 preserves explicit history and stable conversation i
   assert.match(source,/rotateConversation/);
 });
 
+test('mobile boot loads v97 lifecycle, telemetry and v47 backpressure before bootstrap and voice layers', () => {
+  // The native mobile shell no longer injects the legacy desktop boot chain. Validate the
+  // canonical assets directly and keep ordering assertions scoped to surfaces that load them.
+  const server=readFileSync(new URL('../server.js',import.meta.url),'utf8');
+  const mobile=readFileSync(new URL('../api/mobile.js',import.meta.url),'utf8');
+  assert.match(server,/same-origin-native-first-v115/);
+  assert.match(server,/visible-answer-commit\/v114/);
+  assert.match(mobile,/canvas-native-mobile-v1\.js\?v=1/);
+  assert.doesNotMatch(mobile,/fast-lane-v23\.js|telemetry-throttle-v47\.js|mobile-runtime-v47\.js/);
+});
+
 test('native mobile shell boots the real same-origin chat and independent Canvas adapter', () => {
   const server=readFileSync(new URL('../server.js',import.meta.url),'utf8');
   const mobile=readFileSync(new URL('../api/mobile.js',import.meta.url),'utf8');
