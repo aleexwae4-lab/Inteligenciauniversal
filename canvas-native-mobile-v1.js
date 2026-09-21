@@ -5,6 +5,7 @@
   const $ = id => document.getElementById(id);
   const storageKey=()=> 'wae.nativeCanvas.'+(localStorage.getItem('iu.conversationId')||'default');
   const previousKey=()=>storageKey()+'.previous';
+  const historyKey=()=>storageKey()+'.history';
   let busy=false;
   const css=document.createElement('style');
   css.textContent=[
@@ -49,6 +50,7 @@
     +'<div class="wae-build"><textarea id="wncBrief" placeholder="Describe el producto: marca, público, objetivo y estilo." maxlength="3500" aria-label="Encargo"></textarea>'
     +'<div class="wae-build-row"><select id="wncKind" aria-label="Tipo"><option value="landing">Landing</option><option value="presentation">Presentación</option><option value="dashboard">Dashboard</option><option value="app">Aplicación</option></select>'
     +'<input id="wncBrand" placeholder="Marca (opcional)" maxlength="100" aria-label="Marca"><button id="wncCreate" type="button">Crear</button></div>'
+    +'<button id="wncRefine" type="button">↻ Perfeccionar el producto actual</button>'
     +'<div id="wncStatus" role="status" aria-live="polite">Editor, vista previa y exportación HTML.</div></div>'
     +'<div class="wae-view-tabs"><button type="button" data-wnc-tab="preview" aria-selected="true">Vista previa</button><button type="button" data-wnc-tab="code" aria-selected="false">Código editable</button></div>'
     +'<div class="wae-surface"><iframe id="wncPreview" title="Vista previa del producto" sandbox="allow-scripts"></iframe><textarea id="wncCode" spellcheck="false" aria-label="HTML editable"></textarea></div>';
@@ -75,38 +77,45 @@
     return /^(crea|haz|construye|disena|genera|necesito|quiero|prepara|desarrolla)\b/.test(q)
       && /\b(landing|pagina web|presentacion|diapositivas|pitch deck|dashboard|tablero|panel de control|aplicacion|prototipo)\b/.test(q);
   };
-  async function create() {
+  async function create(refine=false) {
     if(busy)return;
     const request=$('wncBrief').value.trim();
     if(request.length<8)return status('Describe el producto antes de generar.',true);
-    busy=true;$('wncCreate').disabled=true;
+    if(refine && (!/^\s*<!doctype\s+html/i.test($('wncCode').value)||$('wncCode').value.length>100000)) return status('Abre un HTML5 válido de hasta 100 KB antes de revisarlo.',true);
+    busy=true;$('wncCreate').disabled=true;$('wncRefine').disabled=true;
     const before=$('wncCode').value;
     status('Especialistas → diseño → construcción → QA. Tu archivo actual se conserva.');
     try{
       const res=await fetch('/api/canvas',{
         method:'POST',headers:{'content-type':'application/json'},
         credentials:'same-origin',
-        body:JSON.stringify({request,kind:$('wncKind').value,brand:$('wncBrand').value,sessionId:localStorage.getItem('iu.conversationId')||''}),
+        body:JSON.stringify({request,kind:$('wncKind').value,brand:$('wncBrand').value,baseHtml:refine?before:'',sessionId:localStorage.getItem('iu.conversationId')||''}),
         signal:AbortSignal.timeout(145000)
       });
       const data=await res.json().catch(()=>({}));
       if(!res.ok||data.quality?.structural!=='passed'||!data.html)throw new Error(data.message||'El producto no pasó la validación.');
       if($('wncCode').value!==before)throw new Error('Cambiaste el editor durante la generación. No reemplacé tu trabajo.');
       try{
-        if(before&&before!==data.html)localStorage.setItem(previousKey(),before);
+        if(before&&before!==data.html){
+          const previous=JSON.parse(localStorage.getItem(historyKey())||'[]');
+          if(!Array.isArray(previous))throw Error('invalid_history');
+          localStorage.setItem(historyKey(),JSON.stringify([...previous,{html:before,at:Date.now()}].slice(-6)));
+          localStorage.setItem(previousKey(),before);
+        }
         localStorage.setItem(storageKey(),data.html);
         if(localStorage.getItem(storageKey())!==data.html)throw Error('not_persisted');
       }catch{throw new Error('No hay espacio para guardar: exporta el proyecto anterior antes de reemplazarlo.');}
       $('wncCode').value=data.html;$('wncPreview').srcdoc=data.html;
       root.dataset.tab='preview';
       root.querySelectorAll('[data-wnc-tab]').forEach(b=>b.setAttribute('aria-selected',String(b.dataset.wncTab==='preview')));
-      status('Producto guardado · estructura validada. Comprueba controles y diseño antes de publicar.');
+      status('Producto '+(data.revision?'perfeccionado':'generado')+' y guardado · estructura validada. Comprueba controles y diseño antes de publicar.');
     }catch(e){status('Se conservó tu versión anterior. '+String(e.message||'Error de conexión.'),true)}
-    finally{busy=false;$('wncCreate').disabled=false;}
+    finally{busy=false;$('wncCreate').disabled=false;$('wncRefine').disabled=false;}
   }
   $('wncOpen')?.addEventListener('click',show);
   $('wncClose').addEventListener('click',hide);
-  $('wncCreate').addEventListener('click',create);
+  $('wncCreate').addEventListener('click',()=>create(false));
+  $('wncRefine').addEventListener('click',()=>create(true));
   root.querySelectorAll('[data-wnc-tab]').forEach(b=>b.addEventListener('click',()=>{
     root.dataset.tab=b.dataset.wncTab;
     root.querySelectorAll('[data-wnc-tab]').forEach(x=>x.setAttribute('aria-selected',String(x===b)));
@@ -117,11 +126,16 @@
   });
   $('wncRestore').addEventListener('click',()=>{
     if(busy)return status('Hay una generación en curso.',true);
-    const previous=localStorage.getItem(previousKey());
+    let history=[];
+    try{history=JSON.parse(localStorage.getItem(historyKey())||'[]')}catch{}
+    const previous=Array.isArray(history)&&history.length?history[history.length-1]?.html:localStorage.getItem(previousKey());
     if(!previous)return status('No hay versión anterior.',true);
     if(!confirm('¿Restaurar la versión anterior?'))return;
     const current=$('wncCode').value;
-    try{localStorage.setItem(storageKey(),previous);localStorage.setItem(previousKey(),current)}
+    try{
+      if(Array.isArray(history)&&history.length)localStorage.setItem(historyKey(),JSON.stringify(history.slice(0,-1)));
+      localStorage.setItem(storageKey(),previous);localStorage.setItem(previousKey(),current)
+    }
     catch{return status('No se pudo respaldar la versión actual.',true)}
     $('wncCode').value=previous;$('wncPreview').srcdoc=previous;
     status('Versión anterior restaurada.');
@@ -139,7 +153,7 @@
     const text=$('input')?.value||'';
     if(!productRequest(text))return;
     $('wncBrief').value=text;$('wncKind').value=kindFrom(text);
-    show();create();
+    show();create(false);
   },true);
   window.__waeNativeCanvasV1={open:show,create,version:'1'};
 })();
