@@ -60,6 +60,6 @@ test('new evidence UX preserves text attachments, original user question, and me
  assert.match(app,/i\.value=m;autosizeInput\(\)/);
  assert.match(css,/\.wae-camera-thumb/);
  assert.match(css,/\.wae-camera-retry\[hidden\]/);
- assert.match(sw,/wae-universal-render-canvas-factory-v32/);
+ assert.match(sw,/wae-universal-render-product-builder-v33/);
  assert.match(sw,/canvas-render-factory-v1\.js\?v=1/);
 });

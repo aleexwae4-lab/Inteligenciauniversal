@@ -34,7 +34,7 @@ function renderMessages(){
   lastId=p.id;feed.replaceChildren();
   const t=thread(p.id);
   if(!t.messages.length){
-    bubble('assistant','Dime qué quieres construir. Yo generaré el producto y lo iré modificando contigo. Puedes pedirme una página web, un dashboard, una presentación o un prototipo.');
+    bubble('assistant','Dime qué quieres construir. Crearé y modificaré los archivos reales del proyecto contigo, con vista previa y Deshacer. El modo HTML rápido sigue disponible; backend y publicación no se crean automáticamente.');
   }else t.messages.forEach(m=>bubble(m.role,m.text));
   state('Proyecto: '+p.name+' · Los cambios se guardan en este dispositivo.');
 }
@@ -58,32 +58,37 @@ async function build(){
   if(!snapshot){state('No encuentro el proyecto. Vuelve a abrir la Fábrica.',true);return}
   const t=thread(snapshot.id);
   const refining=!isStarter(snapshot);
+  const multiFile=$('#wfAgentEngine')?.value!=='html';
   const priorGoals=t.messages.filter(m=>m.role==='user').slice(-5).map(m=>m.text).filter(Boolean);
   const mission=(priorGoals.length>0?('Contexto acumulado del proyecto (conserva requisitos compatibles):\n- '+priorGoals.join('\n- ')+'\n\nCambio solicitado ahora:\n'+instruction):instruction).slice(0,3400);
   if(refining&&snapshot.html.length>100000){state('El proyecto supera 100 KB. Exporta una copia o reduce su tamaño antes de pedir una revisión.',true);return}
-  busy=true;send.disabled=true;send.textContent='Construyendo…';entry.disabled=true;['#wfProjects','#wfNewProject','#wfImportCanvas'].forEach(q=>{const el=$(q);if(el)el.disabled=true});
+  busy=true;send.disabled=true;send.textContent='Construyendo…';entry.disabled=true;['#wfProjects','#wfNewProject','#wfImportCanvas','#wfAgentEngine'].forEach(q=>{const el=$(q);if(el)el.disabled=true});
   entry.value='';remember('user',instruction);
-  state(refining?'Analizando contexto → especialistas → construcción → QA…':'Definiendo producto → especialistas → construcción → QA…');
+  state(multiFile?'Arquitectura → archivos → auditoría → guardado…':refining?'Analizando contexto → especialistas → construcción → QA…':'Definiendo producto → especialistas → construcción → QA…');
   const controller=new AbortController();
   const timeout=setTimeout(()=>controller.abort(),115000);
   try{
-    const res=await fetch('/api/canvas',{
+    const res=await fetch(multiFile?'/api/factory-project':'/api/canvas',{
       method:'POST',credentials:'same-origin',
       headers:{'content-type':'application/json'},
-      body:JSON.stringify({request:mission,baseHtml:refining?snapshot.html:''}),
+      body:JSON.stringify(multiFile
+        ?{request:mission,kind:t.kind||'app',files:refining?snapshot.files:[]}
+         :{request:mission,baseHtml:refining?snapshot.html:''}),
       signal:controller.signal
     });
     const data=await res.json().catch(()=>({}));
-    if(!res.ok||typeof data.html!=='string'||data.quality?.structural!=='passed'){
+    if(!res.ok||data.quality?.structural!=='passed'||(multiFile?!Array.isArray(data.project?.files):typeof data.html!=='string')){
       throw Error(data.message||data.error||'La construcción no pasó la validación estructural.');
     }
-    const result=factory().commitGenerated(data.html,snapshot);
+    const result=multiFile?factory().commitProject(data.project.files,snapshot):factory().commitGenerated(data.html,snapshot);
     if(!result.ok)throw Error(result.error);
     const now=thread(snapshot.id);
     now.kind=String(data.kind||now.kind||'');
     save();
     const action=refining?'Actualicé tu producto.':'Construí la primera versión de tu producto.';
-    const detail='QA estructural aprobado. '+(data.experts?.length||0)+' responsabilidades registradas. La vista previa ya está actualizada; comprueba los botones y el contenido antes de publicarlo.';
+    const detail=multiFile
+      ?'Plan: '+String(data.plan||'Proyecto construido').slice(0,220)+'\nArchivos guardados: '+data.project.files.length+'. Cambios: '+(data.changes||[]).map(c=>c.name).join(', ').slice(0,130)+'. Vista previa actualizada. Auditoría estructural aprobada; backend y pruebas de navegador no ejecutados.'
+      :'QA estructural aprobado. '+(data.experts?.length||0)+' responsabilidades registradas. La vista previa ya está actualizada; comprueba los botones y el contenido antes de publicarlo.';
     remember('assistant',action+' '+detail);
     state('Producto construido y guardado. Puedes pedirme otro cambio.');
   }catch(error){
@@ -93,7 +98,7 @@ async function build(){
     remember('assistant',message+' Conservé la versión anterior del producto.');
     state(message,true);
   }finally{
-    clearTimeout(timeout);busy=false;send.disabled=false;send.textContent='✦ Construir';entry.disabled=false;['#wfProjects','#wfNewProject','#wfImportCanvas'].forEach(q=>{const el=$(q);if(el)el.disabled=false});entry.focus();
+    clearTimeout(timeout);busy=false;send.disabled=false;send.textContent='✦ Construir';entry.disabled=false;['#wfProjects','#wfNewProject','#wfImportCanvas','#wfAgentEngine'].forEach(q=>{const el=$(q);if(el)el.disabled=false});entry.focus();
   }
 }
 function changeProject(){
@@ -108,7 +113,7 @@ function init(){
   root.insertBefore(stage,body);
   const chat=document.createElement('section');chat.className='wf-agent';
   chat.setAttribute('aria-label','Asistente constructor de productos');
-  chat.innerHTML='<header class="wf-agent-top"><strong>✦ Agente constructor</strong><span>Describe → Construye → Corrige</span></header><div id="wfAgentFeed" class="wf-agent-feed" role="log" aria-live="polite"></div><div class="wf-agent-prompts"><button type="button" data-brief="Crea una página web para mi negocio, moderna, móvil y con botones funcionales.">Página web</button><button type="button" data-brief="Construye un dashboard empresarial responsive con datos demostrativos claramente etiquetados y filtros funcionales.">Dashboard</button><button type="button" data-brief="Crea una presentación ejecutiva interactiva con cinco diapositivas y controles de navegación.">Presentación</button></div><form id="wfAgentForm" class="wf-agent-form"><label for="wfAgentText">¿Qué construimos o mejoramos?</label><textarea id="wfAgentText" rows="3" maxlength="2100" placeholder="Ej.: Crea una app para controlar ventas de mi tienda…"></textarea><div class="wf-agent-actions"><button id="wfAgentBuild" type="submit" class="wf-agent-primary">✦ Construir</button><button id="wfAgentUndo" type="button">↶ Deshacer</button><button id="wfAgentCode" type="button" aria-pressed="false">⌘ Código</button><button id="wfAgentExport" type="button">↓ HTML</button><button id="wfAgentProject" type="button">↓ Proyecto</button><button id="wfAgentPreview" type="button">◉ Vista</button></div><div id="wfAgentStatus" class="wf-agent-status" role="status"></div></form>';
+  chat.innerHTML='<header class="wf-agent-top"><strong>✦ Agente constructor</strong><label class="wf-engine-label">Modo <select id="wfAgentEngine" aria-label="Motor de construcción"><option value="project">🧩 Proyecto multifichero</option><option value="html">⚡ HTML rápido</option></select></label></header><div id="wfAgentFeed" class="wf-agent-feed" role="log" aria-live="polite"></div><div class="wf-agent-prompts"><button type="button" data-brief="Crea una página web para mi negocio, moderna, móvil y con botones funcionales.">Página web</button><button type="button" data-brief="Construye un dashboard empresarial responsive con datos demostrativos claramente etiquetados y filtros funcionales.">Dashboard</button><button type="button" data-brief="Crea una presentación ejecutiva interactiva con cinco diapositivas y controles de navegación.">Presentación</button></div><form id="wfAgentForm" class="wf-agent-form"><label for="wfAgentText">¿Qué construimos o mejoramos?</label><textarea id="wfAgentText" rows="3" maxlength="2100" placeholder="Ej.: Crea una app para controlar ventas de mi tienda…"></textarea><div class="wf-agent-actions"><button id="wfAgentBuild" type="submit" class="wf-agent-primary">✦ Construir</button><button id="wfAgentUndo" type="button">↶ Deshacer</button><button id="wfAgentCode" type="button" aria-pressed="false">⌘ Código</button><button id="wfAgentExport" type="button">↓ HTML</button><button id="wfAgentProject" type="button">↓ ZIP</button><button id="wfAgentPreview" type="button">◉ Vista</button></div><div id="wfAgentStatus" class="wf-agent-status" role="status"></div></form>';
   stage.append(chat,body);
   form=$('#wfAgentForm');feed=$('#wfAgentFeed');entry=$('#wfAgentText');send=$('#wfAgentBuild');status=$('#wfAgentStatus');
   load();renderMessages();
@@ -128,7 +133,7 @@ function init(){
     state('Versión anterior restaurada.');
   });
   $('#wfAgentExport').addEventListener('click',()=>$('#wfExportHTML')?.click());
-  $('#wfAgentProject').addEventListener('click',()=>$('#wfExportProject')?.click());
+  $('#wfAgentProject').addEventListener('click',()=>$('#wfExportZIP')?.click());
   $('#wfAgentPreview').addEventListener('click',()=>{factory().preview();$('#wfPreview')?.scrollIntoView({behavior:'smooth',block:'nearest'});});
   $('#wfProjects')?.addEventListener('change',()=>{if(!busy)changeProject()});
   $('#wfNewProject')?.addEventListener('click',()=>{if(!busy)queueMicrotask(changeProject)});

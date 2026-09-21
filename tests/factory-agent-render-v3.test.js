@@ -6,7 +6,7 @@ const read=path=>readFileSync(new URL('../'+path,import.meta.url),'utf8');
 test('conversational builder is syntactically valid and runs on real Canvas API',()=>{
  const agent=read('factory-agent-render-v3.js');
  assert.doesNotThrow(()=>new vm.Script(agent));
- assert.match(agent,/fetch\('\/api\/canvas'/);
+ assert.match(agent,/multiFile\?'\/api\/factory-project':'\/api\/canvas'/);
  assert.match(agent,/quality\?\.structural!=='passed'/);
  assert.match(agent,/commitGenerated\(data\.html,snapshot\)/);
  assert.match(agent,/baseHtml:refining\?snapshot\.html:''/);
@@ -24,7 +24,7 @@ test('Render shell installs agent after existing Canvas and factory, without rep
  const html=read('index.html'),server=read('server.js');
  assert.ok(html.indexOf('canvas-premium-v2.js')<html.indexOf('factory-projects-render-v2.js'));
  assert.ok(html.indexOf('factory-projects-render-v2.js')<html.indexOf('factory-agent-render-v3.js'));
- assert.match(html,/factory-agent-render-v3\.css\?v=4/);
+ assert.match(html,/factory-agent-render-v3\.css\?v=5/);
  assert.match(server,/['"]?\/api\/canvas['"]?, canvasHandler/);
  assert.match(server,/['"]?\/api\/chat['"]?, chatHandler/);
 });
@@ -38,9 +38,9 @@ test('agent prioritizes conversation and preview, with code optional; never gran
 });
 test('mobile PWA refreshes chat factory assets and does not cache API responses',()=>{
  const sw=read('sw.js');
- assert.match(sw,/wae-universal-render-canvas-factory-v32/);
- assert.match(sw,/factory-agent-render-v3\.js\?v=4/);
- assert.match(sw,/factory-agent-render-v3\.css\?v=4/);
+ assert.match(sw,/wae-universal-render-product-builder-v33/);
+ assert.match(sw,/factory-agent-render-v3\.js\?v=5/);
+ assert.match(sw,/factory-agent-render-v3\.css\?v=5/);
  assert.match(sw,/url\.pathname\.startsWith\('\/api\/'\)/);
 });
 

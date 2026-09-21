@@ -15,7 +15,7 @@ test('Render multi-file project factory parses without altering backend or provi
 test('Render shell retains premium Canvas before additive multi-file project tab',()=>{
   const html=read('index.html');
   const canvas=html.indexOf('canvas-render-factory-v1.js?v=1');
-  const project=html.indexOf('factory-projects-render-v2.js?v=3');
+  const project=html.indexOf('factory-projects-render-v2.js?v=4');
   assert.ok(canvas>=0&&project>canvas);
   assert.match(html,/factory-projects-render-v2\.css\?v=2/);
   assert.match(html,/id="workspace"/);
@@ -30,7 +30,7 @@ test('existing Canvas generated HTML and undo remain the single owner',()=>{
 });
 test('PWA includes code workspace assets and never caches API responses',()=>{
   const sw=read('sw.js');
-  assert.match(sw,/factory-projects-render-v2\.js\?v=3/);
+  assert.match(sw,/factory-projects-render-v2\.js\?v=4/);
   assert.match(sw,/factory-projects-render-v2\.css\?v=2/);
   assert.match(sw,/url\.pathname\.startsWith\('\/api\/'\)/);
 });

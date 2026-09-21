@@ -83,7 +83,7 @@ test('UI archives active and remote conversations and provides user-triggered ex
  assert.match(app,/WAEStorage\.save\('document',state.document\)/);
  assert.match(remote,/WAEStorage\.save\('active',messages.slice\(-60\)\)/);
  assert.match(html,/storage-v2\.js\?v=1/);
- assert.match(sw,/wae-universal-render-canvas-factory-v32/);
+ assert.match(sw,/wae-universal-render-product-builder-v33/);
  assert.match(sw,/canvas-render-factory-v1\.js\?v=1/);
 });
 
