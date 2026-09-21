@@ -59,7 +59,8 @@ function base(p,body,cssExtra='',js=''){
  '@media(max-width:760px){header{min-height:70px}header nav{gap:14px;font-size:.77rem}.hero{padding:78px 0 85px}.grid{grid-template-columns:1fr}.story{grid-template-columns:1fr}.button{max-width:100%;min-height:45px}h1{font-size:clamp(2.7rem,12vw,4.5rem)}.card .num{margin-bottom:19px}}',
  '@media(prefers-reduced-motion:reduce){html{scroll-behavior:auto}}'
  ].join('')+cssExtra;
- return '<!doctype html><html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="color-scheme" content="dark"><title>'+esc(p.brand)+' | '+esc(p.headline)+'</title><style>'+css+'</style></head><body>'+body+(js?'<script>'+js+'<\/script>':'')+'</body></html>';
+ const draftLabel=p.draft?'<aside style="padding:8px 18px;background:#3d291b;color:#ffe4bd;text-align:center;font:12px system-ui">Borrador local ilustrativo · no generado por IA · personaliza y verifica el contenido</aside>':'';
+ return '<!doctype html><html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="color-scheme" content="dark"><title>'+esc(p.brand)+' | '+esc(p.headline)+'</title><style>'+css+'</style></head><body>'+draftLabel+body+(js?'<script>'+js+'<\/script>':'')+'</body></html>';
 }
 function header(p,withNav=true){
  return '<header class="wrap">'+(withNav?'<a class="brand" href="#inicio">'+esc(p.brand)+'</a><nav aria-label="Secciones"><a href="#experiencia">Experiencia</a><a href="#contacto">Contacto</a></nav>':'<span class="brand">'+esc(p.brand)+'</span>')+'</header>';
