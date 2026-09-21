@@ -56,16 +56,19 @@
       && /\b(landing|pagina web|pagina de venta|presentacion|diapositivas|pitch deck|dashboard|tablero|panel de control|aplicacion|prototipo)\b/.test(q);
   }
 
-  async function create(request, kind, brand='', automatic=false) {
+  async function create(request, kind, brand='', automatic=false, refine=false) {
     if (busy) return;
     const prompt=String(request||'').trim();
     if (prompt.length<8) {setStatus('Describe el producto que deseas construir.',true);return;}
     const editorBefore=$('#htmlEditor');
     const revisionAtStart=editorBefore?.value ?? '';
+    if (refine && (!/^\s*<!doctype\s+html/i.test(revisionAtStart) || revisionAtStart.length>100000)) return setStatus('Abre un producto HTML5 válido de hasta 100 KB antes de revisarlo.',true);
     busy=true;
     const action=$('#waeCanvasCreate');
+    const refineAction=$('#waeCanvasRefine');
+    if(refineAction) refineAction.disabled=true;
     if(action){action.disabled=true;action.textContent='Construyendo producto…';}
-    setStatus('Consejo de especialistas → diseño → construcción → validación. Conservamos tu versión anterior.');
+    setStatus((refine?'Revisión del producto':'Creación del producto')+' → especialistas → diseño → construcción → QA. Conservamos tu versión anterior.');
     if (automatic) workspaceHtml();
     let applied=false;
     try {
@@ -73,7 +76,7 @@
         method:'POST',
         headers:{'Content-Type':'application/json'},
         credentials:'same-origin',
-        body:JSON.stringify({request:prompt,kind,brand,sessionId:localStorage.getItem('iu.conversationId')||''}),
+        body:JSON.stringify({request:prompt,kind,brand,baseHtml:refine?revisionAtStart:'',sessionId:localStorage.getItem('iu.conversationId')||''}),
         signal:AbortSignal.timeout(145000)
       });
       const data=await response.json().catch(()=>({}));
@@ -90,6 +93,11 @@
       const revisionKey='wae.canvas.previous.'+(localStorage.getItem('iu.conversationId')||'default');
       if(editor.value && editor.value!==data.html) {
         try {
+          const historyKey='wae.canvas.history.'+(localStorage.getItem('iu.conversationId')||'default');
+          const previous=JSON.parse(localStorage.getItem(historyKey)||'[]');
+          if(!Array.isArray(previous)) throw Error('invalid_history');
+          const next=[...previous,{html:editor.value,at:Date.now()}].slice(-6);
+          localStorage.setItem(historyKey,JSON.stringify(next));
           localStorage.setItem(revisionKey,editor.value);
         } catch {
           throw new Error('No hay espacio para respaldar el diseño anterior. Expórtalo antes de reemplazarlo.');
@@ -102,13 +110,14 @@
       $('#saveBtn')?.click();
       if (localStorage.getItem('wae.html') !== data.html) throw new Error('El producto está en el editor, pero el dispositivo no confirmó su guardado. Descarga el HTML desde Exportar.');
       const repaired=data.quality.repaired ? ' · QA corrigió estructura' : '';
-      setStatus(KIND[data.kind]+' generado y guardado · estructura validada'+repaired+'. Revisa el diseño en móvil y escritorio.');
+      setStatus(KIND[data.kind]+(data.revision?' revisado':' generado')+' y guardado · estructura validada'+repaired+'. Revisa el diseño en móvil y escritorio.');
       if (automatic) workspaceHtml();
     } catch(error) {
       setStatus((applied?'El producto sigue en el editor. ':'No se reemplazó tu trabajo. ')+String(error.message||'Error de conexión.'),true);
     } finally {
       busy=false;
       if(action){action.disabled=false;action.textContent='✦ Crear producto premium';}
+      if(refineAction) refineAction.disabled=false;
     }
   }
 
@@ -124,6 +133,7 @@
       +'<div class="wae-canvas-grid"><select id="waeCanvasKind" aria-label="Tipo de producto"><option value="landing">Landing page</option><option value="presentation">Presentación</option><option value="dashboard">Dashboard</option><option value="app">Aplicación</option></select>'
       +'<input id="waeCanvasBrand" aria-label="Nombre de marca" placeholder="Marca (opcional)" maxlength="100"></div>'
       +'<button id="waeCanvasCreate" type="button">✦ Crear producto premium</button>'
+      +'<button id="waeCanvasRefine" type="button" style="margin-top:5px;background:#24493b;color:#e7fff2">↻ Perfeccionar producto actual</button>'
       +'<button id="waeCanvasRestore" type="button" style="margin-top:5px;background:transparent;border:1px solid #426854;color:#a8e8c4">↶ Recuperar versión anterior</button>'
       +'<div id="waeCanvasStatus" class="wae-canvas-status" role="status" aria-live="polite">Diseño, negocio, color, UX, ingeniería y QA.</div>';
     const label=$('.pane-label',pane);
@@ -131,19 +141,28 @@
     $('#waeCanvasCreate').addEventListener('click',()=>create(
       $('#waeCanvasBrief').value, $('#waeCanvasKind').value, $('#waeCanvasBrand').value
     ));
+    $('#waeCanvasRefine').addEventListener('click',()=>create(
+      $('#waeCanvasBrief').value, $('#waeCanvasKind').value, $('#waeCanvasBrand').value, false, true
+    ));
     $('#waeCanvasRestore').addEventListener('click',()=>{
       if(busy) return setStatus('Finaliza o cancela la generación antes de restaurar.',true);
       const revisionKey='wae.canvas.previous.'+(localStorage.getItem('iu.conversationId')||'default');
-      const old=localStorage.getItem(revisionKey);
+      const historyKey='wae.canvas.history.'+(localStorage.getItem('iu.conversationId')||'default');
+      let history=[];
+      try{history=JSON.parse(localStorage.getItem(historyKey)||'[]')}catch{}
+      const old=Array.isArray(history)&&history.length?history[history.length-1]?.html:localStorage.getItem(revisionKey);
       const editor=$('#htmlEditor');
       if(!old || !editor) return setStatus('No existe una versión anterior para esta conversación.',true);
       if(!confirm('¿Sustituir el Canvas actual por la versión anterior guardada?')) return;
       const current=editor.value;
+      try {
+        if(Array.isArray(history)&&history.length) localStorage.setItem(historyKey,JSON.stringify(history.slice(0,-1)));
+        localStorage.setItem(revisionKey,current);
+      } catch { return setStatus('No pude actualizar el historial; exporta el Canvas antes de continuar.',true); }
       editor.value=old;
       editor.dispatchEvent(new Event('input',{bubbles:true}));
       $('#saveBtn')?.click();
-      try { localStorage.setItem(revisionKey,current); } catch {}
-      setStatus('Versión anterior restaurada. Puedes recuperar la otra versión usando el mismo botón.');
+      setStatus('Versión anterior restaurada. Se conserva tu historial de versiones y puedes exportar el HTML.');
     });
     const previewLabel=$('#panel-html .preview-pane .pane-label');
     if (previewLabel && !$('#waeCanvasPreviewToggle')) {
