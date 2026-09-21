@@ -14,6 +14,20 @@ jobs:
       PREMIUM: https://inteligenciauniversal.onrender.com
       ENTERPRISE: https://wae-inteligencia-universal-vt3h.onrender.com
     steps:
+      - name: Diagnose public entrypoints and health without credentials
+        shell: bash
+        run: |
+          set -euo pipefail
+          for app in "$PREMIUM" "$ENTERPRISE"; do
+            for path in / /api/health; do
+              code=$(curl -sSL --max-time 40 -A 'Mozilla/5.0 (Linux; Android 13; Mobile)' -D /tmp/diagnostic-headers -o /tmp/diagnostic-body -w '%{http_code}' "$app$path")
+              printf '%s%s => HTTP %s; ' "$app" "$path" "$code"
+              grep -iE '^(server|content-type|x-wae-ui-profile|location):' /tmp/diagnostic-headers | tr '\n' ' ' || true
+              printf '\nBody prefix: '
+              head -c 200 /tmp/diagnostic-body | tr '\n' ' '
+              printf '\n'
+            done
+          done
       - name: Premium desktop and Android use Premium entry
         shell: bash
         run: |
