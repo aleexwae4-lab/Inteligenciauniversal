@@ -32,7 +32,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          for agent in 'Mozilla/5.0 (X11; Linux x86_64)' 'Mozilla/5.0 (Linux; Android 13; Mobile)'; do
+          for agent in 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36' 'Mozilla/5.0 (Linux; Android 13; Mobile)'; do
             curl --fail-with-body -sSL --retry 3 --retry-all-errors --retry-delay 3 --max-time 90 -A "$agent" -D /tmp/headers -o /tmp/body "$PREMIUM/"
             grep -Eiq '^x-wae-ui-profile: premium' /tmp/headers
             grep -Fq 'data-wae-ui="premium"' /tmp/body
@@ -44,7 +44,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          curl --fail-with-body -sSL --retry 3 --retry-all-errors --retry-delay 3 --max-time 90 -A 'Mozilla/5.0 (X11; Linux x86_64)' -D /tmp/headers -o /tmp/body "$ENTERPRISE/"
+          curl --fail-with-body -sSL --retry 3 --retry-all-errors --retry-delay 3 --max-time 90 -A 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36' -D /tmp/headers -o /tmp/body "$ENTERPRISE/"
           grep -Eiq '^x-wae-ui-profile: enterprise' /tmp/headers
           grep -Fq 'data-wae-ui="enterprise"' /tmp/body
           grep -Fq 'ui/enterprise/surface.css?v=119' /tmp/body
