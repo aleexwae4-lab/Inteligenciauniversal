@@ -21,7 +21,7 @@ test('Universal Core natively registers visual.inspect and dispatches through a 
     pending=false;
     return {reply:'La fotografía muestra un cable junto al piso.',metadata:{mediaKind:'photo'}};
   }});
-  assert.deepEqual(core.list().map(t=>t.id),['visual.inspect']);
+  assert.deepEqual(Array.from(core.list(),t=>t.id),['visual.inspect']);
   const result=await core.runTurn({message:'¿Qué ves?',mode:'analysis',history:[{text:'Contexto previo'}]});
   assert.equal(result.handled,true);assert.equal(result.tool,'visual.inspect');assert.equal(calls,1);
   assert.match(result.reply,/cable/);
@@ -55,7 +55,7 @@ test('native image/video path is shared by camera and ordinary Adjuntar, not tie
   assert.match(camera,/#fileInput'\)\?\.addEventListener\('change'/);
   assert.match(camera,/if\(preparation\)await preparation/);
   assert.match(camera,/const result=await window\.WAECamera\.analyze\(context\)/);
-  assert.match(camera,/\/\\\.\(\?:mp4\|webm\|mov\|m4v\)\$\/i\.test\(file\.name\)/);
+  assert.ok(camera.includes("/\\.(?:mp4|webm|mov|m4v)$/i.test(file.name)"));
   assert.match(camera,/clear\(\);\s*return \{reply:result\.reply/);
   assert.match(runtime,/const media=\[\.\.\.files\]\.some/);
   assert.match(html,/universal-tools-v1\.js\?v=1/);
