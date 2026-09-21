@@ -18,7 +18,7 @@ test('tapping mode card actually selects provider mode and visibly confirms it w
  const pill={classSet:new Set(),attrs:{},classList:{toggle(name,enabled){if(enabled)pill.classSet.add(name);else pill.classSet.delete(name)}},setAttribute(key,value){pill.attrs[key]=value},after(item){fields.set('#waeModeHelp',item)},append(item){fields.set('#waeModeClear',item)}};
  const input={focus(){focusCount++}};
  fields.set('#modePill',pill);fields.set('#messageInput',input);fields.set('#composer',{});
- const fakeDocument={createElement:()=>({setAttribute(key,value){this[key]=value},addEventListener(key,handler){this['on'+key]=handler},stopPropagation(){}})};
+ const fakeDocument={createElement:()=>({attrs:{},setAttribute(key,value){this.attrs[key]=value},addEventListener(key,handler){this['on'+key]=handler}})};
  const state={mode:'general'},modeLabels={general:'General',research:'Investigar',code:'Programar',analysis:'Analizar',design:'Diseñar'};
  const ctx={state,modeLabels,document:fakeDocument,window:{dispatchEvent:e=>events.push(e.detail)},CustomEvent:class{constructor(_name,data){this.detail=data.detail}},localStorage:{setItem:(k,v)=>stored[k]=v},console,$:name=>fields.get(name),$$:()=>cards, Object};
  vm.runInNewContext(section+';setMode("research");',ctx);
