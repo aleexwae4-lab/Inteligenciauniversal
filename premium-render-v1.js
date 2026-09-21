@@ -164,6 +164,8 @@ function initialize(){
   const runtime=Q('.v2-runtime-copy');if(runtime&&/0 req|100%/.test(runtime.textContent||''))runtime.innerHTML='<strong>Universal Core</strong><small>Comprobando conexión…</small>';
   const efficiency=Q('.v2-efficiency');if(efficiency&&/100%/.test(efficiency.textContent||''))efficiency.innerHTML='<strong>CORE</strong><small>ONLINE</small>';
   const drawer=Q('#drawer');if(drawer)new MutationObserver(()=>QA('.v2-recent').forEach(n=>n.remove())).observe(drawer,{childList:true});
+  Q('#newChatBtn')?.addEventListener('click',resetVoice);
+  Q('#drawerNewChat')?.addEventListener('click',resetVoice);
   window.addEventListener('pagehide',resetVoice);
 }
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',initialize,{once:true});else initialize();
