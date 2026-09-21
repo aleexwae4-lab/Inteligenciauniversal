@@ -52,3 +52,20 @@ test('primary and fallback routes both keep evidence without disturbing existing
   assert.match(backend,/appendSourceLinks\(generated.text, generated.sources, message\)/);
   assert.match(providers,/web_enabled:webEnabled/);
 });
+
+
+test('provider fallback rejects the exact degraded non-answer observed in production', () => {
+  const providers = readFileSync(new URL('../lib/providers.js', import.meta.url),'utf8');
+  assert.match(providers,/la ruta generativa avanzada no esta disponible/);
+  assert.match(providers,/no existe evidencia publica suficiente para responder sin inventar/);
+  assert.match(providers,/degraded_runtime_placeholder/);
+  const gate=providers.indexOf('const qualityFailure = degradedAnswer');
+  const success=providers.indexOf('return { ...result, provider:result.provider');
+  assert.ok(gate>0 && success>gate,'quality gate must execute before provider success');
+});
+
+test('quality gate does not turn lack of public evidence into a universal chat requirement', () => {
+  const runtime = readFileSync(new URL('../lib/runtime.js', import.meta.url),'utf8');
+  assert.match(runtime,/needsWebResearch\(message, mode\)/);
+  assert.doesNotMatch(runtime,/no existe evidencia pública suficiente/i);
+});
