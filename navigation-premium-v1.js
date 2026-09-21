@@ -20,19 +20,20 @@ function persist(){
  try{localStorage.setItem(KEY,JSON.stringify(snapshot));return true}catch(error){console.warn('navigation storage',error);window.toast?.('No se pudo guardar: usa Exportar memoria para respaldar tus datos.');return false}
 }
 async function initializeData(){
- if(window.WAEStorage){try{await window.WAEStorage.ready;db=await window.WAEStorage.load('navigation')}catch(error){console.warn('[WAE] navigation archive read failed',error)}}
+ let archivedActive=[];
+ if(window.WAEStorage){try{await window.WAEStorage.ready;[db,archivedActive]=await Promise.all([window.WAEStorage.load('navigation'),window.WAEStorage.load('active')]);if(!Array.isArray(archivedActive))archivedActive=[]}catch(error){console.warn('[WAE] navigation archive read failed',error)}}
  if(!db){try{db=JSON.parse(localStorage.getItem(KEY)||'null')}catch(_){}}
  if(!db||!Array.isArray(db.projects)||!Array.isArray(db.conversations))db={active:null,projects:[],conversations:[]};
  db.projects=db.projects.filter(p=>p&&typeof p.id==='string');
  db.conversations=db.conversations.filter(c=>c&&typeof c.id==='string'&&Array.isArray(c.messages));
  let pending;try{pending=JSON.parse(localStorage.getItem(PENDING)||'null')}catch(_){}
  if(pending?.remoteId){
-  const ms=messages(),existing=db.conversations.find(c=>c.remoteId===pending.remoteId);
+  const ms=archivedActive.length?archivedActive:messages(),existing=db.conversations.find(c=>c.remoteId===pending.remoteId);
   const c=existing||{id:uuid(),createdAt:now(),projectId:null,title:short(pending.title,80)||nameFrom(ms)};
   Object.assign(c,{messages:ms,remoteId:pending.remoteId,mode:localStorage.getItem('wae.mode')||'general',updatedAt:now()});
   if(!existing)db.conversations.unshift(c);db.active=c.id;localStorage.removeItem(PENDING);
- }else if(!db.conversations.length&&messages().length){
-  const ms=messages(),c={id:uuid(),title:nameFrom(ms),messages:ms,projectId:null,remoteId:localStorage.getItem(CLOUD)||null,mode:localStorage.getItem('wae.mode')||'general',createdAt:now(),updatedAt:now()};db.conversations.push(c);db.active=c.id;
+ }else if(!db.conversations.length&&(messages().length||archivedActive.length)){
+  const ms=archivedActive.length?archivedActive:messages(),c={id:uuid(),title:nameFrom(ms),messages:ms,projectId:null,remoteId:localStorage.getItem(CLOUD)||null,mode:localStorage.getItem('wae.mode')||'general',createdAt:now(),updatedAt:now()};db.conversations.push(c);db.active=c.id;
  }
  if(db.active&&!active())db.active=null;
  persist();
