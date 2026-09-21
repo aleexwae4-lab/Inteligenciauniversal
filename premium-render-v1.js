@@ -79,9 +79,9 @@ function speak(article,button){
   function next(){
     if(token!==voice.token||voice.active!==article)return;
     if(at>=chunks.length){resetVoice();return}
-    const utter=new SpeechSynthesisUtterance(chunks[at++]);utter.lang='es-MX';utter.rate=1;utter.pitch=1;
+    const utter=new SpeechSynthesisUtterance(chunks[at++]);utter.lang='es-MX';const voicePrefs=window.WAESettings?.get?.()||{};utter.rate=Number(voicePrefs.rate)||1;utter.pitch=Number(voicePrefs.pitch)||1;
     const spanish=synth.getVoices().find(v=>/^es[-_]/i.test(v.lang)&&/mx/i.test(v.lang))||synth.getVoices().find(v=>/^es/i.test(v.lang));
-    if(spanish)utter.voice=spanish;
+    const selected=synth.getVoices().find(v=>v.voiceURI===voicePrefs.voiceURI);if(selected)utter.voice=selected;else if(spanish)utter.voice=spanish;
     utter.onend=()=>{if(token===voice.token)next()};
     utter.onerror=()=>{if(token===voice.token){resetVoice();notify('No se pudo reproducir la voz')}};
     try{synth.speak(utter)}catch(_){resetVoice();notify('No se pudo iniciar la voz')}
@@ -145,7 +145,7 @@ function initialize(){
   if(voiceControl){
     voiceControl.title='Activar o desactivar lectura automática';
     function refresh(){voiceControl.textContent=auto?'🔊':'🔇';voiceControl.title=auto?'Voz automática activada · tocar para desactivar':'Voz automática desactivada · tocar para activar';voiceControl.setAttribute('aria-pressed',String(auto));voiceControl.setAttribute('aria-label',auto?'Desactivar respuestas con voz':'Activar respuestas con voz')}
-    voiceControl.addEventListener('click',e=>{e.stopImmediatePropagation();auto=!auto;localStorage.setItem(AUTO_KEY,auto?'on':'off');if(!auto)resetVoice();refresh();notify(auto?'Voz automática activada':'Voz automática desactivada')},true);refresh();
+    voiceControl.addEventListener('click',e=>{e.stopImmediatePropagation();auto=!auto;localStorage.setItem(AUTO_KEY,auto?'on':'off');if(!auto)resetVoice();refresh();notify(auto?'Voz automática activada':'Voz automática desactivada')},true);window.addEventListener('wae:voice-settings',e=>{auto=!!e.detail?.auto;if(!auto)resetVoice();refresh()});refresh();
   }
   const Recognition=window.SpeechRecognition||window.webkitSpeechRecognition;
   if(Recognition&&voiceControl&&!Q('#iuMicBtn')){

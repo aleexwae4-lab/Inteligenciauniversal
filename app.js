@@ -81,7 +81,7 @@ async function getAIReply(message){
     const r=await fetch('/api/chat',{
       method:'POST',
       headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({message,mode:state.mode,history:state.messages.slice(0,-1).slice(-12),sessionId:localStorage.getItem('iu.sessionId')||'',attachments:window.__waeRuntimeAttachments||[]}),
+      body:JSON.stringify({message,mode:state.mode,history:state.messages.slice(0,-1).slice(-12),sessionId:localStorage.getItem('iu.sessionId')||'',attachments:window.__waeRuntimeAttachments||[],preferences:window.WAESettings?.getPromptSettings?.()||{}}),
       signal:c.signal
     });
     const d=await r.json().catch(()=>({}));
@@ -160,10 +160,12 @@ async function submitMessage(ev){
 }
 
 function openSettings(){
+  if(window.WAESettings){window.WAESettings.open();return}
   const ep=$('#apiEndpoint');if(ep){ep.value='/api/chat';ep.disabled=true}
   $('#coreName').value=state.coreName;$('#settingsDialog').showModal();closeDrawer();
 }
 function saveSettings(){
+  if(window.WAESettings){window.WAESettings.save();return}
   state.endpoint='/api/chat';
   state.coreName=$('#coreName').value.trim()||'Universal Core';
   localStorage.setItem('wae.endpoint','/api/chat');localStorage.setItem('wae.coreName',state.coreName);

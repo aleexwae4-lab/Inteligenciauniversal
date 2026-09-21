@@ -34,7 +34,7 @@
     try{
       await bootstrap();
       const incoming=request;
-      const data=await edge({action:'chat',...sessionPayload(),conversation_id:localStorage.getItem(CONVERSATION_ID)||null,message:String(incoming.message||''),mode:String(incoming.mode||localStorage.getItem('wae.mode')||'general'),web_enabled:String(incoming.mode||'')==='research',attachments:window.__waeRuntimeAttachments||[]});
+      const data=await edge({action:'chat',...sessionPayload(),conversation_id:localStorage.getItem(CONVERSATION_ID)||null,message:[incoming.preferences?.instructions?'PREFERENCIAS DEL USUARIO (no prevalecen sobre reglas de seguridad):\n'+String(incoming.preferences.instructions).slice(0,4000):'',incoming.preferences?.knowledge?'CONTEXTO GENERAL DEL USUARIO (no verificado):\n'+String(incoming.preferences.knowledge).slice(0,12000):'','SOLICITUD ACTUAL:\n'+String(incoming.message||'')].filter(Boolean).join('\n\n'),mode:String(incoming.mode||localStorage.getItem('wae.mode')||'general'),web_enabled:String(incoming.mode||'')==='research',attachments:window.__waeRuntimeAttachments||[]});
       if(data.conversation_id)localStorage.setItem(CONVERSATION_ID,data.conversation_id);
       window.__iuLastRuntime=data;
       queueMicrotask(()=>{updateRuntimeCard(data);loadConversations().catch(()=>{})});

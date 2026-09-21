@@ -139,3 +139,29 @@ footer.runtime-bar.v2-runtime{
  .v2-has-messages .chat-column{padding-inline:11px!important}
  #messages .message.assistant{padding:11px 12px!important}
 }
+
+/* Actual settings experience – responsive, independently scrollable, readable on Android */
+dialog.iu-settings-dialog{border:1px solid rgba(113,229,186,.2)!important;border-radius:20px!important;background:#101215!important;color:#e8f3ed!important;padding:0!important;box-shadow:0 20px 80px rgba(0,0,0,.75)!important;max-width:min(720px,calc(100vw - 24px))!important;width:min(720px,calc(100vw - 24px))!important;max-height:min(88dvh,900px)!important;height:min(88dvh,900px)!important;overflow:hidden!important}
+dialog.iu-settings-dialog::backdrop{background:rgba(0,0,0,.7)}
+.iu-settings-panel{display:grid;grid-template-rows:auto minmax(0,1fr) auto;max-height:inherit;height:100%;min-height:0}
+.iu-settings-header{display:flex;justify-content:space-between;gap:14px;padding:20px 22px 12px;border-bottom:1px solid #252a29}
+.iu-settings-header h2{font-size:1.35rem;margin:5px 0}.iu-settings-header p{color:#8b9b94;font-size:.8rem;margin:0}
+.iu-settings-eyebrow{font-size:.58rem;letter-spacing:.13em;color:#66e4b4}
+#iuSettingsClose{align-self:start;width:35px;height:35px;border:0;background:#1b2220;color:#d8f3e7;border-radius:9px;font-size:1.35rem}
+.iu-settings-scroll{min-height:0;overflow-y:auto;overscroll-behavior:contain;padding:6px 20px 12px;-webkit-overflow-scrolling:touch}
+.iu-settings-section{padding:16px 0;border-bottom:1px solid #252a29;display:grid;gap:9px}
+.iu-settings-section h3{margin:0 0 3px;font-size:.94rem;color:#dcf8e8}
+.iu-settings-section label{font-size:.76rem;font-weight:650;display:flex;align-items:center;justify-content:space-between;gap:8px}
+.iu-settings-section small,.iu-settings-section output{color:#70d8ad;font-size:.69rem}
+.iu-settings-section textarea,.iu-settings-section input[type=text],.iu-settings-section select{display:block;width:100%;box-sizing:border-box;min-height:40px;padding:10px 11px;resize:vertical;background:#181d1c;color:#f1fff9;border:1px solid #303a36;border-radius:10px;font:inherit;font-size:.82rem;line-height:1.45;max-width:100%}
+.iu-settings-section textarea:focus,.iu-settings-section select:focus,.iu-settings-section input:focus{outline:2px solid #55dca8;outline-offset:1px}
+.iu-settings-section input[type=range]{width:100%;accent-color:#70e7b2}
+.iu-settings-section input[type=checkbox]{accent-color:#4cdda0;width:19px;height:19px}
+.iu-settings-toggle{padding:11px 12px;border:1px solid #303a36;border-radius:10px;background:#181d1c}
+.iu-settings-help,.iu-settings-privacy{margin:1px 0 0;color:#849b8f;font-size:.7rem;line-height:1.55}
+.iu-settings-privacy{padding:13px 0 7px}
+.iu-settings-inline{display:flex;gap:9px;flex-wrap:wrap}
+.iu-settings-inline button,.iu-settings-actions button{padding:9px 13px;border-radius:10px;cursor:pointer;font-size:.77rem;border:1px solid #2c3b34;background:#1b2521;color:#c5f6de}
+.iu-settings-actions{display:flex;justify-content:flex-end;gap:9px;border-top:1px solid #252a29;padding:12px 20px;background:#101215}
+.iu-settings-actions #iuSaveSettings{background:#275d48;color:#e8fff4;border-color:#31785b;font-weight:750}
+@media(max-width:600px){dialog.iu-settings-dialog{max-width:calc(100vw - 12px)!important;width:calc(100vw - 12px)!important;max-height:calc(100dvh - 24px)!important;height:calc(100dvh - 24px)!important;margin:auto!important;border-radius:15px!important}.iu-settings-header{padding:14px 15px 11px}.iu-settings-scroll{padding:4px 14px}.iu-settings-actions{padding:10px 14px}.iu-settings-section{padding:13px 0}}
