@@ -134,7 +134,7 @@ async function generate(){
   let complete=false,lastError='';
   notice(creating?'Diseñando contenido original; Canvas construirá después el HTML completo…':'Refinando el HTML existente sin perder el original…');
   for(let attempt=0;attempt<2;attempt++){
-   const controller=new AbortController(),timeout=setTimeout(()=>controller.abort(),65000);
+   const controller=new AbortController(),timeout=setTimeout(()=>controller.abort(),attempt===0?48000:28000);
    try{
     const message=creating?blueprintPrompt(kind,brief,attempt>0):[
      'Devuelve solamente un archivo HTML completo: <!doctype html> ... </html>. Sin Markdown.',
