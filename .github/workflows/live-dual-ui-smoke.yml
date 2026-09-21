@@ -1,0 +1,53 @@
+name: Live Dual UI Smoke
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/live-dual-ui-smoke.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      PREMIUM: https://inteligenciauniversal.onrender.com
+      ENTERPRISE: https://wae-inteligencia-universal-vt3h.onrender.com
+    steps:
+      - name: Premium desktop and Android use Premium entry
+        shell: bash
+        run: |
+          set -euo pipefail
+          for agent in 'Mozilla/5.0 (X11; Linux x86_64)' 'Mozilla/5.0 (Linux; Android 13; Mobile)'; do
+            curl --fail-with-body -sSL --retry 3 --retry-all-errors --retry-delay 3 --max-time 90 -A "$agent" -D /tmp/headers -o /tmp/body "$PREMIUM/"
+            grep -Eiq '^x-wae-ui-profile: premium' /tmp/headers
+            grep -Fq 'data-wae-ui="premium"' /tmp/body
+            grep -Fq 'ui/premium/surface.css?v=119' /tmp/body
+            if grep -Fq 'ui/enterprise/surface.css' /tmp/body; then exit 1; fi
+            printf 'Premium shell verified for %s\n' "$agent"
+          done
+      - name: Enterprise desktop and Android preserve Enterprise entry
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl --fail-with-body -sSL --retry 3 --retry-all-errors --retry-delay 3 --max-time 90 -A 'Mozilla/5.0 (X11; Linux x86_64)' -D /tmp/headers -o /tmp/body "$ENTERPRISE/"
+          grep -Eiq '^x-wae-ui-profile: enterprise' /tmp/headers
+          grep -Fq 'data-wae-ui="enterprise"' /tmp/body
+          grep -Fq 'ui/enterprise/surface.css?v=119' /tmp/body
+          curl --fail-with-body -sSL --retry 3 --retry-all-errors --retry-delay 3 --max-time 90 -A 'Mozilla/5.0 (Linux; Android 13; Mobile)' -D /tmp/headers -o /tmp/body "$ENTERPRISE/"
+          grep -Eiq '^x-wae-ui-profile: enterprise' /tmp/headers
+          grep -Fq '¿En qué trabajamos?' /tmp/body
+          grep -Fq 'id="coreState">operativo' /tmp/body
+          printf 'Enterprise desktop and native mobile verified\n'
+      - name: Both services respond to health and Premium chat
+        shell: bash
+        run: |
+          set -euo pipefail
+          for app in "$PREMIUM" "$ENTERPRISE"; do
+            curl --fail-with-body -sSL --retry 3 --retry-all-errors --retry-delay 3 --max-time 90 "$app/api/health" | jq -e '.ok == true and .ready == true' >/dev/null
+            printf 'Health verified: %s\n' "$app"
+          done
+          result=$(curl --fail-with-body -sSL --retry 2 --retry-delay 2 --max-time 90 "$PREMIUM/api/chat" -H 'content-type: application/json' --data-binary '{"message":"Responde solamente con la palabra OK.","mode":"general","sessionId":"dual-ui-smoke-v122","history":[],"attachments":[],"tools":[]}')
+          jq -e '(.reply // "") | type == "string" and length > 0' <<<"$result" >/dev/null
+          jq -e '(.response_schema // .response.schema // "") == "assistant-response/v1"' <<<"$result" >/dev/null
+          jq '{provider,model,degraded,reply}' <<<"$result"
