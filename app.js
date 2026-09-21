@@ -108,7 +108,10 @@ async function getAIReply(message){
     return clean;
   }catch(e){
     console.warn('[WAE IU] runtime unavailable',e?.message||e);
-    return 'No pude recuperar la respuesta de los proveedores de IA en este momento. El texto de tu consulta permanece en esta sesión; puedes volver a intentarlo.';
+    // A provider outage is a transport failure, not an assistant answer.
+    // Keep the user's submitted question in the transcript and restore the
+    // draft for one-touch retry instead of persisting a fake assistant turn.
+    return null;
   }finally{clearTimeout(timer)}
 }
 
@@ -225,9 +228,20 @@ async function submitMessage(ev){
   if(!m||state.busy)return;
   state.busy=true;
   const send=$('.send-btn');if(send){send.disabled=true;send.setAttribute('aria-busy','true')}
-  i.value='';autosizeInput();addMessage('user',m);showTyping();
+  i.value='';autosizeInput();
+  // Retrying after a transport error should not duplicate an unanswered user
+  // message or silently discard the original question.
+  const previous=state.messages.at(-1);
+  if(previous?.role!=='user'||previous.text!==m)addMessage('user',m);
+  showTyping();
   try{
-    const r=await getAIReply(m);hideTyping();addMessage('assistant',r);
+    const r=await getAIReply(m);hideTyping();
+    if(typeof r==='string'&&r.trim())addMessage('assistant',r);
+    else{
+      if(!i.value.trim()){i.value=m;autosizeInput();}
+      toast('La IA no respondió. Conservé tu pregunta para reintentar.');
+      return;
+    }
     // A failed multimodal request never discards the user's question or evidence.
     if(window.WAECamera?.status?.().pending&&window.WAECoreTools?.status?.().last?.ok===false&&!i.value.trim()){
       i.value=m;autosizeInput();
