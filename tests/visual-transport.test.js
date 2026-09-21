@@ -1,0 +1,82 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import {readFileSync} from 'node:fs';
+import {forwardVisual,bootstrapVisualSession} from '../lib/vision-gateway.js';
+
+const read=name=>readFileSync(new URL('../'+name,import.meta.url),'utf8');
+const photo='data:image/jpeg;base64,'+Buffer.from('wae visual payload').toString('base64');
+const SID='73a6cf13-a11e-4b62-b940-dc11984de895';
+const SECRET='x'.repeat(40);
+const body={session_id:SID,session_secret:SECRET,question:'¿Qué ves?',kind:'image',frames:[{dataUrl:photo}],mode:'analysis'};
+
+test('same-origin gateway forwards actual photo pixels with IU credentials to the existing WAE visual action',async()=>{
+ let called=0;
+ const result=await forwardVisual(body,{},async(url,init)=>{
+  called++;
+  assert.match(url,/functions\/v1\/wae-ai-stream$/);
+  assert.equal(init.headers.origin,'https://inteligenciauniversal.onrender.com');
+  assert.equal(init.headers['x-goog-api-key'],undefined);
+  assert.ok(init.headers.apikey?.startsWith('sb_publishable_'));
+  const sent=JSON.parse(init.body);
+  assert.equal(sent.action,'iu_visual_v1');
+  assert.equal(sent.session_id,SID);
+  assert.equal(sent.session_secret,SECRET);
+  assert.equal(sent.question,body.question);
+  assert.equal(sent.frames[0].dataUrl,photo);
+  assert.equal(sent.mode,'analysis');
+  return {ok:true,status:200,json:async()=>({success:true,reply:'Se observan dos zapatos negros sobre un piso claro.',model:'free-vision-model',provider:'gemini_native',analyzedFrames:1,videoScope:'image'})};
+ });
+ assert.equal(called,1);
+ assert.match(result.reply,/zapatos negros/);
+ assert.equal(result.transport,'render_same_origin_gateway');
+ assert.equal(result.analyzedFrames,1);
+});
+
+test('no active IU session or invalid photo is sent upstream',async()=>{
+ let count=0;
+ const upstream=async()=>{count++;throw Error('should not call')};
+ await assert.rejects(forwardVisual({...body,session_secret:''},{},upstream),{code:'iu_session_required'});
+ await assert.rejects(forwardVisual({...body,frames:[{dataUrl:'data:text/html;base64,PHNjcmlwdD4='}]},{},upstream),/compatible/);
+ assert.equal(count,0);
+});
+
+test('a network failure returns a structured transport code, never Failed to fetch or imagined image details',async()=>{
+ await assert.rejects(forwardVisual(body,{},async()=>{throw new TypeError('Failed to fetch')}),error=>{
+  assert.equal(error.code,'visual_gateway_transport');
+  assert.equal(error.statusCode,503);
+  assert.match(error.message,/conectar el motor visual/);
+  assert.doesNotMatch(error.message,/Failed to fetch/);
+  return true;
+ });
+});
+
+test('backend conveys FREE guard and quota errors without pretending an image was analyzed',async()=>{
+ for(const [code,status] of [['iu_free_vision_unverified',503],['iu_daily_visual_limit',429],['iu_invalid_session',401]]){
+  await assert.rejects(forwardVisual(body,{},async()=>({ok:false,status:503,json:async()=>({success:false,error:code})})),error=>{
+   assert.equal(error.code,code);assert.equal(error.statusCode,status);return true;
+  });
+ }
+});
+
+test('same-origin session bootstrap works even when browser cannot contact Supabase directly',async()=>{
+ const session=await bootstrapVisualSession({}, {},async(url,init)=>{
+  assert.match(url,/wae-local-voice-demo-v61$/);
+  assert.equal(JSON.parse(init.body).action,'bootstrap');
+  return {ok:true,json:async()=>({session_id:SID,session_secret:SECRET})};
+ });
+ assert.equal(session.session_id,SID);
+ assert.equal(session.session_secret,SECRET);
+});
+
+test('real visual browser transport stays on Render origin for photo/video, retains image on errors',()=>{
+ const runtime=read('runtime-client.js'),camera=read('camera-v1.js'),api=read('api/vision.js');
+ const block=runtime.slice(runtime.indexOf('window.WAEVisualRuntime='),runtime.indexOf('function isLocalRuntime'));
+ assert.match(block,/nativeFetch\('\/api\/vision'/);
+ assert.match(block,/action:'bootstrap'/);
+ assert.doesNotMatch(block,/nativeFetch\(VISUAL_EDGE/);
+ assert.doesNotMatch(block,/x-goog-api-key/);
+ assert.match(api,/forwardVisual\(body\)/);
+ assert.match(api,/bootstrapVisualSession\(body\)/);
+ assert.match(camera,/window.WAEVisualRuntime.analyze/);
+ assert.match(camera,/if\(preparation\)await preparation/);
+});
