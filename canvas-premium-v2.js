@@ -35,6 +35,7 @@ function updatePreview(force=false){
   const device=selector?.value||'responsive';
   frame.style.width=device==='desktop'?'980px':device==='mobile'?'min(390px, 100%)':'100%';
   frame.style.maxWidth=device==='desktop'?'none':'100%';
+  frame.style.setProperty('--iu-preview-width',frame.style.width);
   // Preserve interactive slide/prototype state while switching modes without code changes.
   const source=current();
   if(!force&&source===lastPreviewSource&&device===lastPreviewDevice)return;

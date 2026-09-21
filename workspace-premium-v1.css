@@ -149,3 +149,10 @@
     line-height:1.55!important;
   }
 }
+
+/* Device selector overrides the older globally forced 100%-width iframe. */
+#panel-html .preview-pane #htmlPreview{
+  width:var(--iu-preview-width,100%)!important;
+  max-width:none!important;
+  justify-self:center!important;
+}

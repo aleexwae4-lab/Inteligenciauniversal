@@ -33,3 +33,9 @@ test('Canvas mobile can switch between full-size editing and preview and recover
  assert.match(app,/WAECanvasRefreshPreview/);
  assert.doesNotMatch(code,/\bconfirm\(/);
 });
+
+test('mobile/desktop preview selector overrides legacy fixed iframe width',()=>{
+ const js=read('canvas-premium-v2.js'),css=read('workspace-premium-v1.css');
+ assert.match(js,/setProperty\('--iu-preview-width'/);
+ assert.match(css,/width:var\(--iu-preview-width,100%\)!important/);
+});
