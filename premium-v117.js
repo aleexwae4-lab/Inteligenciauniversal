@@ -128,7 +128,11 @@
           await voice.setEnabled(true);temporarilyEnabled=true;
           activeVoiceNode=node;renderVoiceLabels();
         }
-        await voice.speak(raw,{force:true});
+        const playback=voice.speak(raw,{force:true});
+        // The underlying engine emits "ready" when cancelling previous playback.
+        // Assign the active node after this synchronous reset so Stop stays usable.
+        activeVoiceNode=node;renderVoiceLabels();
+        await playback;
       }else if(typeof window.speakAnswer==='function')window.speakAnswer(raw);
       else throw new Error('voice_unavailable');
     }catch{notify('La voz no está disponible en este dispositivo')}
