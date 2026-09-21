@@ -153,8 +153,10 @@
     if(!body||!body.textContent?.trim()||body.classList.contains('error-text')||body.querySelector('.typing'))return;
     const raw=responseText(node);
     if(!raw||raw===legacyGreeting)return;
-    // Replace only legacy action rows, leaving sources, feedback and the message body intact.
-    $$('.answer-actions,.iu-answer-actions,.actions',node)
+    // Preserve existing real feedback callbacks instead of discarding trained quality signals.
+    const feedbackButtons=$('button[data-feedback]',node).filter(button=>!button.closest('.rich-content,.rich-answer,.assistant-body'));
+    // Replace only legacy action rows, leaving sources and the message body intact.
+    $('.answer-actions,.iu-answer-actions,.actions',node)
       .filter(row=>!row.closest('.rich-content,.rich-answer,.assistant-body')&&!(node.matches('.turn.assistant')&&row.classList.contains('actions')))
       .forEach(row=>row.remove());
     const actions=document.createElement('div');
@@ -167,6 +169,7 @@
       action('auto','○ Voz desactivada',toggleAutoVoice),
       action('workspace','◇ Workspace',()=>openWorkspaceFrom(node))
     );
+    feedbackButtons.forEach(button=>actions.appendChild(button));
     node.appendChild(actions);
     node.dataset.uc117Actions='true';
     renderVoiceLabels();
