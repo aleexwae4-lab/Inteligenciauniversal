@@ -42,7 +42,7 @@ const routes=Object.freeze({
 });
 export default async function vercelUniversalRouter(req,res){
   const raw=req.query?.wae_route;
-  const name=String(Array.isArray(raw)?raw[0]:raw||'').replace(/\\.js$/,'');
+  const name=String(Array.isArray(raw)?raw[0]:raw||'').replace(/\.js$/,'');
   if(!Object.prototype.hasOwnProperty.call(routes,name))return res.status(404).json({error:'not_found'});
   try{
     const mod=await routes[name]();
