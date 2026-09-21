@@ -6,6 +6,7 @@ import {
   extractCanvasHtml,
   auditCanvas,
   hardenCanvasHtml,
+  createPremiumCanvas,
 } from '../lib/canvas-engine-v1.js';
 
 const validHtml = '<!doctype html><html lang="es"><head><title>Cafetería</title><meta name="viewport" content="width=device-width,initial-scale=1"><style>body{font-family:system-ui}@media(max-width:600px){body{padding:1rem}}</style></head><body><main><h1>Cafetería de especialidad</h1><section>Producto real</section></main></body></html>' + ' '.repeat(1800);
@@ -56,4 +57,51 @@ test('security hardening removes external resource loading and strips embeds', (
   assert.ok(!safe.includes('<object'));
   assert.ok(!safe.includes('<embed'));
   assert.equal(auditCanvas(safe).pass,true);
+});
+
+
+test('real creation pipeline executes three expert briefs and builder, then reports only executed experts', async () => {
+  const artifact = validHtml.replace('</main>', '<section>'+'Contenido comercial veraz. '.repeat(90)+'</section></main>');
+  const calls=[];
+  const result=await createPremiumCanvas({
+    request:'Crea una landing profesional para una cafetería de especialidad',
+    kind:'landing',
+    brand:'Café Central',
+    generate:async ({message})=>{
+      calls.push(message);
+      return {text: message.includes('Encargo original:') ? artifact : 'Brief profesional: foco en clientes, UX responsive y oferta honesta.'};
+    }
+  });
+  assert.equal(calls.length,4);
+  assert.equal(result.kind,'landing');
+  assert.equal(result.title,'Café Central');
+  assert.equal(result.quality.structural,'passed');
+  assert.equal(result.quality.repaired,false);
+  assert.equal(result.experts.length,5);
+  assert.ok(result.html.includes('Content-Security-Policy'));
+});
+
+test('broken output gets one QA repair instead of being released to users', async () => {
+  let calls=0;
+  const artifact=validHtml.replace('</main>', '<section>'+'Diseño sólido. '.repeat(150)+'</section></main>');
+  const result=await createPremiumCanvas({
+    request:'Genera una landing útil para turismo local',
+    generate:async ()=>{
+      calls++;
+      return {text: calls<=3?'Brief especializado':calls===4?'<html>incompleto</html>':artifact};
+    }
+  });
+  assert.equal(calls,5);
+  assert.equal(result.quality.repaired,true);
+  assert.equal(result.quality.structural,'passed');
+});
+
+test('unrepairable output fails closed without returning a fake artifact', async () => {
+  await assert.rejects(
+    createPremiumCanvas({
+      request:'Construye una landing que pueda usar ya',
+      generate:async ({message})=>({text:message.includes('Encargo original:')?'<html>roto</html>':'Brief'})
+    }),
+    error=>error.code==='canvas_quality_gate_failed' && error.statusCode===422
+  );
 });
