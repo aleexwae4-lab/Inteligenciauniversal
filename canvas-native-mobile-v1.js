@@ -48,7 +48,7 @@
   root.setAttribute('aria-hidden','true');
   root.innerHTML='<header><button id="wncClose" type="button" aria-label="Cerrar Canvas">←</button><strong>✦ Canvas Premium</strong><button id="wncRestore" type="button">↶ Anterior</button><button id="wncExport" type="button">Exportar</button></header>'
     +'<div class="wae-build"><textarea id="wncBrief" placeholder="Describe el producto: marca, público, objetivo y estilo." maxlength="3500" aria-label="Encargo"></textarea>'
-    +'<div class="wae-build-row"><select id="wncKind" aria-label="Tipo"><option value="landing">Landing</option><option value="presentation">Presentación</option><option value="dashboard">Dashboard</option><option value="app">Aplicación</option></select>'
+    +'<div class="wae-build-row"><select id="wncKind" aria-label="Tipo"><option value="landing">Landing</option><option value="presentation">Presentación</option><option value="dashboard">Dashboard</option><option value="app">Aplicación</option><option value="website">Sitio web</option><option value="ecommerce">E-commerce</option><option value="report">Informe</option></select>'
     +'<input id="wncBrand" placeholder="Marca (opcional)" maxlength="100" aria-label="Marca"><button id="wncCreate" type="button">Crear</button></div>'
     +'<button id="wncRefine" type="button">↻ Perfeccionar el producto actual</button>'
     +'<div id="wncStatus" role="status" aria-live="polite">Editor, vista previa y exportación HTML.</div></div>'
@@ -69,13 +69,16 @@
     const q=String(text).normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase();
     if(/\b(presentacion|diapositivas|pitch deck)\b/.test(q))return 'presentation';
     if(/\b(dashboard|tablero|panel de control)\b/.test(q))return 'dashboard';
+    if(/\b(tienda|ecommerce|e-commerce|catalogo|shop)\b/.test(q))return 'ecommerce';
+    if(/\b(informe|reporte|report)\b/.test(q))return 'report';
+    if(/\b(sitio web|website|portal|micrositio)\b/.test(q))return 'website';
     if(/\b(aplicacion|prototipo)\b/.test(q))return 'app';
     return 'landing';
   };
   const productRequest=text=>{
     const q=String(text).normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().trim();
     return /^(crea|haz|construye|disena|genera|necesito|quiero|prepara|desarrolla)\b/.test(q)
-      && /\b(landing|pagina web|presentacion|diapositivas|pitch deck|dashboard|tablero|panel de control|aplicacion|prototipo)\b/.test(q);
+      && /\b(landing|pagina web|sitio web|website|portal|presentacion|diapositivas|pitch deck|dashboard|tablero|panel de control|aplicacion|prototipo|tienda|ecommerce|e-commerce|catalogo|informe|reporte)\b/.test(q);
   };
   async function create(refine=false) {
     if(busy)return;
