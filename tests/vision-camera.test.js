@@ -79,7 +79,7 @@ test('shared multimodal action requires the IU session and preserves WAE OS vide
  const original=read('supabase/functions/wae-ai-stream-render-visual/BASELINE-v131.ts');
  const client=read('runtime-client.js'),camera=read('camera-v1.js');
  assert.ok(client.includes('functions/v1/wae-ai-stream'));
- assert.ok(client.includes("action:'iu_visual_v1'"));
+ assert.ok(read('lib/vision-gateway.js').includes("action:'iu_visual_v1'"));
  assert.ok(client.includes('...sessionPayload(),question,kind,frames,mode'));
  assert.ok(camera.includes('WAEVisualRuntime.analyze'));
  assert.ok(edge.includes(".eq('secret_hash',await iuHash(secret))"));
