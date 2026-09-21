@@ -113,7 +113,7 @@
       output.push({name:file.name,type:file.type||'text/plain',text:(await file.text()).slice(0,120000)});
     }
     window.__waeRuntimeAttachments=output;
-    const media=[...files].some(file=>file.type.startsWith('image/')||file.type.startsWith('video/')||/\\.(?:mp4|webm|mov|m4v)$/i.test(file.name));
+    const media=[...files].some(file=>file.type.startsWith('image/')||file.type.startsWith('video/')||/\.(?:mp4|webm|mov|m4v)$/i.test(file.name));
     if(output.length)window.toast?.(`${output.length} archivo${output.length===1?'':'s'} de texto listo${output.length===1?'':'s'}`);
     else if(!media)window.toast?.('Ese formato todavía no se procesa como texto, foto o video');
   }
