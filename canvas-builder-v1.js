@@ -86,5 +86,44 @@ function prototype(p){
  return base(p,header(p,false)+'<main class="wrap"><div class="stage">'+sections+'</div></main>',extra,js);
 }
 function build(plan){if(plan.kind==='slides')return slides(plan);if(plan.kind==='prototype')return prototype(plan);return landing(plan)}
-window.WAECanvasBuilder={parse:validate,build};
+function draft(brief,kind='landing'){
+ const instruction=word(brief);
+ const named=instruction.match(/\b(?:para|de)\s+([\p{L}\p{N}][\p{L}\p{N} '&-]{2,60})/iu)?.[1];
+ const brand=text((named||instruction.replace(/^(crear?|crea(?:me)?|diseña(?:me)?|haz|una?|un|landing|pagina|página)\s+/gi,'')).replace(/[.!?].*$/,'').replace(/\b(?:con|que|en|y|sobre)\b.*$/i,'').trim(),50)||'Tu proyecto';
+ const coffee=/caf[eé]|cafeter[ií]a|coffee/i.test(instruction+' '+brand);
+ const textFor=coffee?{
+  headline:'Una pausa con carácter, aroma y sabor',
+  subheadline:'Una propuesta visual para presentar tus bebidas y contar la historia detrás de cada taza.',
+  story:'Un espacio para contar qué hace especial a esta cafetería y cómo quieres que tus visitantes vivan la experiencia.',
+  cta:'Explorar la propuesta',
+  features:[
+   {title:'Café de especialidad',description:'Presenta tu selección y explica la experiencia que quieres ofrecer.'},
+   {title:'Bebidas para cada momento',description:'Describe tus preparaciones, frías o calientes, sin inventar precios.'},
+   {title:'Un espacio para compartir',description:'Cuenta qué ambiente quieres crear para tus visitantes.'}
+  ],
+  slides:[
+   {title:'Una bienvenida con aroma',body:'Presenta la identidad de tu cafetería y su propuesta.'},
+   {title:'La experiencia',body:'Explica qué bebidas y momentos quieres destacar.'},
+   {title:'Próximo encuentro',body:'Incluye una invitación a conocer tu propuesta sin datos de contacto inventados.'}
+  ]
+ }:{
+  headline:'Presenta '+brand+' con una propuesta clara',
+  subheadline:'Un punto de partida editable para presentar tu idea, tus servicios y lo que quieres construir.',
+  story:'Personaliza esta sección con información real sobre tu proyecto, su audiencia y el valor que ofreces.',
+  cta:'Conocer la propuesta',
+  features:[
+   {title:'La propuesta',description:'Describe aquí el producto o servicio que quieres ofrecer.'},
+   {title:'La experiencia',description:'Explica cómo las personas podrán utilizar tu producto o servicio.'},
+   {title:'Siguiente paso',description:'Añade una invitación verificable y adaptada a tu audiencia.'}
+  ],
+  slides:[
+   {title:'La idea principal',body:'Presenta el propósito y el alcance de '+brand+'.'},
+   {title:'El valor',body:'Describe con ejemplos lo que tu propuesta aportará.'},
+   {title:'El siguiente paso',body:'Muestra una conclusión y una acción concreta para avanzar.'}
+  ]
+ };
+ const plan={...textFor,kind,brand,eyebrow:coffee?'Concepto de cafetería':'Concepto de proyecto',contact:'Reemplaza este bloque con información de contacto real.',palette:coffee?'warm':'blue',draft:true};
+ return {plan,html:build(plan)};
+}
+window.WAECanvasBuilder={parse:validate,build,draft};
 })();
