@@ -51,22 +51,42 @@
   }).catch(err=>{bootPromise=null;throw err}));
   const sessionPayload=()=>({session_id:localStorage.getItem(SESSION_ID)||'',session_secret:localStorage.getItem(SESSION_SECRET)||''});
   // Reuse the IU custom session; never copy the other WAE OS product's org token or Gemini key.
+  // Multimodal photo / video requests stay first-party. Render proxies to the
+  // same IU-authenticated WAE function, so Android avoids a large cross-origin POST.
   window.WAEVisualRuntime=Object.freeze({
     analyze:async({question,kind,frames,mode})=>{
-      await bootstrap();
-      const response=await nativeFetch(VISUAL_EDGE,{
-        method:'POST',headers:{'content-type':'application/json','apikey':SUPABASE_KEY,'x-client-info':'wae-iu-render-visual/1.0'},
-        body:JSON.stringify({action:'iu_visual_v1',...sessionPayload(),question,kind,frames,mode}),cache:'no-store',
-        signal:typeof AbortSignal.timeout==='function'?AbortSignal.timeout(55000):undefined
-      });
+      // The standard chat may run on Render fallback when direct Supabase
+      // bootstrap is blocked. Resolve the exact IU session through our own host.
+      try{await bootstrap()}catch(_){
+        const recovery=await nativeFetch('/api/vision',{
+          method:'POST',headers:{'content-type':'application/json'},
+          body:JSON.stringify({action:'bootstrap',...sessionPayload()}),cache:'no-store',
+          signal:typeof AbortSignal.timeout==='function'?AbortSignal.timeout(20000):undefined
+        }).catch(()=>{throw Object.assign(Error('No se pudo conectar para iniciar una sesión visual. Verifica tu conexión.'),{code:'visual_bootstrap_transport'})});
+        const session=await recovery.json().catch(()=>({}));
+        if(!recovery.ok||!session.session_id||!session.session_secret)
+          throw Object.assign(Error(session.message||'No fue posible iniciar la sesión visual. Tu captura se conserva.'),{code:session.error||'visual_bootstrap_failed',status:recovery.status});
+        localStorage.setItem(SESSION_ID,session.session_id);localStorage.setItem(SESSION_SECRET,session.session_secret);
+        bootPromise=Promise.resolve(session);
+      }
+      let response;
+      try{
+        response=await nativeFetch('/api/vision',{
+          method:'POST',headers:{'content-type':'application/json'},
+          body:JSON.stringify({...sessionPayload(),question,kind,frames,mode}),cache:'no-store',
+          signal:typeof AbortSignal.timeout==='function'?AbortSignal.timeout(65000):undefined
+        });
+      }catch(error){
+        const aborted=error?.name==='AbortError'||error?.name==='TimeoutError';
+        throw Object.assign(Error(aborted?'Se agotó el tiempo de análisis. Conservamos la captura para reintentar.':'La conexión con Universal Core se interrumpió antes del análisis. Conservamos la captura para reintentar.'),{code:aborted?'visual_timeout':'visual_transport'});
+      }
       const body=await response.json().catch(()=>({}));
-      if(!response.ok||body.success!==true||typeof body.reply!=='string'||!body.reply.trim())
-        throw Object.assign(new Error(body.message||'No se completó el análisis visual; tu captura sigue lista para reintentar.'),{code:body.error||'vision_unavailable',status:response.status});
+      if(!response.ok||typeof body.reply!=='string'||!body.reply.trim())
+        throw Object.assign(new Error(body.message||'El motor visual no devolvió una respuesta. Tu captura continúa preparada.'),{code:body.error||'vision_unavailable',status:response.status});
       return body;
     },
-    transport:'supabase-iu-authenticated'
+    transport:'render_same_origin_iu'
   });
-
 
   function isLocalRuntime(input){
     try{const raw=typeof input==='string'?input:input?.url;const url=new URL(raw,location.href);return url.origin===location.origin&&url.pathname==='/api/chat'}catch{return false}
