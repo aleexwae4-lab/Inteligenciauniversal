@@ -81,15 +81,17 @@ function addMessage(role,text){
 }
 
 async function getAIReply(message){
-  if(window.WAECamera?.hasPending?.()){
-    try{
-      const result=await window.WAECamera.analyze(message);
-      window.WAECamera.clear();
-      return result.reply;
-    }catch(error){
-      console.warn('[WAE] visual analysis unavailable',error?.message||error);
-      return 'La captura permanece preparada. '+String(error?.message||'No se pudo completar el análisis visual')+' No he interpretado ni analizado el contenido todavía.';
-    }
+  // All native tools are dispatched by Universal Core, independent of the button used to provide evidence.
+  try{
+    const tool=await window.WAECoreTools?.runTurn({
+      message,mode:state.mode,history:state.messages.slice(0,-1).slice(-8),
+      attachments:window.__waeRuntimeAttachments||[],
+      project:window.WAENavigation?.getProjectContext?.()||{}
+    });
+    if(tool?.handled)return tool.reply;
+  }catch(error){
+    console.warn('[WAE Core Tool] real execution did not complete',error?.code||error?.message);
+    return 'La evidencia visual sigue preparada. '+String(error?.message||'No se pudo completar el análisis.').slice(0,220)+' No afirmaré que analicé la imagen hasta recibir un resultado real. Puedes reintentar o quitar la captura.';
   }
   const c=new AbortController(),timer=setTimeout(()=>c.abort(),65000);
   try{
@@ -163,7 +165,7 @@ function setMode(mode){
   });
   window.dispatchEvent(new CustomEvent('wae:mode-changed',{detail:{mode}}));
 }
-function resetConversation(){if(window.WAENavigation?.newConversation?.())return;state.messages=[];persistMessages();renderMessages();toast('Nueva conversación creada')}
+function resetConversation(){if(state.busy)return;window.WAECamera?.clear?.();if(window.WAENavigation?.newConversation?.())return;state.messages=[];persistMessages();renderMessages();toast('Nueva conversación creada')}
 function openDrawer(){$('#drawer').classList.add('open');$('#drawer').setAttribute('aria-hidden','false');$('#scrim').classList.add('visible')}
 function closeDrawer(){$('#drawer').classList.remove('open');$('#drawer').setAttribute('aria-hidden','true');$('#scrim').classList.remove('visible')}
 function openWorkspace(){$('#workspace').classList.add('open');$('#workspace').setAttribute('aria-hidden','false');closeDrawer()}
@@ -219,7 +221,7 @@ function autosizeInput(){
 
 async function submitMessage(ev){
   ev.preventDefault();
-  const i=$('#messageInput'),m=i.value.trim()||(window.WAECamera?.hasPending?.()?window.WAECamera.defaultQuestion():'');
+  const i=$('#messageInput'),m=i.value.trim()||(window.WAECoreTools?.defaultQuestion?.()||'');
   if(!m||state.busy)return;
   state.busy=true;
   const send=$('.send-btn');if(send){send.disabled=true;send.setAttribute('aria-busy','true')}

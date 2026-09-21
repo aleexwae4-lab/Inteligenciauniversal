@@ -42,7 +42,7 @@ test('camera controls genuinely connect to pending capture, API route and x mode
  const camera=read('camera-v1.js'),app=read('app.js'),server=read('server.js'),html=read('index.html'),sw=read('sw.js');
  assert.match(app,/clear\.textContent='×'/);
  assert.match(app,/setMode\('general'\)/);
- assert.match(app,/window\.WAECamera\.analyze\(message\)/);
+ assert.match(app,/window\.WAECoreTools\?\.runTurn\(/);
  assert.match(camera,/getUserMedia/);
  assert.match(camera,/facingMode:\{ideal:side\}/);
  assert.match(camera,/new MediaRecorder/);
@@ -53,8 +53,8 @@ test('camera controls genuinely connect to pending capture, API route and x mode
  assert.match(camera,/stopStream\(\);dialog\.close\(\)/);
  assert.match(camera,/WAEVisualRuntime\.analyze/);
  assert.match(server,/\['\/api\/vision', visionHandler\]/);
- assert.match(html,/camera-v1\.js\?v=3/);
- assert.match(sw,/camera-v1\.js\?v=3/);
+ assert.match(html,/camera-v1\.js\?v=4/);
+ assert.match(sw,/camera-v1\.js\?v=4/);
  assert.match(html,/video-scan-v2\.js\?v=1/);
 });
 
