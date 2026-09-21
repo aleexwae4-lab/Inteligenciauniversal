@@ -5,8 +5,8 @@
 html.v2-has-messages #v2Welcome,
 body.iu-has-turns #v2Welcome{display:none!important}
 #messages:not(:empty)~#capabilityGrid{display:none!important}
-.runtime-bar.v2-runtime,
-.runtime-bar.uc117-compact{
+body .runtime-bar.v2-runtime.uc117-compact,
+body .runtime-bar.uc117-compact{
   display:flex!important;align-items:center!important;justify-content:center!important;
   width:max-content!important;max-width:calc(100vw - 24px)!important;
   min-height:27px!important;height:27px!important;
@@ -15,8 +15,8 @@ body.iu-has-turns #v2Welcome{display:none!important}
   border:1px solid rgba(125,211,252,.16)!important;
   background:rgba(13,20,24,.96)!important;box-shadow:none!important;
 }
-.runtime-bar.uc117-compact .uc117-status{width:6px;height:6px;flex:none;border-radius:50%;background:#34d399}
-.runtime-bar.uc117-compact strong{font:700 .67rem/1.2 inherit!important;letter-spacing:.015em;color:#ddebe7!important}
+.runtime-bar.uc117-compact .uc117-status{width:6px;height:6px;flex:none;border-radius:50%;background:#76a6a3}
+.runtime-bar.uc117-compact strong{font-size:.67rem!important;font-weight:700!important;line-height:1.2!important;letter-spacing:.015em;color:#ddebe7!important}
 .runtime-bar.uc117-compact [hidden]{display:none!important}
 .uc117-actions{display:flex!important;flex-wrap:wrap!important;align-items:center!important;gap:7px!important;margin:12px 0 4px!important}
 .uc117-actions button{
