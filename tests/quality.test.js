@@ -125,3 +125,34 @@ test('la interfaz envía continuidad explícita y no duplica el turno actual en 
     assert.match(source,/(?:items|list)\.at\(-1\).*role==='user'/s);
   }
 });
+
+test('v117 rejects an unrelated definition even when the answer is lengthy',()=>{
+  const result=evaluateAnswer({
+    question:'¿Qué es la neuroplasticidad?',
+    answer:'La maladaptación se refiere a cambios poco útiles para el organismo. Puede describir cambios en conducta o respuestas que dificultan el bienestar. Este párrafo explica algo distinto de lo que se preguntó y no debería pasar por su longitud.',
+    mode:'general'
+  });
+  assert.equal(result.pass,false);
+  assert.equal(result.critical,true);
+  assert.ok(result.reasons.includes('definition_topic_missing'));
+});
+
+test('v117 rejects generic clarification as a substitute for a clear definition',()=>{
+  const result=evaluateAnswer({
+    question:'¿Qué es la neuroplasticidad?',
+    answer:'Necesito más contexto sobre neuroplasticidad para responderte. ¿Podrías especificar qué aspecto deseas conocer?',
+    mode:'general'
+  });
+  assert.equal(result.pass,false);
+  assert.ok(result.reasons.includes('definition_deflected'));
+});
+
+test('v117 permits a definition that addresses the requested concept',()=>{
+  const result=evaluateAnswer({
+    question:'¿Qué es la neuroplasticidad?',
+    answer:'La neuroplasticidad es la capacidad del sistema nervioso para reorganizar conexiones y modificar su funcionamiento a partir de la experiencia, el aprendizaje o una lesión. No implica que cualquier cambio sea necesariamente beneficioso.',
+    mode:'general'
+  });
+  assert.equal(result.reasons.includes('definition_topic_missing'),false);
+  assert.equal(result.reasons.includes('definition_deflected'),false);
+});
