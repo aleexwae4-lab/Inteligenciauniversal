@@ -62,10 +62,21 @@ test('same-origin session bootstrap works even when browser cannot contact Supab
  const session=await bootstrapVisualSession({}, {},async(url,init)=>{
   assert.match(url,/wae-local-voice-demo-v61$/);
   assert.equal(JSON.parse(init.body).action,'bootstrap');
+  assert.equal(init.headers.origin,undefined,'server-side bootstrap must not send a browser Origin rejected by the legacy Edge allowlist');
+  assert.ok(init.headers.apikey?.startsWith('sb_publishable_'));
   return {ok:true,json:async()=>({session_id:SID,session_secret:SECRET})};
  });
  assert.equal(session.session_id,SID);
  assert.equal(session.session_secret,SECRET);
+});
+
+test('bootstrap forwards the real rejection code rather than hiding invalid origin or app key',async()=>{
+ for(const [code,fragment] of [['denied','dominio autorizado'],['invalid_application_key','credencial pública'],['session_creation_failed','crear una sesión']]){
+  await assert.rejects(bootstrapVisualSession({}, {},async(_url,init)=>{
+   assert.equal(init.headers.origin,undefined);
+   return {ok:false,status:403,json:async()=>({success:false,error:code})};
+  }),error=>{assert.equal(error.code,code);assert.match(error.message,new RegExp(fragment));return true});
+ }
 });
 
 test('real visual browser transport stays on Render origin for photo/video, retains image on errors',()=>{
