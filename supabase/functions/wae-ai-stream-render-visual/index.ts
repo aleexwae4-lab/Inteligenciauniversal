@@ -39,11 +39,11 @@ function iuVisibleFinal(value:unknown):string{
   reply=reply.replace(block,'').trim();
   if(new RegExp('<\\/?'+tag+'\\b','i').test(reply))return '';
  }
- const final=reply.match(/^<final\\s*>([\\s\\S]*?)<\\/final\\s*>$/i);
+ const final=reply.match(/^<final\s*>([\s\S]*?)<\/final\s*>$/i);
  if(final)reply=final[1].trim();
- if(!reply||/<\\/?(?:thought|think|analysis|final)\\b/i.test(reply))return '';
- if(/(?:^|\\n)\\s*(?:internal reasoning|chain.of.thought|scratchpad|private analysis|thoughts?)\\s*:/im.test(reply))return '';
- if(/\\b(?:no (?:has|hay|veo|recib[ií]|puedo ver) (?:adjuntado |una |ninguna )?(?:imagen|archivo)|no image (?:was |is )?(?:attached|provided|received)|cannot (?:see|access) the image)\\b/i.test(reply))return '';
+ if(!reply||/<\/?(?:thought|think|analysis|final)\b/i.test(reply))return '';
+ if(/(?:^|\n)\s*(?:internal reasoning|chain.of.thought|scratchpad|private analysis|thoughts?)\s*:/im.test(reply))return '';
+ if(/\b(?:no (?:has|hay|veo|recib[ií]|puedo ver) (?:adjuntado |una |ninguna )?(?:imagen|archivo)|no image (?:was |is )?(?:attached|provided|received)|cannot (?:see|access) the image)\b/i.test(reply))return '';
  return reply;
 }
 
