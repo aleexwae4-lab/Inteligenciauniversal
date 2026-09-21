@@ -148,28 +148,34 @@
     return button;
   }
   function decorate(node){
-    if(!node?.isConnected||node.dataset.uc117Actions==='true'&&$('.uc117-actions',node))return;
+    if(!node?.isConnected)return;
+    const existing=$('.uc117-actions',node);
     const body=$('.rich-content,.rich-answer,.assistant-body',node);
     if(!body||!body.textContent?.trim()||body.classList.contains('error-text')||body.querySelector('.typing'))return;
+    const legacyRows=$$('.answer-actions,.iu-answer-actions,.actions',node)
+      .filter(row=>row!==existing&&!row.closest('.rich-content,.rich-answer,.assistant-body')
+        &&!(node.matches('.turn.assistant')&&row.classList.contains('actions')));
+    // Move real feedback controls, including click handlers, into the premium toolbar.
+    const feedbackButtons=legacyRows.flatMap(row=>$$('button[data-feedback]',row));
+    if(existing){
+      feedbackButtons.forEach(button=>existing.appendChild(button));
+      legacyRows.forEach(row=>row.remove());
+      return;
+    }
     const raw=responseText(node);
     if(!raw||raw===legacyGreeting)return;
-    // Preserve existing real feedback callbacks instead of discarding trained quality signals.
-    const feedbackButtons=$('button[data-feedback]',node).filter(button=>!button.closest('.rich-content,.rich-answer,.assistant-body'));
-    // Replace only legacy action rows, leaving sources and the message body intact.
-    $('.answer-actions,.iu-answer-actions,.actions',node)
-      .filter(row=>!row.closest('.rich-content,.rich-answer,.assistant-body')&&!(node.matches('.turn.assistant')&&row.classList.contains('actions')))
-      .forEach(row=>row.remove());
     const actions=document.createElement('div');
     actions.className='iu-answer-actions uc117-actions wae-actions';
     actions.setAttribute('role','group');
     actions.setAttribute('aria-label','Herramientas de respuesta');
     actions.append(
-      action('copy','⧉ Copiar',()=>copyText(raw)),
-      action('listen','▶ Escuchar',()=>listen(node,raw)),
+      action('copy','⧉ Copiar',()=>copyText(responseText(node))),
+      action('listen','▶ Escuchar',()=>listen(node,responseText(node))),
       action('auto','○ Voz desactivada',toggleAutoVoice),
       action('workspace','◇ Workspace',()=>openWorkspaceFrom(node))
     );
     feedbackButtons.forEach(button=>actions.appendChild(button));
+    legacyRows.forEach(row=>row.remove());
     node.appendChild(actions);
     node.dataset.uc117Actions='true';
     renderVoiceLabels();
