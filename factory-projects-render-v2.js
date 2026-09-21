@@ -69,6 +69,43 @@ function commitGenerated(html,expected){
     persist();render();preview();return{ok:false,error:String(error.message||error)}
   }
 }
+function commitProject(nextFiles,expected){
+  saveEditor();
+  if(!expected||current.id!==expected.id||JSON.stringify(current.files)!==JSON.stringify(expected.files))
+    return{ok:false,error:'El proyecto cambió durante la construcción. No sobrescribí archivos.'};
+  if(!Array.isArray(nextFiles)||nextFiles.length<4||nextFiles.length>12)
+    return{ok:false,error:'El constructor no devolvió un proyecto de archivos completo.'};
+  const names=new Set(),required=['index.html','styles.css','main.js','README.md'];
+  let total=0;
+  for(const f of nextFiles){
+    if(!f||typeof f.name!=='string'||typeof f.content!=='string'||!validName(f.name)||f.content.length>100000||names.has(f.name))
+      return{ok:false,error:'El constructor devolvió rutas o archivos inválidos.'};
+    names.add(f.name);total+=f.content.length;
+  }
+  if(total>170000||required.some(name=>!names.has(name)))
+    return{ok:false,error:'El constructor devolvió un proyecto demasiado grande o incompleto.'};
+  const before=current.files.map(f=>({...f}));
+  const previousSelected=selected,oldProjects=localStorage.getItem(KEY),oldRevisions=localStorage.getItem(REVISIONS);
+  try{
+    const history=JSON.parse(oldRevisions||'{}');
+    const stack=Array.isArray(history[current.id])?history[current.id]:[];
+    history[current.id]=stack.concat([{date:new Date().toISOString(),files:before}]).slice(-4);
+    localStorage.setItem(REVISIONS,JSON.stringify(history));
+    current.files=nextFiles.map(f=>({name:f.name,content:f.content}));
+    selected='index.html';
+    if(!persist())throw Error('No se pudo guardar el nuevo proyecto por falta de espacio.');
+    const verified=JSON.parse(localStorage.getItem(KEY)||'[]').find(p=>p.id===current.id);
+    if(JSON.stringify(verified?.files)!==JSON.stringify(current.files))throw Error('Falló la verificación del guardado.');
+    render();preview();return{ok:true};
+  }catch(error){
+    current.files=before;selected=previousSelected;
+    try{
+      if(oldProjects===null)localStorage.removeItem(KEY);else localStorage.setItem(KEY,oldProjects);
+      if(oldRevisions===null)localStorage.removeItem(REVISIONS);else localStorage.setItem(REVISIONS,oldRevisions);
+    }catch{}
+    render();preview();return{ok:false,error:String(error.message||error)};
+  }
+}
 function restorePrevious(){
   const history=previousForProject();if(!history.length)return{ok:false,error:'No hay una versión previa.'};
   saveEditor();
@@ -100,6 +137,6 @@ $('#wfImportCanvas').addEventListener('click',importCanvas);$('#wfSendCanvas').a
 $('#wfExportFile').addEventListener('click',exportFile);$('#wfExportHTML').addEventListener('click',exportBundle);$('#wfExportProject').addEventListener('click',exportProject);
 $('#wfImport').addEventListener('click',()=>$('#wfImportFile').click());$('#wfImportFile').addEventListener('change',importProject);
 $('#exportBtn')?.addEventListener('click',onExport,true);$('#saveBtn')?.addEventListener('click',onSave,true);
-window.__waeFactoryV1={version:'3',save,preview,diagnostics,exportProject,snapshot,commitGenerated,restorePrevious};if(new URLSearchParams(location.search).get('wae_factory')==='1'){setTimeout(()=>{$('#workspaceBtn')?.click();tab.click()},80)}}
+window.__waeFactoryV1={version:'3',save,preview,diagnostics,exportProject,snapshot,commitGenerated,commitProject,restorePrevious};if(new URLSearchParams(location.search).get('wae_factory')==='1'){setTimeout(()=>{$('#workspaceBtn')?.click();tab.click()},80)}}
 document.readyState==='loading'?document.addEventListener('DOMContentLoaded',init,{once:true}):init();
 })();
