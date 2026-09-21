@@ -45,3 +45,25 @@ body .runtime-bar.uc117-compact{
   .runtime-bar.uc117-compact{margin-bottom:max(4px,env(safe-area-inset-bottom))!important}
 }
 @media(prefers-reduced-motion:reduce){.uc117-actions button{transition:none!important}}
+
+
+/* v119 — UI profile isolation.
+   Intelligence/runtime stay shared; each Render service selects its own shell
+   through WAE_UI_PROFILE without forking the backend. */
+body.wae-ui-premium .chat-heading{
+  display:none!important;
+}
+body.wae-ui-premium .capability-grid{
+  display:none!important;
+}
+body.wae-ui-premium .status-strip{
+  border-bottom-color:rgba(40,247,164,.16);
+}
+body.wae-ui-premium .chat-column{
+  max-width:980px;
+  margin-inline:auto;
+}
+body.wae-ui-enterprise .chat-heading,
+body.wae-ui-enterprise .capability-grid{
+  /* Explicit ownership: enterprise retains the established shell. */
+}
