@@ -64,3 +64,21 @@ test('native mobile factory retains briefs and synchronizes the selected product
  assert.match(factory,/persist\(\);render\(\);preview\(\)/);
  assert.match(css,/overflow-y:auto;overflow-x:hidden;overscroll-behavior:contain/);
 });
+
+
+test('native Canvas transfers are exposed without code view and async import switches the agent thread',()=>{
+ const agent=read('factory-agent-render-v3.js');
+ const factory=read('factory-projects-render-v2.js');
+ const html=read('index.html'),sw=read('sw.js');
+ assert.match(agent,/wfAgentToCanvas/);
+ assert.match(agent,/wfAgentFromCanvas/);
+ assert.match(agent,/wfSendCanvas.*click/);
+ assert.match(agent,/wfImportCanvas.*click/);
+ assert.match(agent,/document\.addEventListener\('wae:factory-project-changed'/);
+ assert.match(factory,/function announceProjectChange\(/);
+ assert.match(factory,/function importProject[\s\S]*?announceProjectChange\(\)/);
+ assert.match(factory,/function importCanvas[\s\S]*?announceProjectChange\(\)/);
+ assert.match(html,/factory-projects-render-v2\.js\?v=4/);
+ assert.match(html,/factory-agent-render-v3\.js\?v=5/);
+ assert.match(sw,/wae-universal-render-canvas-factory-v33/);
+});
