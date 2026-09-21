@@ -102,8 +102,8 @@ test('live readiness is IU-session-authenticated, zero-token and never claims im
  assert.ok(begin>0&&end>begin);
  const code=edge.slice(begin,end);
  assert.match(edge.slice(0,begin),/secret_hash',await iuHash\(secret\)/);
- assert.match(code,/key=Deno.env.get\('GEMINI_API_KEY'\)/);
- assert.match(code,/\.eq\('access_tier','FREE'\)/);
+ assert.match(code,/iuSelectFreeVision\(db\)/);
+ assert.match(edge,/\.eq\('access_tier','FREE'\)/);
  assert.match(code,/actualInferenceTested:false/);
  assert.doesNotMatch(code,/generateContent|inline_data|iu_request_traces/);
  assert.ok(canary.includes("action:'iu_visual_readiness_v1'"));
@@ -120,4 +120,19 @@ test('API prefers explicitly enabled Render-native vision and browser does not b
  const block=runtime.slice(runtime.indexOf('window.WAEVisualRuntime='),runtime.indexOf('function isLocalRuntime'));
  assert.doesNotMatch(block,/await ensureVisualSession\(\);/);
  assert.match(block,/try\{return await visualRequest\(payload\)\}/);
+});
+
+test('zero-budget visual provider fallback checks live image modality and all chargeable pricing fields before making a model call',()=>{
+ const edge=read('supabase/functions/wae-ai-stream-render-visual/index.ts');
+ assert.match(edge,/async function iuSelectFreeVision\(db/);
+ assert.match(edge,/input_modalities=image/);
+ assert.match(edge,/inputs.includes\('image'\)/);
+ assert.match(edge,/pricing.prompt===undefined\|\|pricing.completion===undefined/);
+ assert.match(edge,/Number\(value\)===0/);
+ assert.match(edge,/openrouter\/free/);
+ assert.match(edge,/endsWith\(':free'\)/);
+ assert.match(edge,/provider:\{data_collection:'deny',allow_fallbacks:false\}/);
+ assert.match(edge,/if\(Number\(usage.cost\|\|0\)>0\)/);
+ assert.match(edge,/iu_no_verified_free_visual_provider/);
+ assert.match(edge,/if\(s\(b.action\)==='video_evidence_v131'\)return video/);
 });
