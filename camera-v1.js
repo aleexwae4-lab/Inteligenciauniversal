@@ -30,7 +30,7 @@ function renderBadge(){
 }
 function clear(){
   revision++;pending=null;samples=[];chunks=[];lastSignature=null;processing=false;lastQuestion='';evidenceState='idle';cleanURL();
-  const picker=$('#fileInput');if(picker)picker.value='';
+
   if(image){image.removeAttribute('src');image.hidden=true}
   if(videoPreview){videoPreview.pause();videoPreview.removeAttribute('src');videoPreview.load();videoPreview.hidden=true}
   renderBadge();
@@ -208,6 +208,8 @@ function initialize(){
     if(!visuals.length)return;
     if(visuals.length>1){notify('Analizaré el primer archivo visual; adjunta los demás por separado.')}
     if(window.WAEChatState?.busy?.()){notify('Termina la respuesta actual antes de adjuntar otra imagen.');return}
+    // Clear picker only after every change listener has read the same FileList (including text attachments).
+    const picker=event.target;setTimeout(()=>{picker.value=''},0);
     const task=preparation=prepareFile(visuals[0]);
     try{await task}catch(error){notify('No se preparó el archivo: '+String(error?.message||error).slice(0,150))}
     finally{if(preparation===task)preparation=null}
@@ -304,9 +306,10 @@ window.WAECamera={
     const args=typeof context==='string'?{message:context}:context||{};
     const relevantHistory=(Array.isArray(args.history)?args.history:[]).slice(-4)
       .map(item=>String(item?.role||'')+': '+String(item?.text||'').slice(0,220)).join('\n');
-    const question=String(args.message||'').slice(0,3000);
-    if(question.trim()&&!/^(?:reintenta|vuelve a intentar|otra vez|inténtalo otra vez)[.!\s]*$/i.test(question.trim()))lastQuestion=question;
-    else if(!lastQuestion)lastQuestion=question;
+    const requested=String(args.message||'').slice(0,3000);
+    const simpleRetry=/^(?:reintenta|vuelve a intentar|otra vez|inténtalo otra vez)[.!\s]*$/i.test(requested.trim());
+    const question=simpleRetry&&lastQuestion?lastQuestion:requested;
+    if(question.trim())lastQuestion=question;
     const contextual= relevantHistory?question+'\n\nContexto conversacional (puede ser incompleto; no lo trates como evidencia visual):\n'+relevantHistory:question;
     return window.WAEVisualRuntime.analyze({question:contextual.slice(0,4000),kind:pending.kind,frames:pending.frames,mode:args.mode||window.WAEChatState?.mode?.()||'general'});
   }
