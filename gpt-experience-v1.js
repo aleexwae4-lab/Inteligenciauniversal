@@ -20,9 +20,9 @@
     let html='',list=null,table=[],inCode=false,codeLang='',code=[];
     const closeList=()=>{if(list){html+=`</${list}>`;list=null}};
     const flushTable=()=>{
-      if(table.length<2){table=[];return false}
+      if(table.length<2){html+=table.map(line=>'<p>'+inline(line)+'</p>').join('');table=[];return false}
       const rows=table.map(r=>r.trim().replace(/^\||\|$/g,'').split('|').map(c=>c.trim()));
-      if(!rows[1]?.every(c=>/^:?-{3,}:?$/.test(c))){table=[];return false}
+      if(!rows[1]?.every(c=>/^:?-{3,}:?$/.test(c))){html+=table.map(line=>'<p>'+inline(line)+'</p>').join('');table=[];return false}
       html+='<div class="rich-table-wrap"><table class="rich-table"><thead><tr>'+rows[0].map(c=>`<th>${inline(c)}</th>`).join('')+'</tr></thead><tbody>'+rows.slice(2).map(r=>'<tr>'+r.map(c=>`<td>${inline(c)}</td>`).join('')+'</tr>').join('')+'</tbody></table></div>';table=[];return true;
     };
     const flushCode=()=>{const text=esc(code.join('\n'));const lang=esc(codeLang||'código');html+=`<div class="iu-code"><div class="iu-code-head"><span>${lang}</span><button class="iu-code-copy" type="button">Copiar</button></div><pre><code>${text}</code></pre></div>`;code=[];codeLang=''};
@@ -50,7 +50,7 @@
     try{return (JSON.parse(localStorage.getItem('wae.messages')||'[]')||[]).filter(x=>x?.role==='assistant').map(x=>String(x.text||''))}catch{return[]}
   }
   function attachCodeCopy(root){
-    $$('.iu-code-copy',root).forEach(btn=>{if(btn.dataset.bound)return;btn.dataset.bound='1';btn.addEventListener('click',()=>{const text=btn.closest('.iu-code')?.querySelector('code')?.textContent||'';navigator.clipboard?.writeText(text).then(()=>{btn.textContent='Copiado';setTimeout(()=>btn.textContent='Copiar',1200)}).catch(()=>{})})});
+    $$('.iu-code-copy',root).forEach(btn=>{if(btn.dataset.bound)return;btn.dataset.bound='1';btn.addEventListener('click',()=>{const text=btn.closest('.iu-code')?.querySelector('code')?.textContent||'';(window.__waePremiumControlsV1?.copy?window.__waePremiumControlsV1.copy(text):navigator.clipboard?.writeText(text))?.then?.(ok=>{if(ok===false)return;btn.textContent='Copiado';setTimeout(()=>btn.textContent='Copiar',1200)}).catch(()=>window.toast?.('No se pudo copiar'))})});
   }
   function sourcesFromRuntime(data){return Array.isArray(data?.web_sources)?data.web_sources:Array.isArray(data?.response?.sources)?data.response.sources:[]}
   function decorateLatest(node){
