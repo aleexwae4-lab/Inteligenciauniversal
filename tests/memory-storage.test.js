@@ -83,7 +83,7 @@ test('UI archives active and remote conversations and provides user-triggered ex
  assert.match(app,/WAEStorage\.save\('document',state.document\)/);
  assert.match(remote,/WAEStorage\.save\('active',messages.slice\(-60\)\)/);
  assert.match(html,/storage-v2\.js\?v=1/);
- assert.match(sw,/wae-universal-render-premium-v27/);
+ assert.match(sw,/wae-universal-render-premium-v28/);
 });
 
 test('Render fallback never uses shared IP or anonymous cross-user memory key',()=>{
