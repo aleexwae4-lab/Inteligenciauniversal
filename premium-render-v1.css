@@ -37,3 +37,30 @@
 #messages .iu-answer-tools button{font-size:.67rem;padding:7px 9px;min-height:34px}
 .top-actions #newChatBtn.v2-hide-new{font-size:.67rem;padding:7px}
 }
+
+
+/* Compact per-answer icon toolbar: all four actions fit on one phone row. */
+#messages .message.assistant .iu-answer-tools{
+  display:flex!important;flex-flow:row nowrap!important;justify-content:flex-start!important;align-items:center!important;
+  gap:5px!important;max-width:100%!important;min-width:0!important;
+  margin:8px 0 0!important;padding:7px 0 0!important;overflow-x:auto!important;
+  scrollbar-width:none!important;-webkit-overflow-scrolling:touch!important;
+}
+#messages .message.assistant .iu-answer-tools::-webkit-scrollbar{display:none}
+#messages .message.assistant .iu-answer-tools button{
+  box-sizing:border-box!important;display:inline-flex!important;justify-content:center!important;align-items:center!important;
+  flex:0 0 30px!important;width:30px!important;min-width:30px!important;max-width:30px!important;
+  height:30px!important;min-height:30px!important;max-height:30px!important;
+  margin:0!important;padding:0!important;line-height:1!important;font-size:15px!important;font-weight:600!important;
+  letter-spacing:0!important;border-radius:8px!important;white-space:nowrap!important;
+  background:rgba(17,43,31,.44)!important;border:1px solid rgba(135,255,202,.15)!important;
+}
+#messages .message.assistant .iu-answer-tools button:active{background:rgba(25,110,74,.58)!important}
+#messages .message.assistant .iu-answer-tools button[aria-pressed="true"]{border-color:#35e2a2!important;color:#72ffc5!important}
+#voiceBtn{display:inline-grid!important;place-items:center!important;width:29px!important;min-width:29px!important;max-width:29px!important;height:30px!important;min-height:30px!important;padding:0!important;font-size:15px!important;line-height:1!important;white-space:nowrap!important}
+#voiceBtn[aria-pressed="true"]{color:#73f4c1!important;background:rgba(39,203,141,.11)!important;border-radius:8px!important}
+#iuMicBtn{flex:0 0 29px!important;max-width:29px!important;font-size:14px!important}
+@media(max-width:600px){
+#messages .message.assistant .iu-answer-tools{gap:4px!important;margin-top:7px!important;padding-top:6px!important}
+#messages .message.assistant .iu-answer-tools button{flex-basis:29px!important;width:29px!important;min-width:29px!important;max-width:29px!important;height:29px!important;min-height:29px!important;max-height:29px!important;font-size:14px!important}
+}
