@@ -50,14 +50,29 @@ test('Canvas selected pane fills workspace regardless of device-width breakpoint
  const css=read('workspace-premium-v1.css'),js=read('canvas-premium-v2.js');
  assert.match(css,/#workspace #panel-html\[data-iu-view="code"\] \.preview-pane\{display:none!important\}/);
  assert.match(css,/#workspace #panel-html\[data-iu-view="preview"\] \.code-pane\{display:none!important\}/);
- assert.match(js,/Respuesta incompleta; intentando una versión compacta/);
- assert.match(js,/No modifiqué tu HTML/);
+ assert.match(js,/reintentando sin sacrificar el diseño/);
+ assert.match(js,/Conservé tu Canvas/);
 });
 
 test('Canvas compact retry uses independent Render route with HTML-only system guidance',()=>{
  const canvas=read('canvas-premium-v2.js'),client=read('runtime-client.js'),server=read('lib/runtime.js');
- assert.match(canvas,/canvas_direct:index===1/);
- assert.match(client,/request\.canvas_direct===true/);
- assert.match(server,/payload\.canvas === true/);
- assert.match(server,/exclusivamente un archivo HTML COMPLETO/);
+ assert.match(canvas,/canvas_blueprint:creating,canvas_direct:true/);
+ assert.match(client,/request\.canvas_blueprint===true/);
+ assert.match(server,/payload\.canvas_blueprint === true/);
+ assert.match(server,/Devuelve solo JSON válido/);
+});
+
+test('Canvas preview blocks page replacement from non-anchor links and form submissions',()=>{
+ const w=load(),html=w.WAECanvasPreparePreview('<!doctype html><html><head></head><body><a href="/">Abrir app</a><form action="/"></form></body></html>');
+ assert.match(html,/data-iu-preview-guard/);
+ assert.match(html,/Content-Security-Policy/);
+ assert.match(html,/connect-src/);
+ assert.match(html,/preventDefault/);
+});
+test('Canvas generation uses validated blueprints rather than truncating full HTML to 1900 characters',()=>{
+ const code=read('canvas-premium-v2.js'),html=read('index.html');
+ assert.match(code,/WAECanvasBuilder/);
+ assert.match(code,/blueprintPrompt/);
+ assert.doesNotMatch(code,/Máximo 1900 caracteres/);
+ assert.match(html,/canvas-builder-v1\.js\?v=15/);
 });
