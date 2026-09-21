@@ -23,6 +23,8 @@ test('AI blueprint yields complete self-contained high-detail landing without HT
 test('AI blueprint parser rejects incomplete data, generic branding and injected markup',()=>{
  assert.throws(()=>builder.parse('{"brand":"Café Aroma"','landing','Café Aroma'));
  assert.throws(()=>builder.parse(JSON.stringify({...plan,brand:'WAE OS'}),'landing','Café Aroma'),/marca distinta/);
+ assert.throws(()=>builder.parse(JSON.stringify({...plan,brand:'WAE OS Enterprise'}),'landing','Café Aroma'),/marca distinta/);
+ assert.throws(()=>builder.parse(JSON.stringify({...plan,features:[{title:'Innovación',description:'Descripción demasiado genérica sin identidad.'},{title:'Confianza',description:'Descripción demasiado genérica sin identidad.'},{title:'Resultados',description:'Descripción demasiado genérica sin identidad.'}]}),'landing','Café Aroma'),/ejemplo genérico/);
  assert.throws(()=>builder.parse(JSON.stringify({...plan,features:[]}), 'landing','Café Aroma'),/contenido suficiente/);
  const raw=JSON.stringify({...plan,headline:'Café <script>alert(1)</script> Aroma'});
  const html=builder.build(builder.parse(raw,'landing','Café Aroma'));
