@@ -6,7 +6,8 @@ const text=(v)=>String(v==null?'':v);
 const esc=(v)=>text(v).replace(/[&<>"']/g,(c)=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const notify=(s)=>window.toast&&window.toast(s);
 const AUTO_KEY='iu.premium.voice.auto.v1';
-let auto=localStorage.getItem(AUTO_KEY)==='on';
+let auto=localStorage.getItem(AUTO_KEY)!=='off';
+let allowAuto=false;
 const voice={token:0,active:null,paused:false};
 const synth=window.speechSynthesis;
 const supported=!!(synth&&window.SpeechSynthesisUtterance);
@@ -58,16 +59,16 @@ function speechText(raw){return text(raw).replace(/\[([^\]]+)\]\(https?:\/\/[^)]
 function resetVoice(){
   voice.token++;voice.active=null;voice.paused=false;
   if(supported)try{synth.cancel()}catch(_){}
-  QA('.iu-voice').forEach(b=>{b.textContent='▶ Escuchar';b.setAttribute('aria-pressed','false')});
+  QA('.iu-voice').forEach(b=>{b.textContent='▶';b.title='Escuchar respuesta';b.setAttribute('aria-label','Escuchar respuesta');b.setAttribute('aria-pressed','false')});
 }
 function speak(article,button){
   if(!supported){notify('La voz no está disponible en este navegador');return}
   if(voice.active===article&&synth.speaking&&!voice.paused){
-    try{synth.pause();voice.paused=true;button.textContent='▶ Reanudar';button.setAttribute('aria-pressed','false')}catch(_){}
+    try{synth.pause();voice.paused=true;button.textContent='▶';button.title='Reanudar voz';button.setAttribute('aria-label','Reanudar voz');button.setAttribute('aria-pressed','false')}catch(_){}
     return;
   }
   if(voice.active===article&&voice.paused){
-    try{synth.resume();voice.paused=false;button.textContent='⏸ Pausar';button.setAttribute('aria-pressed','true')}catch(_){}
+    try{synth.resume();voice.paused=false;button.textContent='⏸';button.title='Pausar voz';button.setAttribute('aria-label','Pausar voz');button.setAttribute('aria-pressed','true')}catch(_){}
     return;
   }
   resetVoice();const content=speechText(rawOf(article));if(!content)return;
@@ -94,14 +95,14 @@ async function copyValue(s){
 }
 function toolbar(article,raw){
   const bar=document.createElement('div');bar.className='iu-answer-tools';bar.setAttribute('aria-label','Acciones de esta respuesta');
-  const copy=document.createElement('button');copy.type='button';copy.className='iu-copy';copy.textContent='⧉ Copiar';copy.setAttribute('aria-label','Copiar respuesta');
-  copy.addEventListener('click',async()=>{try{await copyValue(raw);copy.textContent='✓ Copiado';setTimeout(()=>{if(copy.isConnected)copy.textContent='⧉ Copiar'},1800)}catch(_){notify('No se pudo copiar la respuesta')}});
-  const voiceButton=document.createElement('button');voiceButton.type='button';voiceButton.className='iu-voice';voiceButton.textContent='▶ Escuchar';voiceButton.setAttribute('aria-pressed','false');
+  const copy=document.createElement('button');copy.type='button';copy.className='iu-copy';copy.textContent='⧉';copy.title='Copiar respuesta';copy.setAttribute('aria-label','Copiar respuesta');
+  copy.addEventListener('click',async()=>{try{await copyValue(raw);copy.textContent='✓';copy.setAttribute('aria-label','Respuesta copiada');setTimeout(()=>{if(copy.isConnected){copy.textContent='⧉';copy.setAttribute('aria-label','Copiar respuesta')}},1800)}catch(_){notify('No se pudo copiar la respuesta')}});
+  const voiceButton=document.createElement('button');voiceButton.type='button';voiceButton.className='iu-voice';voiceButton.textContent='▶';voiceButton.title='Escuchar respuesta';voiceButton.setAttribute('aria-label','Escuchar respuesta');voiceButton.setAttribute('aria-pressed','false');
   if(!supported){voiceButton.disabled=true;voiceButton.title='Voz no compatible con este navegador'}
   voiceButton.addEventListener('click',()=>speak(article,voiceButton));
-  const stop=document.createElement('button');stop.type='button';stop.textContent='■ Detener';stop.className='iu-stop';
+  const stop=document.createElement('button');stop.type='button';stop.textContent='■';stop.title='Detener voz';stop.setAttribute('aria-label','Detener voz');stop.className='iu-stop';
   stop.addEventListener('click',resetVoice);
-  const space=document.createElement('button');space.type='button';space.className='iu-workspace';space.textContent='◇ Workspace';
+  const space=document.createElement('button');space.type='button';space.className='iu-workspace';space.textContent='◇';space.title='Abrir en Workspace';space.setAttribute('aria-label','Abrir respuesta en Workspace');
   space.addEventListener('click',()=>{
     const editor=Q('#documentEditor');
     if(!editor){notify('Workspace no disponible');return}
@@ -125,7 +126,7 @@ function enhance(article){
   article.dataset.iuRich='1';article.dataset.iuRaw=raw;
   const body=document.createElement('div');body.className='iu-rich';body.innerHTML=rich(raw);p.replaceWith(body);
   article.append(toolbar(article,raw));
-  if(auto&&article===QA('#messages .message.assistant').at(-1)&&!/^El núcleo de inteligencia está reconectando/.test(raw)){
+  if(allowAuto&&auto&&article===QA('#messages .message.assistant').at(-1)&&!/^El núcleo de inteligencia está reconectando/.test(raw)){
     const b=article.querySelector('.iu-voice');if(b)speak(article,b);
   }
 }
@@ -137,11 +138,13 @@ function decorate(){
 function initialize(){
   const messages=Q('#messages');if(!messages)return;
   decorate();
+  // No leer respuestas históricas al cargar; solo respuestas nuevas.
+  allowAuto=true;
   const obs=new MutationObserver(decorate);obs.observe(messages,{childList:true,subtree:false});
   const voiceControl=Q('#voiceBtn');
   if(voiceControl){
     voiceControl.title='Activar o desactivar lectura automática';
-    function refresh(){voiceControl.textContent=auto?'◉ Voz ON':'◎ Voz OFF';voiceControl.setAttribute('aria-pressed',String(auto));voiceControl.setAttribute('aria-label',auto?'Desactivar respuestas con voz':'Activar respuestas con voz')}
+    function refresh(){voiceControl.textContent=auto?'🔊':'🔇';voiceControl.title=auto?'Voz automática activada · tocar para desactivar':'Voz automática desactivada · tocar para activar';voiceControl.setAttribute('aria-pressed',String(auto));voiceControl.setAttribute('aria-label',auto?'Desactivar respuestas con voz':'Activar respuestas con voz')}
     voiceControl.addEventListener('click',e=>{e.stopImmediatePropagation();auto=!auto;localStorage.setItem(AUTO_KEY,auto?'on':'off');if(!auto)resetVoice();refresh();notify(auto?'Voz automática activada':'Voz automática desactivada')},true);refresh();
   }
   const Recognition=window.SpeechRecognition||window.webkitSpeechRecognition;
