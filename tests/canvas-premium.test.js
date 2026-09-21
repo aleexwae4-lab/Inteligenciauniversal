@@ -74,7 +74,7 @@ test('Canvas generation uses validated blueprints rather than truncating full HT
  assert.match(code,/WAECanvasBuilder/);
  assert.match(code,/blueprintPrompt/);
  assert.doesNotMatch(code,/Máximo 1900 caracteres/);
- assert.match(html,/canvas-builder-v1\.js\?v=16/);
+ assert.match(html,/canvas-builder-v1\.js\?v=17/);
 });
 
 test('preview guard is registered before generated HTML handlers can navigate',()=>{
