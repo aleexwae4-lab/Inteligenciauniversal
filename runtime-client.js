@@ -2,6 +2,7 @@
   const SUPABASE_URL='https://pbswcbryxawsmltyromd.supabase.co';
   const SUPABASE_KEY='sb_publishable_2zXa35U9Z--xuy_mQekG9w_kY7AVlv-';
   const EDGE=`${SUPABASE_URL}/functions/v1/wae-local-voice-demo-v61`;
+  const VISUAL_EDGE=`${SUPABASE_URL}/functions/v1/iu-visual-runtime-v1`;
   const nativeFetch=window.fetch.bind(window);
   const responsePolicy='CALIDAD UNIVERSAL CORE: Responde primero a lo pedido, con criterio y especificidad. Distingue hechos, inferencias y límites. Si la pregunta exige actualidad, fundamenta lo que afirmas solo en fuentes recuperadas y pertinentes. No agregues fuentes tangenciales ni un listado de enlaces por defecto; sin evidencia, indica el límite. Para código, entrega cambios reproducibles, pruebas pertinentes y riesgos, sin afirmar ejecuciones que no hiciste. Usa Markdown, tablas o ejemplos únicamente cuando mejoren la explicación. Mantén un tono natural, sin relleno ni texto interno.';
   function needsFreshWeb(message, mode){
@@ -49,6 +50,23 @@
     localStorage.setItem(SESSION_ID,data.session_id);localStorage.setItem(SESSION_SECRET,data.session_secret);return data;
   }).catch(err=>{bootPromise=null;throw err}));
   const sessionPayload=()=>({session_id:localStorage.getItem(SESSION_ID)||'',session_secret:localStorage.getItem(SESSION_SECRET)||''});
+  // Reuse the IU custom session; never copy the other WAE OS product's org token or Gemini key.
+  window.WAEVisualRuntime=Object.freeze({
+    analyze:async({question,kind,frames,mode})=>{
+      await bootstrap();
+      const response=await nativeFetch(VISUAL_EDGE,{
+        method:'POST',headers:{'content-type':'application/json','apikey':SUPABASE_KEY,'x-client-info':'wae-iu-render-visual/1.0'},
+        body:JSON.stringify({...sessionPayload(),question,kind,frames,mode}),cache:'no-store',
+        signal:typeof AbortSignal.timeout==='function'?AbortSignal.timeout(55000):undefined
+      });
+      const body=await response.json().catch(()=>({}));
+      if(!response.ok||body.success!==true||typeof body.reply!=='string'||!body.reply.trim())
+        throw Object.assign(new Error(body.message||'No se completó el análisis visual; tu captura sigue lista para reintentar.'),{code:body.error||'vision_unavailable',status:response.status});
+      return body;
+    },
+    transport:'supabase-iu-authenticated'
+  });
+
 
   function isLocalRuntime(input){
     try{const raw=typeof input==='string'?input:input?.url;const url=new URL(raw,location.href);return url.origin===location.origin&&url.pathname==='/api/chat'}catch{return false}
