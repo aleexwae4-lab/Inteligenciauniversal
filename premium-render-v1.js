@@ -74,7 +74,7 @@ function speak(article,button){
   resetVoice();const content=speechText(rawOf(article));if(!content)return;
   const token=voice.token;voice.active=article;voice.paused=false;
   button.textContent='⏸';button.title='Pausar voz';button.setAttribute('aria-label','Pausar voz');button.setAttribute('aria-pressed','true');
-  const chunks=content.match(/[\s\S]{1,170}/g)||[];
+  const chunks=window.WAESpeechChunks?window.WAESpeechChunks(content,280):[content];
   let at=0;
   function next(){
     if(token!==voice.token||voice.active!==article)return;
