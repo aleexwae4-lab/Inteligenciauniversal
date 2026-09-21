@@ -48,3 +48,11 @@ test('actual mobile native endpoint handles the question before the LLM quality 
   assert.match(code,/path:'grounded-competition'/);
   assert.ok(code.indexOf('classifyGroundedCompetitionV120(payload)')<code.indexOf('const local=!needsContext'));
 });
+
+
+test('mobile tables wrap long cells instead of clipping the second column',async()=>{
+  const mobile=await readFile(new URL('../api/mobile.js',import.meta.url),'utf8');
+  assert.match(mobile,/\.assistant-body table\{[^}]*table-layout:fixed/);
+  assert.match(mobile,/\.assistant-body th,\.assistant-body td\{[^}]*white-space:normal;overflow-wrap:anywhere/);
+  assert.doesNotMatch(mobile,/\.assistant-body th,\.assistant-body td\{[^}]*white-space:nowrap/);
+});
