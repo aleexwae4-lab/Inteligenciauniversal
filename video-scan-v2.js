@@ -65,5 +65,39 @@ async function prepare(frames){
  for(let i=0;i<total;i++)sheets.push(await sheet(original.slice(i*FRAMES_PER_SHEET,(i+1)*FRAMES_PER_SHEET),i,total));
  return{frames:sheets,frameCount:original.length,sheetCount:sheets.length,timestamps:original.map(x=>x.timeSec)};
 }
-window.WAEVideoScanV2=Object.freeze({version:'2.0.0',prepare,signature,frameDelta,MAX_SAMPLES,MAX_SHEETS,stamp});
+async function waitFor(element,event,ms){
+ return new Promise((resolve,reject)=>{
+  const timer=setTimeout(()=>{finish();reject(Error('Se agotó el tiempo de decodificación del video'))},ms);
+  function finish(){clearTimeout(timer);element.removeEventListener(event,onLoad);element.removeEventListener('error',onError)}
+  function onLoad(){finish();resolve()}
+  function onError(){finish();reject(Error('El navegador no pudo decodificar el video'))}
+  element.addEventListener(event,onLoad,{once:true});element.addEventListener('error',onError,{once:true});
+ });
+}
+async function prepareFile(file){
+ if(!file||!/^video\//.test(file.type)||file.size>150*1024*1024)throw Error('Selecciona un video compatible de hasta 150 MB');
+ const source=URL.createObjectURL(file),video=document.createElement('video');
+ video.preload='auto';video.muted=true;video.playsInline=true;video.src=source;
+ try{
+  const ready=waitFor(video,'loadedmetadata',15000);video.load();await ready;
+  if(!Number.isFinite(video.duration)||video.duration<=0)throw Error('El video no informa una duración válida');
+  const duration=video.duration,frames=[];
+  for(let i=0;i<MAX_SAMPLES;i++){
+   const at=Math.min(duration-.03,duration*(i+.5)/MAX_SAMPLES);
+   const seek=waitFor(video,'seeked',12000);
+   video.currentTime=Math.max(0,at);await seek;
+   const canvas=document.createElement('canvas'),width=Math.min(720,video.videoWidth||720),height=Math.max(1,Math.round(width*(video.videoHeight||405)/(video.videoWidth||720)));
+   canvas.width=width;canvas.height=height;canvas.getContext('2d',{alpha:false}).drawImage(video,0,0,width,height);
+   let dataUrl=canvas.toDataURL('image/jpeg',.59);
+   if(dataUrl.length>350000)dataUrl=canvas.toDataURL('image/jpeg',.43);
+   if(dataUrl.length>350000)throw Error('Un fotograma supera el tamaño admitido');
+   frames.push({timeSec:Math.round(at*10)/10,dataUrl});
+  }
+  const result=await prepare(frames);
+  return{...result,duration,originalUploaded:false,audioTranscribed:false};
+ }finally{
+  video.pause();video.removeAttribute('src');video.load();URL.revokeObjectURL(source);
+ }
+}
+window.WAEVideoScanV2=Object.freeze({version:'2.1.0',prepare,prepareFile,signature,frameDelta,MAX_SAMPLES,MAX_SHEETS,stamp});
 })();
