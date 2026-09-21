@@ -11,13 +11,13 @@ test('factory client is valid JavaScript and does not modify chat runtime',()=>{
   assert.match(src,/data\.format!=='wae-factory\/v1'/);
   assert.doesNotMatch(src,/\/api\/chat|fetch\(/);
 });
-test('both isolated desktop UI profiles load the same factory assets',()=>{
-  for(const path of ['index.html','ui/enterprise/index.html']){
-    const src=read(path);
-    assert.match(src,/factory-v1\.css\?v=1/);
-    assert.match(src,/factory-v1\.js\?v=1/);
-    assert.match(src,/id="workspace"/);
-  }
+test('Render enterprise shell has the factory; premium shell remains isolated',()=>{
+  const enterprise=read('ui/enterprise/index.html');
+  const premium=read('index.html');
+  assert.match(enterprise,/factory-v1\.css\?v=1/);
+  assert.match(enterprise,/factory-v1\.js\?v=1/);
+  assert.match(enterprise,/id="workspace"/);
+  assert.doesNotMatch(premium,/factory-v1\.(?:js|css)/);
 });
 test('mobile shell exposes explicit factory entry without replacing native chat',()=>{
   const src=read('api/mobile.js');
