@@ -226,10 +226,8 @@ window.WAECamera={
   open,
   analyze:async question=>{
     if(!pending)throw Error('No hay captura preparada');
-    const response=await fetch('/api/vision',{method:'POST',headers:{'Content-Type':'application/json'},cache:'no-store',body:JSON.stringify({question,kind:pending.kind,frames:pending.frames,mode:window.WAEChatState?.mode?.()||'general'})});
-    const data=await response.json().catch(()=>({}));
-    if(!response.ok||typeof data.reply!=='string'||!data.reply.trim())throw Error(data.message||'El análisis visual no está disponible.');
-    return data;
+    if(!window.WAEVisualRuntime?.analyze)throw Error('No se cargó el motor visual. Actualiza la página y conserva tu captura.');
+    return window.WAEVisualRuntime.analyze({question,kind:pending.kind,frames:pending.frames,mode:window.WAEChatState?.mode?.()||'general'});
   }
 };
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',initialize,{once:true});else initialize();
