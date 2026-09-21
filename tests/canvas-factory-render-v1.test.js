@@ -58,6 +58,8 @@ test('Render edition mounts a standalone endpoint and Canvas overlay after its o
  assert.match(sw,/url\.pathname\.startsWith\('\/api\/'\)/);
  const adapter=read('canvas-render-factory-v1.js');
  assert.match(adapter,/WAECanvasCommit/);
+ assert.match(read('api/canvas.js'),/const canvasBuckets = new Map\(\)/);
+ assert.doesNotMatch(read('api/canvas.js'),/allowRequest\(req/);
  assert.match(adapter,/WAEStorage\.load\('html'\)/);
  assert.match(adapter,/stopImmediatePropagation/);
  assert.match(adapter,/Conservé el Canvas anterior/);
