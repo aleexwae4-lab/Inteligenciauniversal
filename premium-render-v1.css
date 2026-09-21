@@ -64,3 +64,66 @@
 #messages .message.assistant .iu-answer-tools{gap:4px!important;margin-top:7px!important;padding-top:6px!important}
 #messages .message.assistant .iu-answer-tools button{flex-basis:29px!important;width:29px!important;min-width:29px!important;max-width:29px!important;height:29px!important;min-height:29px!important;max-height:29px!important;font-size:14px!important}
 }
+
+
+/* Render-only UI polish v3: the runtime status stays functional but is not part of the visible chat. */
+footer.runtime-bar,
+footer.runtime-bar.v2-runtime{
+  display:none!important;
+  visibility:hidden!important;
+  margin:0!important;
+  padding:0!important;
+  border:0!important;
+  min-height:0!important;
+  height:0!important;
+}
+
+/* Quiet per-answer icon row: transparent chrome, compact spacing, preserved touch targets. */
+#messages .message.assistant .iu-answer-tools{
+  gap:2px!important;
+  margin:5px 0 0!important;
+  padding:5px 0 0!important;
+  border-top:0!important;
+  background:transparent!important;
+  overflow-x:auto!important;
+}
+#messages .message.assistant .iu-answer-tools button{
+  flex:0 0 30px!important;
+  width:30px!important;
+  min-width:30px!important;
+  max-width:30px!important;
+  height:30px!important;
+  min-height:30px!important;
+  max-height:30px!important;
+  padding:0!important;
+  border:1px solid transparent!important;
+  border-radius:7px!important;
+  background:transparent!important;
+  box-shadow:none!important;
+  font-size:14px!important;
+  font-weight:500!important;
+  color:#8baca0!important;
+  opacity:.88;
+  transition:color .15s ease,background-color .15s ease,opacity .15s ease;
+}
+#messages .message.assistant .iu-answer-tools button:hover,
+#messages .message.assistant .iu-answer-tools button:focus-visible{
+  background:rgba(118,226,179,.09)!important;
+  color:#ccffe5!important;
+  opacity:1;
+}
+#messages .message.assistant .iu-answer-tools button[aria-pressed="true"]{
+  color:#64e7b3!important;
+  background:rgba(118,226,179,.08)!important;
+  border-color:transparent!important;
+  opacity:1;
+}
+#messages .message.assistant .iu-answer-tools button:disabled{opacity:.35!important}
+#messages .message.assistant .iu-answer-tools button:focus-visible{outline:2px solid #6efcc0!important;outline-offset:1px!important}
+@media(max-width:600px){
+  #messages .message.assistant .iu-answer-tools{gap:2px!important;margin-top:4px!important;padding-top:4px!important}
+  #messages .message.assistant .iu-answer-tools button{
+    flex-basis:30px!important;width:30px!important;min-width:30px!important;max-width:30px!important;
+    height:30px!important;min-height:30px!important;max-height:30px!important;font-size:14px!important;
+  }
+}
