@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {readFileSync} from 'node:fs';
+import {readFileSync,readdirSync} from 'node:fs';
 import {fileURLToPath} from 'node:url';
 import {spawnSync} from 'node:child_process';
 import router from '../api/index.js';
@@ -20,13 +20,10 @@ test('Hobby build emits one API function and only allowlisted static assets',()=
 });
 test('every root API entry remains an importable router target, without dynamic path traversal',()=>{
   const source=read('api/index.js');
-  const {readdirSync}=requireDirectory();
   const apiNames=readdirSync(new URL('../api/',import.meta.url)).filter(x=>x.endsWith('.js')&&x!=='index.js').map(x=>x.slice(0,-3));
   for(const name of apiNames)assert.ok(source.includes(JSON.stringify(name)+':()=>import('+JSON.stringify('./'+name+'.js')+')'),name);
   assert.match(source,/Object\.prototype\.hasOwnProperty\.call\(routes,name\)/);
 });
-function requireDirectory(){return {readdirSync:dir=>readDir(dir)}}
-import {readdirSync as readDir} from 'node:fs';
 test('single router rejects routes not in the allowlist',async()=>{
   const events=[];
   const res={status(code){events.push(code);return this},json(value){events.push(value);return value}};
