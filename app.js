@@ -100,11 +100,46 @@ async function getAIReply(message){
   }finally{clearTimeout(timer)}
 }
 
+const modeDescriptions={
+  research:'Investigar: consultaré fuentes pertinentes si la búsqueda está disponible. Escribe tu pregunta y envíala.',
+  code:'Programar: priorizaré código, arquitectura y depuración. Describe qué necesitas construir.',
+  analysis:'Analizar: priorizaré datos, riesgos y razonamiento. Comparte la información que quieres examinar.',
+  design:'Diseñar: priorizaré producto, experiencia e interfaz. Describe tu idea o proyecto.'
+};
+const modePlaceholders={
+  general:'Describe una misión, crea un sistema o haz una consulta…',
+  research:'¿Qué deseas investigar?',
+  code:'¿Qué necesitas programar o depurar?',
+  analysis:'¿Qué datos, situación o problema quieres analizar?',
+  design:'¿Qué producto, interfaz o experiencia deseas diseñar?'
+};
 function setMode(mode){
-  state.mode=mode;localStorage.setItem('wae.mode',mode);
-  $('#modePill').textContent=modeLabels[mode]||'General';
-  $$('.capability-card').forEach(b=>b.classList.toggle('active',b.dataset.mode===mode));
-  $('#messageInput')?.focus();
+  mode=Object.hasOwn(modeLabels,mode)?mode:'general';
+  state.mode=mode;
+  try{localStorage.setItem('wae.mode',mode)}catch(error){console.warn('[WAE] no se pudo conservar la preferencia de modo',error)}
+  const pill=$('#modePill'),input=$('#messageInput'),composer=$('#composer');
+  if(pill){
+    pill.textContent=mode==='general'?'General':'✓ '+modeLabels[mode]+' activo';
+    pill.classList.toggle('wae-mode-visible',mode!=='general');
+    pill.setAttribute('aria-live','polite');
+    pill.setAttribute('aria-label',mode==='general'?'Modo general':'Modo '+modeLabels[mode]+' activo');
+  }
+  if(input)input.placeholder=modePlaceholders[mode];
+  let helper=$('#waeModeHelp');
+  if(!helper&&composer){
+    helper=document.createElement('small');helper.id='waeModeHelp';
+    helper.className='wae-mode-help';helper.setAttribute('role','status');helper.setAttribute('aria-live','polite');
+    pill?.after(helper);
+  }
+  if(helper){helper.textContent=modeDescriptions[mode]||'';helper.hidden=mode==='general'}
+  $('.capability-card').forEach(button=>{
+    const selected=button.dataset.mode===mode;
+    button.classList.toggle('active',selected);
+    button.setAttribute('aria-pressed',String(selected));
+    button.setAttribute('aria-controls','messageInput');
+    button.title=selected?modeLabels[mode]+' activo · escribe tu consulta':'Activar '+(modeLabels[button.dataset.mode]||'modo');
+  });
+  window.dispatchEvent(new CustomEvent('wae:mode-changed',{detail:{mode}}));
 }
 function resetConversation(){if(window.WAENavigation?.newConversation?.())return;state.messages=[];persistMessages();renderMessages();toast('Nueva conversación creada')}
 function openDrawer(){$('#drawer').classList.add('open');$('#drawer').setAttribute('aria-hidden','false');$('#scrim').classList.add('visible')}
@@ -228,5 +263,6 @@ function initInteractions(){
 }
 function registerSW(){if('serviceWorker'in navigator&&location.protocol!=='file:')navigator.serviceWorker.register('./sw.js').catch(()=>{})}
 
+window.WAEModes={select:setMode,current:()=>state.mode};
 window.WAEChatState={snapshot:()=>state.messages.map(m=>({...m})),restore:(messages,mode)=>{state.messages=Array.isArray(messages)?messages.map(m=>({...m})):[];persistMessages();renderMessages();if(mode)setMode(mode)},busy:()=>state.busy,mode:()=>state.mode};
 renderMessages();initDocument();initInteractions();setMode(state.mode);registerSW();
