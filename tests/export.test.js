@@ -21,7 +21,7 @@ test('PDF and Word exporters produce actual binary documents',async()=>{
   assert.match(headers['Content-Disposition'],new RegExp('prueba\\.'+fmt));
  }
 });
-test('UI offers document formats and working Canvas construction controls',()=>{
+test('UI offers document formats and working Canvas construction controls',async()=>{
  const {readFileSync}=await import('node:fs');
  const ui=readFileSync(new URL('../workspace-premium-v1.js',import.meta.url),'utf8');
  const html=readFileSync(new URL('../index.html',import.meta.url),'utf8');
