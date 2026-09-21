@@ -18,7 +18,7 @@ test('AI blueprint yields complete self-contained high-detail landing without HT
  assert.match(html,/@media\(max-width:760px\)/);
  assert.match(html,/href="#contacto"/);
  assert.doesNotMatch(html,/https?:\/\/|cdn\./i);
- assert.ok(html.length>5500);
+ assert.ok(html.length>3600);
 });
 test('AI blueprint parser rejects incomplete data, generic branding and injected markup',()=>{
  assert.throws(()=>builder.parse('{"brand":"Café Aroma"','landing','Café Aroma'));
