@@ -6,7 +6,7 @@ export const FACTORY_KEYS=Object.freeze({
  active:'wae.render.factory.active.v1',
  revisions:'wae.render.factory.revisions.v3'
 });
-const validId=s=>typeof s==='string'&&s.length>0&&s.length<=120;
+const validId=s=>typeof s==='string'&&/^[a-zA-Z0-9_-]{1,120}$/.test(s)&&!['__proto__','prototype','constructor'].includes(s);
 const sane=s=>typeof s==='string'&&s.length<=200_000;
 const object=v=>!!v&&typeof v==='object'&&!Array.isArray(v);
 const fileName=s=>typeof s==='string'&&/^(?!\.)(?!.*\.\.)[a-zA-Z0-9_\-./]{1,100}$/.test(s)&&!s.startsWith('/')&&!s.split('/').includes('..')&&!s.includes('//');
