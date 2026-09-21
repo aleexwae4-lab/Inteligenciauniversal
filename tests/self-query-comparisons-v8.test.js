@@ -49,9 +49,9 @@ test('comparison routing, primary policy and cache version agree with live Rende
  assert.match(server,/preguntas comparativas/);
  assert.match(client,/selfQuery\(request\.message\)/);
  assert.match(client,/Si comparan Universal Core con Google/);
- assert.match(html,/runtime-client\.js\?v=23/);
- assert.match(sw,/runtime-client\.js\?v=23/);
- assert.match(sw,/wae-universal-render-selfquery-v37/);
+ assert.match(html,/runtime-client\.js\?v=24/);
+ assert.match(sw,/runtime-client\.js\?v=24/);
+ assert.match(sw,/wae-universal-render-intelligence-v38/);
  assert.match(sw,/factory-projects-render-v2/);
  assert.match(sw,/continuity-backup-v7/);
 });
