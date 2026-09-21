@@ -71,10 +71,15 @@ test('browser restores only a checked archive and warns that the file is plainte
  assert.match(ui,/No se importarán credenciales ni sesiones/);
  assert.match(ui,/safeDocumentHTML/);
  assert.match(ui,/window\.WAENavigation\?\.snapshotLocal/);
+ assert.match(ui,/const liveDocument=\$\('#documentEditor'\)/);
+ assert.match(ui,/const liveCanvas=\$\('#htmlEditor'\)/);
+ assert.match(ui,/active\.files=live\.files\.map/);
+ assert.match(ui,/El almacenamiento local es ilegible/);
+ assert.match(sw,/continuity-backup-v7\.js\?v=2/);
  assert.match(ui,/window\.WAEStorage\.save\('navigation',merged\.navigation\)/);
  assert.match(ui,/rollback/);
  assert.match(ui,/location\.reload\(\)/);
- assert.match(html,/continuity-backup-v7\.js\?v=1/);
+ assert.match(html,/continuity-backup-v7\.js\?v=2/);
  assert.match(html,/continuity-backup-v7\.css\?v=1/);
  assert.match(sw,/wae-universal-render-continuity-v36/);
  assert.match(sw,/continuity-archive-core-v7\.js/);

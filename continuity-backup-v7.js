@@ -4,7 +4,7 @@ const $=(q,r=document)=>r.querySelector(q);
 const text=(x)=>String(x??'');
 const notify=message=>window.toast?.(message);
 const local=key=>{try{return localStorage.getItem(key)}catch{return null}};
-const readJSON=(key,fallback)=>{try{return JSON.parse(local(key)||'null')??fallback}catch{return fallback}};
+const readJSON=(key,fallback)=>{const raw=local(key);if(raw===null)return fallback;try{return JSON.parse(raw)??fallback}catch{throw Error('El almacenamiento local es ilegible: '+key+'. No se reemplazará el dato.') }};
 const snapshot=async key=>{
  try{if(window.WAEStorage){await window.WAEStorage.ready;return await window.WAEStorage.load(key)}}catch{}
  return undefined;
@@ -30,7 +30,20 @@ async function currentPayload(){
  }
  const projects=readJSON(FACTORY_KEYS.projects,[]);
  const allRevisions=readJSON(FACTORY_KEYS.revisions,{});
- const revisions={};for(const project of projects||[])if(Array.isArray(allRevisions?.[project.id]))revisions[project.id]=allRevisions[project.id];
+ if(!Array.isArray(projects)||!allRevisions||typeof allRevisions!=='object'||Array.isArray(allRevisions))
+  throw Error('El archivo local de la Fábrica no tiene un formato recuperable.');
+ const live=window.__waeFactoryV1?.snapshot?.();
+ if(live?.id&&Array.isArray(live.files)){
+  const active=projects.find(p=>p.id===live.id);
+  if(active)active.files=live.files.map(f=>({name:f.name,content:f.content}));
+ }
+ const revisions={};for(const project of projects)if(Array.isArray(allRevisions?.[project.id]))revisions[project.id]=allRevisions[project.id];
+ const liveDocument=$('#documentEditor');
+ const liveCanvas=$('#htmlEditor');
+ const savedDocument=(await snapshot('document'))??local('wae.document')??'';
+ const savedCanvas=(await snapshot('html'))??local('wae.html')??'';
+ const currentDocument=liveDocument?.innerHTML??savedDocument;
+ const currentCanvas=liveCanvas?.value??savedCanvas;
  const data={
   format:CONTINUITY_FORMAT,
   exportedAt:new Date().toISOString(),
@@ -38,8 +51,8 @@ async function currentPayload(){
   note:'Archivo JSON sin cifrado: guárdalo en un lugar privado. NO incluye conversaciones remotas, sesiones, contraseñas, claves API ni configuración de cuenta.',
   navigation,
   activeMessages:messages,
-  document:text((await snapshot('document'))??local('wae.document')),
-  html:text((await snapshot('html'))??local('wae.html')),
+  document:text(currentDocument.includes('placeholder-line')&&!savedDocument?'':currentDocument),
+  html:text(currentCanvas),
   factory:{projects:Array.isArray(projects)?projects:[],active:local(FACTORY_KEYS.active)||null,revisions}
  };
  validatePayload(data);return data;
