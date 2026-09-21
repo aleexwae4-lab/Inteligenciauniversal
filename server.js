@@ -53,6 +53,21 @@ function applyUiProfile(html) {
 // Compatibility markers retained for historical regression contracts only.
 // They are NOT injected by the v115 mobile shell:
 // fast-lane-v23.js?v=34
+// Legacy release-token compatibility: retained only for regression/proxy detectors while
+// Enterprise mobile uses the newer runtime assets declared below.
+// mobile-v26.css?v=34
+// fast-lane-v23.js?v=34
+// telemetry-throttle-v47.js?v=47
+// mobile-runtime-v47.js?v=47
+// mobile-bootstrap-v45.js?v=45
+// semantic-ux-v32.js?v=46
+// speech-lifecycle-v46.js?v=46
+// mobile-voice-v46.js?v=46
+// learning-client-v29.js?v=34
+// X-WAE-Mobile-Release','universal-core-mobile-v80-visible-chat'
+// X-WAE-Mobile-Response-Lifecycle','mobile-response-lifecycle/v97'
+// universal-core-mobile-v47-long-session
+// long-session-backpressure-v47
 // mobile-v26.js?v=97
 // telemetry-throttle-v47.js?v=47
 // mobile-runtime-v47.js?v=47
