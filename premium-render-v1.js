@@ -73,7 +73,7 @@ function speak(article,button){
   }
   resetVoice();const content=speechText(rawOf(article));if(!content)return;
   const token=voice.token;voice.active=article;voice.paused=false;
-  button.textContent='⏸ Pausar';button.setAttribute('aria-pressed','true');
+  button.textContent='⏸';button.title='Pausar voz';button.setAttribute('aria-label','Pausar voz');button.setAttribute('aria-pressed','true');
   const chunks=content.match(/[\s\S]{1,170}/g)||[];
   let at=0;
   function next(){
