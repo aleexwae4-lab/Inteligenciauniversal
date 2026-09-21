@@ -148,5 +148,5 @@ test('FREE-only multimodal failover retries distinct catalog-verified models on 
  assert.match(edge,/provider:\{data_collection:'deny',allow_fallbacks:false\}/);
  assert.match(edge,/openrouter_free_models_exhausted_429/);
  assert.match(gateway,/iu_free_vision_rate_limited/);
- assert.match(gateway,/proveedor de pago/);
+ assert.match(gateway,/servicios de pago/);
 });
