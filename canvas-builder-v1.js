@@ -60,13 +60,13 @@ function base(p,body,cssExtra='',js=''){
  ].join('')+cssExtra;
  return '<!doctype html><html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="color-scheme" content="dark"><title>'+esc(p.brand)+' | '+esc(p.headline)+'</title><style>'+css+'</style></head><body>'+body+(js?'<script>'+js+'<\/script>':'')+'</body></html>';
 }
-function header(p){
- return '<header class="wrap"><a class="brand" href="#inicio">'+esc(p.brand)+'</a><nav aria-label="Secciones"><a href="#experiencia">Experiencia</a><a href="#contacto">Contacto</a></nav></header>';
+function header(p,withNav=true){
+ return '<header class="wrap">'+(withNav?'<a class="brand" href="#inicio">'+esc(p.brand)+'</a><nav aria-label="Secciones"><a href="#experiencia">Experiencia</a><a href="#contacto">Contacto</a></nav>':'<span class="brand">'+esc(p.brand)+'</span>')+'</header>';
 }
 function landing(p){
  const features=p.features.map((x,i)=>'<article class="card"><span class="num">0'+(i+1)+'</span><h3>'+esc(x.title)+'</h3><p>'+esc(x.description)+'</p></article>').join('');
  const body=header(p)+'<main id="inicio"><section class="hero"><div class="wrap"><p class="eyebrow">'+esc(p.eyebrow||p.brand)+'</p><h1>'+esc(p.headline)+'</h1><p class="lead">'+esc(p.subheadline)+'</p><a class="button" href="#experiencia">'+esc(p.cta||'Descubrir más')+' →</a></div></section>'+
- '<section class="section alt" id="experiencia"><div class="wrap"><div class="intro"><p class="eyebrow">'+esc(p.brand)+'</p><h2>'+esc(p.story||p.headline)+'</h2></div><div class="grid">'+features+'</div></div></section>'+
+ '<section class="section alt" id="experiencia"><div class="wrap"><div class="intro"><p class="eyebrow">'+esc(p.brand)+'</p><h2>'+esc(p.eyebrow||p.headline)+'</h2></div><div class="grid">'+features+'</div></div></section>'+
  '<section class="section"><div class="wrap story"><div><p class="eyebrow">Nuestra propuesta</p><h2>'+esc(p.brand)+'</h2></div><p>'+esc(p.story||p.subheadline)+'</p></div></section>'+
  '<section id="contacto" class="section"><div class="wrap"><div class="cta-block"><p class="eyebrow">Siguiente paso</p><h2>'+esc(p.cta||'Conoce nuestra propuesta')+'</h2><p class="lead">'+esc(p.contact||p.subheadline)+'</p><a class="button" href="#inicio">Volver al inicio ↑</a></div></div></section></main>'+
  '<footer><div class="wrap">'+esc(p.brand)+' · Diseño adaptable y editable</div></footer>';
@@ -76,13 +76,13 @@ function slides(p){
  const sections=p.slides.map((x,i)=>'<section class="slide" aria-label="Diapositiva '+(i+1)+'"'+(i?' hidden':'')+'><p class="eyebrow">'+esc(p.brand)+' · '+String(i+1).padStart(2,'0')+'</p><h1>'+esc(x.title)+'</h1><p class="lead">'+esc(x.body)+'</p></section>').join('');
  const extra='.stage{min-height:min(76dvh,760px);display:flex;align-items:center}.slide{width:100%}.slide[hidden]{display:none}.controls{display:flex;align-items:center;gap:12px;flex-wrap:wrap;padding-bottom:35px}.controls span{margin-left:auto;color:var(--accent);font-weight:800}@media(max-width:760px){.stage{min-height:65dvh}}';
  const script='(function(){const s=[...document.querySelectorAll(".slide")],count=document.getElementById("count"),back=document.getElementById("back"),next=document.getElementById("next");let n=0;function paint(){s.forEach((e,i)=>{e.hidden=i!==n});count.textContent=(n+1)+" / "+s.length;back.disabled=n===0;next.textContent=n===s.length-1?"Volver al inicio ↺":"Siguiente →";}back.addEventListener("click",()=>{n=Math.max(0,n-1);paint()});next.addEventListener("click",()=>{n=(n+1)%s.length;paint()});document.addEventListener("keydown",e=>{if(e.key==="ArrowRight"){n=(n+1)%s.length;paint()}if(e.key==="ArrowLeft"){n=Math.max(0,n-1);paint()}});paint()})();';
- return base(p,header(p)+'<main class="wrap"><div class="stage">'+sections+'</div><div class="controls"><button class="button secondary" id="back" type="button">← Anterior</button><button class="button" id="next" type="button">Siguiente →</button><span id="count" aria-live="polite"></span></div></main>',extra,script);
+ return base(p,header(p,false)+'<main class="wrap"><div class="stage">'+sections+'</div><div class="controls"><button class="button secondary" id="back" type="button">← Anterior</button><button class="button" id="next" type="button">Siguiente →</button><span id="count" aria-live="polite"></span></div></main>',extra,script);
 }
 function prototype(p){
  const sections=p.slides.map((x,i)=>'<section class="screen"'+(i?' hidden':'')+'><p class="eyebrow">Paso 0'+(i+1)+'</p><h2>'+esc(x.title)+'</h2><p class="lead">'+esc(x.body)+'</p><button type="button" class="button next">Continuar →</button></section>').join('');
  const extra='.stage{max-width:590px;margin:65px auto;min-height:60dvh}.screen{border:1px solid #ffffff3a;padding:clamp(26px,5vw,52px);border-radius:28px;background:var(--panel)}.screen[hidden]{display:none}.lead{font-size:1.03rem}';
  const js='(function(){const screens=[...document.querySelectorAll(".screen")];let n=0;document.querySelectorAll(".next").forEach(b=>b.addEventListener("click",()=>{screens[n].hidden=true;n=(n+1)%screens.length;screens[n].hidden=false}));})();';
- return base(p,header(p)+'<main class="wrap"><div class="stage">'+sections+'</div></main>',extra,js);
+ return base(p,header(p,false)+'<main class="wrap"><div class="stage">'+sections+'</div></main>',extra,js);
 }
 function build(plan){if(plan.kind==='slides')return slides(plan);if(plan.kind==='prototype')return prototype(plan);return landing(plan)}
 window.WAECanvasBuilder={parse:validate,build};
