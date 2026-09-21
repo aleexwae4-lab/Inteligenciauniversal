@@ -24,7 +24,7 @@ test('same-origin gateway forwards actual photo pixels with IU credentials to th
   assert.equal(sent.question,body.question);
   assert.equal(sent.frames[0].dataUrl,photo);
   assert.equal(sent.mode,'analysis');
-  return {ok:true,status:200,json:async()=>({success:true,reply:'Se observan dos zapatos negros sobre un piso claro.',model:'free-vision-model',provider:'gemini_native',analyzedFrames:1,videoScope:'image'})};
+  return {ok:true,status:200,json:async()=>({success:true,grounded:true,pixel_transport:'inline_data_uri',reply:'Se observan dos zapatos negros sobre un piso claro.',model:'free-vision-model',provider:'gemini_native',analyzedFrames:1,videoScope:'image'})};
  });
  assert.equal(called,1);
  assert.match(result.reply,/zapatos negros/);
