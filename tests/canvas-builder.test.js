@@ -53,3 +53,20 @@ test('offline drafts are clearly labeled, specific to user brief, and generated 
   if(kind==='prototype')assert.match(result.html,/Paso 03/);
  }
 });
+
+test('premium landing includes responsive original coffee illustration without remote assets',()=>{
+ const html=builder.build(builder.parse(JSON.stringify(plan),'landing','Café Aroma'));
+ assert.match(html,/hero-grid/);
+ assert.match(html,/hero-visual/);
+ assert.match(html,/Ilustración editorial de taza de café/);
+ assert.match(html,/<svg/);
+ assert.match(html,/grid-template-columns:minmax\(0,1\.1fr\)/);
+ assert.doesNotMatch(html,/<img[^>]+https?:\/\//);
+});
+test('dashboard is an actual dashboard with empty data states, not a landing with invented KPIs',()=>{
+ const html=builder.build(builder.parse(JSON.stringify(plan),'dashboard','Café Aroma'));
+ assert.match(html,/Sin datos conectados/);
+ assert.match(html,/conecta fuentes reales/);
+ assert.doesNotMatch(html,/\$120,000|240 · Ejemplo/);
+ assert.doesNotMatch(html,/href="#experiencia"/);
+});
