@@ -15,10 +15,10 @@ test('tapping mode card actually selects provider mode and visibly confirms it w
  }));
  for(const card of cards)card.classList={toggle(name,enabled){if(enabled)card.classes.add(name);else card.classes.delete(name)}};
  let focusCount=0;
- const pill={classSet:new Set(),attrs:{},classList:{toggle(name,enabled){if(enabled)pill.classSet.add(name);else pill.classSet.delete(name)}},setAttribute(key,value){pill.attrs[key]=value},after(item){fields.set('#waeModeHelp',item)}};
+ const pill={classSet:new Set(),attrs:{},classList:{toggle(name,enabled){if(enabled)pill.classSet.add(name);else pill.classSet.delete(name)}},setAttribute(key,value){pill.attrs[key]=value},after(item){fields.set('#waeModeHelp',item)},append(item){fields.set('#waeModeClear',item)}};
  const input={focus(){focusCount++}};
  fields.set('#modePill',pill);fields.set('#messageInput',input);fields.set('#composer',{});
- const fakeDocument={createElement:()=>({setAttribute(key,value){this[key]=value}})};
+ const fakeDocument={createElement:()=>({setAttribute(key,value){this[key]=value},addEventListener(key,handler){this['on'+key]=handler},stopPropagation(){}})};
  const state={mode:'general'},modeLabels={general:'General',research:'Investigar',code:'Programar',analysis:'Analizar',design:'Diseñar'};
  const ctx={state,modeLabels,document:fakeDocument,window:{dispatchEvent:e=>events.push(e.detail)},CustomEvent:class{constructor(_name,data){this.detail=data.detail}},localStorage:{setItem:(k,v)=>stored[k]=v},console,$:name=>fields.get(name),$$:()=>cards, Object};
  vm.runInNewContext(section+';setMode("research");',ctx);
@@ -31,6 +31,8 @@ test('tapping mode card actually selects provider mode and visibly confirms it w
  assert.equal(cards[0].attrs['aria-pressed'],'true');
  assert.equal(cards[1].attrs['aria-pressed'],'false');
  assert.equal(focusCount,0,'mode click should not pop the Android keyboard');
+ assert.equal(fields.get('#waeModeClear').textContent,'×');
+ assert.match(fields.get('#waeModeClear').attrs['aria-label'],/Desactivar Investigar/);
  vm.runInNewContext('setMode("code")',ctx);
  assert.equal(state.mode,'code');
  assert.match(fields.get('#waeModeHelp').textContent,/código/);
@@ -39,6 +41,11 @@ test('tapping mode card actually selects provider mode and visibly confirms it w
  assert.equal(fields.get('#waeModeHelp').hidden,true);
  assert.equal(pill.classSet.has('wae-mode-visible'),false);
  assert.equal(events.length,3);
+ vm.runInNewContext('setMode("analysis")',ctx);
+ fields.get('#waeModeClear').onclick({stopPropagation(){}});
+ assert.equal(state.mode,'general');
+ assert.equal(stored['wae.mode'],'general');
+ assert.equal(focusCount,0);
 });
 
 test('every shown composer control has an actual action and legacy fake handlers are gone',()=>{
