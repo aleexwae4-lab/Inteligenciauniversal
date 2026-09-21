@@ -1,6 +1,6 @@
 const PREVIOUS_CACHE_CONTRACT='wae-universal-v34-adaptive-mesh';
-const CACHE='wae-universal-v35-canonical-v107';
-const CORE=['./index.html','./styles.css','./polish-v2.css','./mobile-safe-composer.css','./startup-guard-v23.js','./runtime-client.js','./app.js','./mobile-safe-composer.js','./progressive-boot-v23.js','./mobile-v26.js','./mobile-runtime-v34.js','./mobile-canonical-chat-v80.js','./canonical-brain-v106.js','./manifest.webmanifest','./assets/logo.svg','./assets/logo-v2.svg'];
+const CACHE='wae-universal-v36-premium-actions-v117';
+const CORE=['./index.html','./styles.css','./polish-v2.css','./mobile-safe-composer.css','./startup-guard-v23.js','./runtime-client.js','./app.js','./mobile-safe-composer.js','./progressive-boot-v23.js','./mobile-v26.js','./mobile-runtime-v34.js','./mobile-canonical-chat-v80.js','./canonical-brain-v106.js','./premium-v117.css','./premium-v117.js','./manifest.webmanifest','./assets/logo.svg','./assets/logo-v2.svg'];
 const OPTIONAL=['./premium-v3.css','./premium-v4.css','./experience-v5.css','./experience-v6.css','./experience-v7.css','./experience-v8.css','./voice-client.js','./premium-v4.js','./streaming-v2.js','./experience-v5.js','./experience-v6.js','./experience-v7.js','./experience-v8.js','./interaction-guard-v21.js','./lib/sse-events.js','./polish-v2.js','./mobile-voice-v27.js','./semantic-ux-v32.js','./learning-client-v29.js'];
 
 self.addEventListener('install',event=>{
@@ -21,8 +21,8 @@ self.addEventListener('activate',event=>{
     await Promise.allSettled(windows.map(client=>{
       try{
         const url=new URL(client.url);
-        if(url.origin===self.location.origin&&url.searchParams.get('wae_runtime')!=='35'){
-          url.searchParams.set('wae_runtime','35');
+        if(url.origin===self.location.origin&&url.searchParams.get('wae_runtime')!=='36'){
+          url.searchParams.set('wae_runtime','36');
           return client.navigate(url.href);
         }
       }catch{}
