@@ -16,7 +16,7 @@ test('base interface exposes Universal Core as the sole intelligence identity', 
 
 test('premium shell disables the legacy voice channel before natural voice loads', async () => {
   const js = await read('polish-v2.js');
-  assert.match(js, /localStorage\.setItem\('wae\.autoVoice','false'\)/);
+  assert.doesNotMatch(js, /localStorage\.setItem\('wae\.autoVoice','false'\)/);
   assert.match(js, /state\.autoVoice=false/);
   assert.match(js, /cloneNode\(true\)/);
   assert.match(js, /load\('\.\/voice-client\.js'/);
