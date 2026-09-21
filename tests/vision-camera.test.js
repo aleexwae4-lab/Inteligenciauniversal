@@ -74,22 +74,22 @@ test('WAE local video scan preserves timestamps and never transports the origina
  assert.match(source,/No inventes costos, identidades ni métricas/);
 });
 
-test('Supabase route uses existing IU session, free model guard and preserves WAE OS video route',()=>{
+test('shared multimodal action requires the IU session and preserves WAE OS video handler',()=>{
  const edge=read('supabase/functions/wae-ai-stream-render-visual/index.ts');
  const original=read('supabase/functions/wae-ai-stream-render-visual/BASELINE-v131.ts');
  const client=read('runtime-client.js'),camera=read('camera-v1.js');
- assert.match(client,/VISUAL_EDGE=.*wae-ai-stream/);
- assert.match(client,/action:'iu_visual_v1'/);
- assert.match(client,/\\.\\.\\.sessionPayload\\(\\),question,kind,frames,mode/);
- assert.match(camera,/WAEVisualRuntime\\.analyze/);
- assert.match(edge,/secret_hash',await iuHash\\(secret\\)/);
- assert.match(edge,/\\.eq\\('access_tier','FREE'\\)/);
- assert.match(edge,/\\.eq\\('kind',IU_TRACE\\)/);
- assert.match(edge,/origin!==IU_RENDER/);
- assert.match(edge,/if\\(s\\(b.action\\)==='iu_visual_v1'\\)return iuVisual/);
- assert.match(edge,/if\\(s\\(b.action\\)==='video_evidence_v131'\\)return video/);
- assert.match(original,/if\\(s\\(b.action\\)==='video_evidence_v131'\\)return video/);
- assert.doesNotMatch(original,/iu_visual_v1/);
- assert.match(edge,/raw_media_saved:false/);
- assert.match(edge,/videoScope:kind==='video'\\?'sampled_frames_only'/);
+ assert.ok(client.includes('functions/v1/wae-ai-stream'));
+ assert.ok(client.includes("action:'iu_visual_v1'"));
+ assert.ok(client.includes('...sessionPayload(),question,kind,frames,mode'));
+ assert.ok(camera.includes('WAEVisualRuntime.analyze'));
+ assert.ok(edge.includes(".eq('secret_hash',await iuHash(secret))"));
+ assert.ok(edge.includes(".eq('access_tier','FREE')"));
+ assert.ok(edge.includes(".eq('kind',IU_TRACE)"));
+ assert.ok(edge.includes('origin!==IU_RENDER'));
+ assert.ok(edge.includes("if(s(b.action)==='iu_visual_v1')return iuVisual"));
+ assert.ok(edge.includes("if(s(b.action)==='video_evidence_v131')return video"));
+ assert.ok(original.includes("if(s(b.action)==='video_evidence_v131')return video"));
+ assert.ok(!original.includes('iu_visual_v1'));
+ assert.ok(edge.includes('raw_media_saved:false'));
+ assert.ok(edge.includes("videoScope:kind==='video'?'sampled_frames_only'"));
 });
