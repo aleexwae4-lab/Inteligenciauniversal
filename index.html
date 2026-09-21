@@ -108,13 +108,14 @@
     <dialog id="settingsDialog"><form method="dialog" class="settings-card"><div class="settings-head"><div><p class="eyebrow">CONFIGURACIÓN</p><h2>Conectar inteligencia real</h2></div><button class="icon-btn" value="cancel">×</button></div><label>Endpoint IA<input id="apiEndpoint" type="url" placeholder="/api/chat" /></label><label>Nombre del núcleo<input id="coreName" type="text" placeholder="Universal Core" /></label><p class="help">Por defecto WAE usa <code>/api/chat</code>. También puedes indicar un endpoint compatible que acepte <code>message</code> y <code>mode</code> y devuelva <code>{ "reply": "..." }</code>.</p><div class="dialog-actions"><button value="cancel" class="secondary-wide">Cancelar</button><button type="button" id="saveSettingsBtn" class="save-btn">Guardar</button></div></form></dialog>
     <input id="fileInput" type="file" hidden multiple />
   </div>
-  <script src="./runtime-client.js?v=16" defer></script>
-  <script src="./app.js?v=11" defer></script>
+  <script src="./storage-v2.js?v=1" defer></script>
+  <script src="./runtime-client.js?v=17" defer></script>
+  <script src="./app.js?v=12" defer></script>
   <script src="./polish-v2.js?v=4" defer></script>
   <script src="./speech-chunks.js?v=9" defer></script>
   <script src="./premium-render-v1.js?v=9" defer></script>
   <script src="./settings-premium-v1.js?v=5" defer></script>
-  <script src="./navigation-premium-v1.js?v=7" defer></script>
+  <script src="./navigation-premium-v1.js?v=8" defer></script>
   <script src="./workspace-premium-v1.js?v=11" defer></script>
   <script src="./canvas-builder-v1.js?v=19" defer></script>
   <script src="./canvas-premium-v2.js?v=19" defer></script>
