@@ -18,6 +18,9 @@ test('canvas supports landing, presentation, dashboard and app intent', () => {
   assert.equal(canvasKind('Una presentación ejecutiva'), 'presentation');
   assert.equal(canvasKind('Necesito un dashboard de negocio'), 'dashboard');
   assert.equal(canvasKind('Crea un prototipo de aplicación'), 'app');
+  assert.equal(canvasKind('Construye un sitio web corporativo'), 'website');
+  assert.equal(canvasKind('Diseña una tienda e-commerce'), 'ecommerce');
+  assert.equal(canvasKind('Genera un informe ejecutivo'), 'report');
 });
 
 test('extracts whole HTML from fenced provider responses', () => {
@@ -74,12 +77,12 @@ test('real creation pipeline executes three expert briefs and builder, then repo
       return {text: message.includes('Encargo original:') ? artifact : 'Brief profesional: foco en clientes, UX responsive y oferta honesta.'};
     }
   });
-  assert.equal(calls.length,4);
+  assert.equal(calls.length,5);
   assert.equal(result.kind,'landing');
   assert.equal(result.title,'Café Central');
   assert.equal(result.quality.structural,'passed');
   assert.equal(result.quality.repaired,false);
-  assert.equal(result.experts.length,5);
+  assert.equal(result.experts.length,7);
   assert.ok(result.html.includes('Content-Security-Policy'));
 });
 
@@ -90,10 +93,10 @@ test('broken output gets one QA repair instead of being released to users', asyn
     request:'Genera una landing útil para turismo local',
     generate:async ()=>{
       calls++;
-      return {text: calls<=3?'Brief especializado':calls===4?'<html>incompleto</html>':artifact};
+      return {text: calls<=5?'Brief especializado':calls===6?'<html>incompleto</html>':artifact};
     }
   });
-  assert.equal(calls,5);
+  assert.equal(calls,7);
   assert.equal(result.quality.repaired,true);
   assert.equal(result.quality.structural,'passed');
 });
