@@ -81,6 +81,16 @@ function addMessage(role,text){
 }
 
 async function getAIReply(message){
+  if(window.WAECamera?.hasPending?.()){
+    try{
+      const result=await window.WAECamera.analyze(message);
+      window.WAECamera.clear();
+      return result.reply;
+    }catch(error){
+      console.warn('[WAE] visual analysis unavailable',error?.message||error);
+      return 'La captura permanece preparada. '+String(error?.message||'No se pudo completar el análisis visual')+' No he interpretado ni analizado el contenido todavía.';
+    }
+  }
   const c=new AbortController(),timer=setTimeout(()=>c.abort(),65000);
   try{
     const r=await fetch('/api/chat',{
@@ -123,6 +133,18 @@ function setMode(mode){
     pill.classList.toggle('wae-mode-visible',mode!=='general');
     pill.setAttribute('aria-live','polite');
     pill.setAttribute('aria-label',mode==='general'?'Modo general':'Modo '+modeLabels[mode]+' activo');
+    let clear=$('#waeModeClear');
+    if(!clear){
+      clear=document.createElement('button');
+      clear.id='waeModeClear';clear.type='button';clear.className='wae-mode-clear';
+      clear.textContent='×';clear.title='Desactivar modo y volver a General';
+      clear.setAttribute('aria-label','Desactivar '+modeLabels[mode]+' y volver a General');
+      clear.addEventListener('click',event=>{event.stopPropagation();setMode('general')});
+    }
+    if(mode!=='general'){
+      clear.hidden=false;clear.setAttribute('aria-label','Desactivar '+modeLabels[mode]+' y volver a General');
+      pill.append(clear);
+    }
   }
   if(input)input.placeholder=modePlaceholders[mode];
   let helper=$('#waeModeHelp');
@@ -197,7 +219,7 @@ function autosizeInput(){
 
 async function submitMessage(ev){
   ev.preventDefault();
-  const i=$('#messageInput'),m=i.value.trim();
+  const i=$('#messageInput'),m=i.value.trim()||(window.WAECamera?.hasPending?.()?window.WAECamera.defaultQuestion():'');
   if(!m||state.busy)return;
   state.busy=true;
   const send=$('.send-btn');if(send){send.disabled=true;send.setAttribute('aria-busy','true')}
