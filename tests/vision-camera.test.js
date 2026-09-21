@@ -53,8 +53,8 @@ test('camera controls genuinely connect to pending capture, API route and x mode
  assert.match(camera,/stopStream\(\);dialog\.close\(\)/);
  assert.match(camera,/WAEVisualRuntime\.analyze/);
  assert.match(server,/\['\/api\/vision', visionHandler\]/);
- assert.match(html,/camera-v1\.js\?v=4/);
- assert.match(sw,/camera-v1\.js\?v=4/);
+ assert.match(html,/camera-v1\.js\?v=5/);
+ assert.match(sw,/camera-v1\.js\?v=5/);
  assert.match(html,/video-scan-v2\.js\?v=1/);
 });
 
