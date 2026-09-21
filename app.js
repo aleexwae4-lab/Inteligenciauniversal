@@ -118,7 +118,15 @@ function saveWorkspace(){
   localStorage.setItem('wae.document',state.document);localStorage.setItem('wae.html',state.html);
   $('#saveState').textContent='Guardado';toast('Workspace guardado');
 }
-function updatePreview(){$('#htmlPreview').srcdoc=$('#htmlEditor').value}
+let previewTimer;
+function updatePreview(){
+  clearTimeout(previewTimer);
+  previewTimer=setTimeout(()=>{
+    if(window.WAECanvasRefreshPreview){window.WAECanvasRefreshPreview();return}
+    const html=$('#htmlEditor').value;
+    $('#htmlPreview').srcdoc=window.WAECanvasPreparePreview?.(html)||html;
+  },250);
+}
 function downloadText(filename,content,type='text/plain'){
   const b=new Blob([content],{type}),u=URL.createObjectURL(b),a=document.createElement('a');
   a.href=u;a.download=filename;a.click();setTimeout(()=>URL.revokeObjectURL(u),1000);

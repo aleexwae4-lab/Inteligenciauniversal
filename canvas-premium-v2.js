@@ -4,6 +4,7 @@ const $=selector=>document.querySelector(selector);
 const STORAGE='iu.canvas.revisions.v2';
 const MAX_REVISIONS=5;
 let history=[],generating=false,pendingAction=null;
+let lastPreviewSource='',lastPreviewDevice='';
 const notice=text=>{const el=$('#iuCanvasStatus');if(el)el.textContent=text;};
 const toast=text=>window.toast?.(text);
 const editor=()=>$('#htmlEditor');
@@ -28,14 +29,16 @@ function show(view){
   });
   if(view!=='code')updatePreview();
 }
-function updatePreview(){
+function updatePreview(force=false){
   const panel=$('#panel-html'),frame=$('#htmlPreview'),selector=$('#iuCanvasDevice');
   if(!panel||!frame)return;
   const device=selector?.value||'responsive';
   frame.style.width=device==='desktop'?'980px':device==='mobile'?'min(390px, 100%)':'100%';
   frame.style.maxWidth=device==='desktop'?'none':'100%';
-  // The HTML source is unchanged; only its isolated preview gets the viewport fix.
+  // Preserve interactive slide/prototype state while switching modes without code changes.
   const source=current();
+  if(!force&&source===lastPreviewSource&&device===lastPreviewDevice)return;
+  lastPreviewSource=source;lastPreviewDevice=device;
   frame.srcdoc=window.WAECanvasPreparePreview?.(source)||source;
 }
 function apply(html,label){
@@ -91,11 +94,13 @@ function preparePreview(source){
     if(/<head\b[^>]*>/i.test(value))value=value.replace(/<head\b[^>]*>/i,match=>match+meta);
     else if(/<html\b[^>]*>/i.test(value))value=value.replace(/<html\b[^>]*>/i,match=>match+'<head>'+meta+'</head>');
   }
-  const fallback='<style data-iu-preview="mobile-fallback">@media(max-width:700px){html,body{max-width:100%;overflow-x:auto}img,video,svg,canvas{max-width:100%;height:auto}pre{max-width:100%;white-space:pre-wrap;overflow-wrap:anywhere}}</style>';
+  const fallback='<style data-iu-preview="mobile-fallback">@media(max-width:700px){html,body{max-width:100%;overflow-x:auto}main,section,header,footer,nav,.container,.slide{max-width:100%}img,video,svg,canvas{max-width:100%;height:auto}pre{max-width:100%;white-space:pre-wrap;overflow-wrap:anywhere}}</style>';
   if(/<\/head>/i.test(value))return value.replace(/<\/head>/i,fallback+'</head>');
-  return value;
+  return value.replace(/<body\b[^>]*>/i,match=>fallback+match);
 }
 window.WAECanvasPreparePreview=preparePreview;
+window.WAECanvasRefreshPreview=updatePreview;
+window.WAECanvasValidateHTML=validate;
 async function generate(){
   const brief=$('#iuCanvasBrief')?.value.trim(),kind=$('#iuCanvasType')?.value||'landing',operation=$('#iuCanvasOperation')?.value||'create';
   if(!brief)return toast('Describe la página, presentación o prototipo que quieres crear');
@@ -154,7 +159,7 @@ function init(){
  toolbar.innerHTML='<div class="iu-canvas-toggle" role="group" aria-label="Vista de Canvas"><button type="button" data-iu-canvas-view="code" aria-pressed="false">⌘ Editar</button><button type="button" data-iu-canvas-view="preview" aria-pressed="true">◉ Vista previa</button></div><select id="iuCanvasDevice" aria-label="Ancho de la vista previa"><option value="responsive">Ajustar</option><option value="mobile">Móvil</option><option value="desktop">Escritorio</option></select><button type="button" id="iuCanvasUndo" title="Recuperar versión anterior" aria-label="Deshacer último cambio de Canvas">↶</button>';
  panel.insertBefore(toolbar,pane);
  for(const b of toolbar.querySelectorAll('[data-iu-canvas-view]'))b.addEventListener('click',()=>show(b.dataset.iuCanvasView));
- $('#iuCanvasDevice').addEventListener('change',updatePreview);
+ $('#iuCanvasDevice').addEventListener('change',()=>updatePreview(true));
  $('#iuCanvasUndo').addEventListener('click',undo);
  const oldControls=$('#iuCanvasControls');
  const operation=document.createElement('select');operation.id='iuCanvasOperation';operation.setAttribute('aria-label','Tipo de generación');

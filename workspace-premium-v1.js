@@ -60,6 +60,7 @@ async function generate(){
  }catch(e){console.warn('Canvas generation',e);toast(String(e.message||'No se pudo generar HTML').slice(0,110))}
  finally{button.disabled=false;button.textContent='✦ Generar HTML'}
 }
+window.WAECanvasTemplates=template;
 function initialize(){
  const doc=$('#panel-document .toolbar'),pane=$('#panel-html .code-pane'),exportBtn=$('#exportBtn');if(!doc||!pane)return;
  if(!$('#iuExportGo')){

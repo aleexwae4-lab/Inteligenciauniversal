@@ -20,3 +20,132 @@
   #iuCanvasControls button{font-size:.64rem;padding:7px 6px}
   #panel-document.active .document-sheet{min-height:0!important}
 }
+
+
+/* Canvas v2: phone uses the whole editor or the whole preview, never two clipped half-panes. */
+#panel-html.split-panel.active{
+  display:grid!important;
+  grid-template-columns:minmax(0,1fr) minmax(0,1fr)!important;
+  grid-template-rows:auto minmax(0,1fr)!important;
+  width:100%!important;
+  max-width:100%!important;
+  min-height:0!important;
+  height:100%!important;
+  overflow:hidden!important;
+}
+#iuCanvasViewBar{
+  grid-column:1/-1!important;
+  grid-row:1!important;
+  display:flex!important;
+  flex:0 0 auto;
+  align-items:center;
+  justify-content:space-between;
+  gap:6px;
+  min-width:0;
+  background:#101916;
+  padding:7px 9px;
+  border-bottom:1px solid #304338;
+}
+.iu-canvas-toggle{display:flex;flex:1 1 auto;gap:4px;min-width:0}
+#iuCanvasViewBar button,#iuCanvasViewBar select{
+  font:inherit;
+  font-size:.70rem!important;
+  min-height:34px;
+  padding:7px 10px;
+  border:1px solid #355444;
+  border-radius:9px;
+  color:#a9c5b7;
+  background:#18221d;
+  cursor:pointer;
+  white-space:nowrap;
+}
+#iuCanvasViewBar button.active{color:#8bf6c6;background:#193c2b;border-color:#326b4d}
+#iuCanvasDevice{max-width:102px;min-width:85px}
+#iuCanvasUndo{min-width:35px;flex:0 0 35px}
+#iuCanvasUndo:disabled{opacity:.35;cursor:default}
+#panel-html .code-pane{
+  grid-column:1!important;
+  grid-row:2!important;
+  width:100%!important;
+  min-width:0!important;
+  min-height:0!important;
+}
+#panel-html .preview-pane{
+  grid-column:2!important;
+  grid-row:2!important;
+  width:100%!important;
+  min-width:0!important;
+  min-height:0!important;
+  overflow:auto!important;
+  display:grid!important;
+  grid-template-rows:auto minmax(0,1fr)!important;
+  justify-items:center;
+}
+#panel-html .preview-pane .pane-label{justify-self:stretch;width:100%;box-sizing:border-box}
+#panel-html #htmlPreview{
+  display:block!important;
+  min-height:0!important;
+  height:100%!important;
+  min-width:0!important;
+  box-sizing:border-box!important;
+  background:#fff;
+  border:0!important;
+}
+#iuCanvasStatus{color:#93b7a3;line-height:1.35;font-size:.65rem}
+#iuCanvasOperation{background:#19261f;color:#d9ffeb;border:1px solid #355541;border-radius:9px;font-size:.73rem;padding:7px;min-height:34px}
+.iu-canvas-confirm{
+  box-sizing:border-box;
+  padding:0;
+  max-width:calc(100vw - 28px);
+  width:min(390px,calc(100vw - 28px));
+  border:1px solid #3d5c4d;
+  border-radius:17px;
+  background:#17201b;
+  color:#e8fff4;
+  box-shadow:0 16px 70px #0009;
+}
+.iu-canvas-confirm::backdrop{background:#0009}
+.iu-canvas-confirm-card{padding:20px}
+.iu-canvas-confirm h3{margin:0 0 10px;font-size:1rem}
+.iu-canvas-confirm p{font-size:.81rem;line-height:1.55;color:#b9ccbf}
+.iu-canvas-confirm-actions{display:flex;gap:8px;justify-content:flex-end;margin-top:18px}
+.iu-canvas-confirm-actions button{background:#24342b;color:#e5fff2;border:1px solid #405e4e;border-radius:9px;padding:9px 13px;font-size:.78rem}
+#iuCanvasApply{background:#225a40;border-color:#3b8460}
+@media(max-width:700px){
+  #panel-html.split-panel.active{
+    grid-template-columns:minmax(0,1fr)!important;
+    grid-template-rows:auto minmax(0,1fr)!important;
+  }
+  #panel-html .code-pane,#panel-html .preview-pane{
+    grid-column:1!important;
+    grid-row:2!important;
+    min-height:0!important;
+    width:100%!important;
+    height:100%!important;
+  }
+  #panel-html[data-iu-view="preview"] .code-pane{display:none!important}
+  #panel-html[data-iu-view="code"] .preview-pane{display:none!important}
+  #panel-html[data-iu-view="code"] .code-pane{
+    display:flex!important;
+    flex-direction:column!important;
+    overflow:hidden!important;
+  }
+  #panel-html[data-iu-view="preview"] .preview-pane{
+    display:grid!important;
+    grid-template-rows:auto minmax(0,1fr)!important;
+    overflow:auto!important;
+    border:0!important;
+  }
+  #iuCanvasViewBar{padding:6px 8px;gap:4px}
+  #iuCanvasViewBar button,#iuCanvasViewBar select{font-size:.65rem!important;padding:7px}
+  #iuCanvasDevice{max-width:94px;min-width:77px}
+  #iuCanvasControls{max-height:min(36dvh,240px)!important;min-height:0!important}
+  #panel-html[data-iu-view="code"] #htmlEditor{
+    flex:1 1 auto!important;
+    min-height:0!important;
+    max-width:100%!important;
+    overflow:auto!important;
+    font-size:.76rem!important;
+    line-height:1.55!important;
+  }
+}
