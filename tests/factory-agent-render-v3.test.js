@@ -38,7 +38,7 @@ test('agent prioritizes conversation and preview, with code optional; never gran
 });
 test('mobile PWA refreshes chat factory assets and does not cache API responses',()=>{
  const sw=read('sw.js');
- assert.match(sw,/wae-universal-render-canvas-factory-v31/);
+ assert.match(sw,/wae-universal-render-product-builder-v32/);
  assert.match(sw,/factory-agent-render-v3\.js\?v=3/);
  assert.match(sw,/factory-agent-render-v3\.css\?v=3/);
  assert.match(sw,/url\.pathname\.startsWith\('\/api\/'\)/);
