@@ -40,7 +40,7 @@ async function iuVisual(req:Request,b:J,origin:string|null,url:string,service:st
  if(s(b.action)==='iu_visual_readiness_v1'){
   // Non-generative authenticated readiness only: NEVER forward images or consume model tokens.
   const key=Deno.env.get('GEMINI_API_KEY')||'',model=Deno.env.get('GEMINI_MODEL')||Deno.env.get('GEMINI_NATIVE_MODEL')||'';
-  if(!key||!model)return js(503,{success:false,ready:false,error:'iu_vision_provider_not_configured',keyConfigured:!!key,modelConfigured:!!model,provider:'gemini_native'},origin);
+  if(!key||!model)return js(503,{success:false,ready:false,error:'iu_vision_provider_not_configured',keyConfigured:!!key,modelConfigured:!!model,provider:'gemini_native',otherCredentialPresent:{openrouter:!!Deno.env.get('OPENROUTER_API_KEY'),nvidia:!!(Deno.env.get('NVIDIA_API_KEY')||Deno.env.get('NVIDIA_NIM_API_KEY')),groq:!!Deno.env.get('GROQ_API_KEY')}},origin);
   const {data:eligible,error:eligibleError}=await db.from('iu_adaptive_model_registry_v2').select('model_name').eq('model_name',model).eq('enabled',true).eq('vision_capable',true).eq('access_tier','FREE').limit(1);
   if(eligibleError||!eligible?.length)return js(503,{success:false,ready:false,error:'iu_free_vision_unverified',model,provider:'gemini_native',freeRegistry:false},origin);
   return js(200,{success:true,ready:true,provider:'gemini_native',model,freeRegistry:true,actualInferenceTested:false},origin);
