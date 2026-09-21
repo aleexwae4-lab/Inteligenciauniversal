@@ -129,3 +129,15 @@ test('Render registers the new Canvas route without diverting main chat', () => 
   assert.match(sw,/canvas-creation-v1\.js/);
   assert.match(sw,/url\.pathname\.startsWith\('\/api\/'\)/);
 });
+
+
+test('distinct Render mobile shell mounts a Canvas adapter without replacing its chat transport', () => {
+  const page=readFileSync(new URL('../api/mobile.js',import.meta.url),'utf8');
+  const adapter=readFileSync(new URL('../canvas-native-mobile-v1.js',import.meta.url),'utf8');
+  assert.match(page,/canvas-native-mobile-v1\.js\?v=1/);
+  assert.match(page,/form\.addEventListener\('submit'/);
+  assert.match(adapter,/fetch\('\/api\/canvas'/);
+  assert.match(adapter,/sandbox="allow-scripts"/);
+  assert.match(adapter,/wae\.nativeCanvas\./);
+  assert.match(adapter,/previousKey\(\)/);
+});
