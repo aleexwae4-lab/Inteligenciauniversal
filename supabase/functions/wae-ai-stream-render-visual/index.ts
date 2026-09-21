@@ -31,14 +31,14 @@ const IU_MIME=/^data:image\/(jpeg|png|webp);base64,([A-Za-z0-9+/]+={0,2})$/;
 async function iuHash(secret:string){const d=await crypto.subtle.digest('SHA-256',new TextEncoder().encode(secret));return[...new Uint8Array(d)].map(v=>v.toString(16).padStart(2,'0')).join('')}
 
 type IUVisionProvider={provider:'gemini_native'|'openrouter';model:string;key:string};
-async function iuSelectFreeVision(db:any):Promise<IUVisionProvider|null>{
+async function iuSelectFreeVision(db:any,exclude:string[]=[]):Promise<IUVisionProvider|null>{
  const geminiKey=Deno.env.get('GEMINI_API_KEY')||'',
   geminiModel=Deno.env.get('GEMINI_MODEL')||Deno.env.get('GEMINI_NATIVE_MODEL')||'';
  if(geminiKey&&geminiModel){
   const {data,error}=await db.from('iu_adaptive_model_registry_v2')
    .select('model_name').eq('provider','gemini_native').eq('model_name',geminiModel)
    .eq('enabled',true).eq('vision_capable',true).eq('access_tier','FREE').limit(1);
-  if(!error&&data?.length)return{provider:'gemini_native',model:geminiModel,key:geminiKey};
+  if(!error&&data?.length&&!exclude.includes(geminiModel))return{provider:'gemini_native',model:geminiModel,key:geminiKey};
  }
  const key=Deno.env.get('OPENROUTER_API_KEY')||'';
  if(!key)return null;
@@ -50,10 +50,10 @@ async function iuSelectFreeVision(db:any):Promise<IUVisionProvider|null>{
  if(registryError)return null;
  const approved=(registry||[]).filter((m:any)=>String(m.model_name||'').endsWith(':free'))
   .sort((a:any,b:any)=>Number(b.priority||0)-Number(a.priority||0))
-  .map((m:any)=>String(m.model_name));
+  .map((m:any)=>String(m.model_name)).filter((id:string)=>!exclude.includes(id));
  const {data:freeRouter}=await db.from('wae_ai_models').select('model_name').eq('provider','openrouter')
   .eq('model_name','openrouter/free').eq('enabled',true).eq('access_tier','FREE').limit(1);
- if(freeRouter?.length)approved.push('openrouter/free');
+ if(freeRouter?.length&&!exclude.includes('openrouter/free'))approved.push('openrouter/free');
  if(!approved.length)return null;
  let response:Response;
  try{
@@ -110,7 +110,7 @@ async function iuVisual(req:Request,b:J,origin:string|null,url:string,service:st
  }
  const selected=await iuSelectFreeVision(db);
  if(!selected)return js(503,{success:false,error:'iu_no_verified_free_visual_provider',message:'Ningún proveedor visual FREE configurado pasó la validación de modalidad y precio actual. No se enviaron imágenes ni se generaron cargos.'},origin);
- const {key,model,provider}=selected;
+ const {key,provider}=selected;let model=selected.model;
  const {count,error:quotaError}=await db.from('iu_request_traces').select('request_id',{count:'exact',head:true}).eq('session_id',sid).eq('kind',IU_TRACE).gte('created_at',new Date(Date.now()-86400000).toISOString());
  if(quotaError)return js(503,{success:false,error:'iu_quota_unavailable',message:'No se pudo comprobar la cuota del análisis visual.'},origin);
  if((count||0)>=12)return js(429,{success:false,error:'iu_daily_visual_limit',message:'Límite de 12 análisis en 24 horas para proteger el presupuesto.'},origin);
@@ -134,21 +134,39 @@ async function iuVisual(req:Request,b:J,origin:string|null,url:string,service:st
     content.push({type:'text',text:kind==='video'?'Hoja temporal '+(i+1)+': '+frame.start+'s a '+frame.end+'s.':'Imagen '+(i+1)});
     content.push({type:'image_url',image_url:{url:'data:'+frame.mime+';base64,'+frame.data}});
    });
-   const response=await fetch('https://openrouter.ai/api/v1/chat/completions',{
-    method:'POST',headers:{'content-type':'application/json','authorization':'Bearer '+key,
-     'HTTP-Referer':IU_RENDER,'X-Title':'WAE Universal Core Visual'},
-    body:JSON.stringify({model,messages:[{role:'user',content}],max_tokens:1600,temperature:0.2,
-     provider:{data_collection:'deny',allow_fallbacks:false}}),
-    signal:AbortSignal.timeout(42000)
-   });
-   const result=o(await response.json().catch(()=>({})));
-   if(!response.ok)throw Error('openrouter_http_'+response.status);
-   const choices=Array.isArray(result.choices)?result.choices:[],message=o(o(choices[0]).message),
-    raw=message.content;
-   reply=(typeof raw==='string'?raw:Array.isArray(raw)?raw.map((p:unknown)=>s(o(p).text)).filter(Boolean).join('\n'):'').trim();
-   const usage=o(result.usage);
-   inputTokens=Number(usage.prompt_tokens)||null;outputTokens=Number(usage.completion_tokens)||null;
-   if(Number(usage.cost||0)>0)throw Error('provider_billing_guard_violation');
+   const failed:string[]=[];
+   let lastStatus=503;
+   // Bound retries strictly to different, newly catalog-verified FREE vision models.
+   for(let attempt=0;attempt<3;attempt++){
+    if(attempt){
+     const next=await iuSelectFreeVision(db,failed);
+     if(!next||next.provider!=='openrouter')break;
+     model=next.model;
+    }
+    const response=await fetch('https://openrouter.ai/api/v1/chat/completions',{
+     method:'POST',headers:{'content-type':'application/json','authorization':'Bearer '+key,
+      'HTTP-Referer':IU_RENDER,'X-Title':'WAE Universal Core Visual'},
+     body:JSON.stringify({model,messages:[{role:'user',content}],max_tokens:1600,temperature:0.2,
+      provider:{data_collection:'deny',allow_fallbacks:false}}),
+     signal:AbortSignal.timeout(35000)
+    });
+    const result=o(await response.json().catch(()=>({})));
+    if(!response.ok){
+     lastStatus=response.status;failed.push(model);
+     if([404,429,502,503].includes(response.status))continue;
+     throw Error('openrouter_http_'+response.status);
+    }
+    const choices=Array.isArray(result.choices)?result.choices:[],message=o(o(choices[0]).message),raw=message.content;
+    reply=(typeof raw==='string'?raw:Array.isArray(raw)?raw.map((p:unknown)=>s(o(p).text)).filter(Boolean).join('\n'):'').trim();
+    const usage=o(result.usage);
+    if(Number(usage.cost||0)>0)throw Error('provider_billing_guard_violation');
+    if(reply){
+     inputTokens=Number(usage.prompt_tokens)||null;outputTokens=Number(usage.completion_tokens)||null;
+     break;
+    }
+    failed.push(model);
+   }
+   if(!reply)throw Error('openrouter_free_models_exhausted_'+lastStatus);
   }else{
    const endpoint='https://generativelanguage.googleapis.com/v1beta/models/'+encodeURIComponent(model)+':generateContent';
    const response=await fetch(endpoint,{method:'POST',headers:{'content-type':'application/json','x-goog-api-key':key},
@@ -162,11 +180,12 @@ async function iuVisual(req:Request,b:J,origin:string|null,url:string,service:st
    const usage=o(responseBody.usageMetadata);
    inputTokens=Number(usage.promptTokenCount)||null;outputTokens=Number(usage.candidatesTokenCount)||null;
   }
-  await db.from('iu_request_traces').update({status:'ok',total_latency_ms:Date.now()-start,input_tokens:inputTokens,output_tokens:outputTokens}).eq('request_id',requestId).eq('session_id',sid);
+  await db.from('iu_request_traces').update({status:'ok',model_name:model,total_latency_ms:Date.now()-start,input_tokens:inputTokens,output_tokens:outputTokens}).eq('request_id',requestId).eq('session_id',sid);
   return js(200,{success:true,reply,provider,model,mediaKind:kind,analyzedFrames:frames.length,videoScope:kind==='video'?'sampled_frames_only':'image',latencyMs:Date.now()-start},origin);
  }catch(e){
   const reason=e instanceof Error?e.message:'visual_provider_failed';
   await db.from('iu_request_traces').update({status:'error',error_code:reason.slice(0,100),total_latency_ms:Date.now()-start}).eq('request_id',requestId).eq('session_id',sid);
+  if(reason.startsWith('openrouter_free_models_exhausted_429'))return js(429,{success:false,error:'iu_free_vision_rate_limited',message:'Los modelos visuales gratuitos están saturados. No se analizó tu imagen ni se cambió a un proveedor de pago; tu captura sigue lista para reintentar.'},origin);
   return js(502,{success:false,error:'iu_visual_provider_failed',message:'El análisis visual no terminó ('+reason.slice(0,50)+'). Tu captura sigue lista para reintentar.'},origin);
  }
 }
