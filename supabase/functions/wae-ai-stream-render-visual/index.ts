@@ -30,7 +30,7 @@ const IU_RENDER='https://inteligenciauniversal.onrender.com',IU_TRACE='iu_visual
 const IU_MIME=/^data:image\/(jpeg|png|webp);base64,([A-Za-z0-9+/]+={0,2})$/;
 async function iuHash(secret:string){const d=await crypto.subtle.digest('SHA-256',new TextEncoder().encode(secret));return[...new Uint8Array(d)].map(v=>v.toString(16).padStart(2,'0')).join('')}
 
-type IUVisionProvider={provider:'gemini_native'|'openrouter';model:string;key:string};
+type IUVisionProvider={provider:'gemini_native'|'google_gemma'|'openrouter';model:string;key:string};
 async function iuSelectFreeVision(db:any,exclude:string[]=[]):Promise<IUVisionProvider|null>{
  const geminiKey=Deno.env.get('GEMINI_API_KEY')||'',
   geminiModel=Deno.env.get('GEMINI_MODEL')||Deno.env.get('GEMINI_NATIVE_MODEL')||'';
@@ -39,6 +39,17 @@ async function iuSelectFreeVision(db:any,exclude:string[]=[]):Promise<IUVisionPr
    .select('model_name').eq('provider','gemini_native').eq('model_name',geminiModel)
    .eq('enabled',true).eq('vision_capable',true).eq('access_tier','FREE').limit(1);
   if(!error&&data?.length&&!exclude.includes(geminiModel))return{provider:'gemini_native',model:geminiModel,key:geminiKey};
+ }
+ // Direct Gemma 4 Developer API: same effective provider as Waeosgreen, IU authentication remains separate.
+ // Official Gemini Developer API Gemma 4 pricing is free-only; do NOT use paid Vertex AI.
+ if(geminiKey){
+  const {data:gemma,error:gemmaError}=await db.from('iu_adaptive_model_registry_v2')
+   .select('model_name').eq('provider','google_gemma').eq('enabled',true)
+   .eq('vision_capable',true).eq('access_tier','FREE')
+   .in('model_name',['gemma-4-26b-a4b-it','gemma-4-31b-it']).limit(2);
+  if(!gemmaError)for(const candidate of ['gemma-4-26b-a4b-it','gemma-4-31b-it'])
+   if(!exclude.includes(candidate)&&(gemma||[]).some((row:any)=>s(row.model_name)===candidate))
+    return{provider:'google_gemma',model:candidate,key:geminiKey};
  }
  const key=Deno.env.get('OPENROUTER_API_KEY')||'';
  if(!key)return null;
@@ -94,7 +105,7 @@ async function iuVisual(req:Request,b:J,origin:string|null,url:string,service:st
   // Non-generative authenticated readiness only: NEVER forward images or consume model tokens.
   const selected=await iuSelectFreeVision(db);
   if(!selected)return js(503,{success:false,ready:false,error:'iu_no_verified_free_visual_provider',
-   geminiConfigured:!!(Deno.env.get('GEMINI_API_KEY')&&(Deno.env.get('GEMINI_MODEL')||Deno.env.get('GEMINI_NATIVE_MODEL'))),
+   geminiConfigured:!!Deno.env.get('GEMINI_API_KEY'),
    otherCredentialPresent:{openrouter:!!Deno.env.get('OPENROUTER_API_KEY'),groq:!!Deno.env.get('GROQ_API_KEY')}},origin);
   return js(200,{success:true,ready:true,provider:selected.provider,model:selected.model,
    freeRegistry:true,liveCatalogChecked:selected.provider==='openrouter',actualInferenceTested:false},origin);
@@ -128,7 +139,28 @@ async function iuVisual(req:Request,b:J,origin:string|null,url:string,service:st
    parts.push({inline_data:{mime_type:frame.mime,data:frame.data}});
   });
   let reply='',inputTokens:number|null=null,outputTokens:number|null=null;
-  if(provider==='openrouter'){
+  if(provider==='google_gemma'){
+   const content:any[]=[{type:'text',text:policy}];
+   frames.forEach((frame,i)=>{
+    content.push({type:'text',text:kind==='video'?'Hoja temporal '+(i+1)+': '+frame.start+'s a '+frame.end+'s.':'Imagen '+(i+1)});
+    content.push({type:'image_url',image_url:{url:'data:'+frame.mime+';base64,'+frame.data}});
+   });
+   for(let attempt=0;attempt<2;attempt++){
+    if(attempt){const next=await iuSelectFreeVision(db,[model]);if(!next||next.provider!=='google_gemma')break;model=next.model}
+    const response=await fetch('https://generativelanguage.googleapis.com/v1beta/openai/chat/completions',{
+     method:'POST',headers:{'content-type':'application/json',authorization:'Bearer '+key},
+     body:JSON.stringify({model,messages:[{role:'user',content}],max_tokens:1800,temperature:0.15,stream:false}),
+     signal:AbortSignal.timeout(18000)
+    });
+    const result=o(await response.json().catch(()=>({})));
+    if(!response.ok){if(attempt===0&&[429,502,503].includes(response.status))continue;throw Error('google_gemma_http_'+response.status)}
+    const choices=Array.isArray(result.choices)?result.choices:[],message=o(o(choices[0]).message),raw=message.content;
+    reply=(typeof raw==='string'?raw:Array.isArray(raw)?raw.map((p:unknown)=>s(o(p).text)).filter(Boolean).join('\n'):'').trim();
+    const usage=o(result.usage);inputTokens=Number(usage.prompt_tokens)||null;outputTokens=Number(usage.completion_tokens)||null;
+    if(reply)break;
+   }
+   if(!reply)throw Error('google_gemma_visual_empty');
+  }else if(provider==='openrouter'){
    const content:any[]=[{type:'text',text:policy}];
    frames.forEach((frame,i)=>{
     content.push({type:'text',text:kind==='video'?'Hoja temporal '+(i+1)+': '+frame.start+'s a '+frame.end+'s.':'Imagen '+(i+1)});
