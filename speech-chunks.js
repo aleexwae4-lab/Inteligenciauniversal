@@ -1,9 +1,11 @@
+(()=>{
+'use strict';
 /**
  * Divide TTS into natural utterances without cutting inside a word.
  * Keep long unspaced tokens intact rather than corrupting their pronunciation.
  * Sentences are preferred when an Android/browser TTS engine needs short chunks.
  */
-export function speechChunks(input,maxLength=280){
+function speechChunks(input,maxLength=280){
   const text=String(input??'').replace(/\s+/gu,' ').trim();
   if(!text)return [];
   const max=Math.max(100,Math.floor(Number(maxLength)||280));
@@ -19,3 +21,6 @@ export function speechChunks(input,maxLength=280){
   }
   flush();return output;
 }
+
+if(typeof window!=='undefined')window.WAESpeechChunks=speechChunks;
+})();
