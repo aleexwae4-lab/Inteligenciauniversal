@@ -59,9 +59,9 @@ async function build(){
   const t=thread(snapshot.id);
   const refining=!isStarter(snapshot);
   const priorGoals=t.messages.filter(m=>m.role==='user').slice(-5).map(m=>m.text).filter(Boolean);
-  const mission=(priorGoals.length>1?('Contexto acumulado del proyecto (conserva requisitos compatibles):\n- '+priorGoals.join('\n- ')+'\n\nCambio solicitado ahora:\n'+instruction):instruction).slice(0,3400);
+  const mission=(priorGoals.length>0?('Contexto acumulado del proyecto (conserva requisitos compatibles):\n- '+priorGoals.join('\n- ')+'\n\nCambio solicitado ahora:\n'+instruction):instruction).slice(0,3400);
   if(refining&&snapshot.html.length>100000){state('El proyecto supera 100 KB. Exporta una copia o reduce su tamaño antes de pedir una revisión.',true);return}
-  busy=true;send.disabled=true;entry.disabled=true;['#wfProjects','#wfNewProject','#wfImportCanvas'].forEach(q=>{const el=$(q);if(el)el.disabled=true});
+  busy=true;send.disabled=true;send.textContent='Construyendo…';entry.disabled=true;['#wfProjects','#wfNewProject','#wfImportCanvas'].forEach(q=>{const el=$(q);if(el)el.disabled=true});
   entry.value='';remember('user',instruction);
   state(refining?'Analizando contexto → especialistas → construcción → QA…':'Definiendo producto → especialistas → construcción → QA…');
   const controller=new AbortController();
@@ -70,7 +70,7 @@ async function build(){
     const res=await fetch('/api/canvas',{
       method:'POST',credentials:'same-origin',
       headers:{'content-type':'application/json'},
-      body:JSON.stringify({request:mission,kind:t.kind||undefined,baseHtml:refining?snapshot.html:''}),
+      body:JSON.stringify({request:mission,baseHtml:refining?snapshot.html:''}),
       signal:controller.signal
     });
     const data=await res.json().catch(()=>({}));
@@ -88,10 +88,12 @@ async function build(){
     state('Producto construido y guardado. Puedes pedirme otro cambio.');
   }catch(error){
     const message=error?.name==='AbortError'?'La construcción agotó el tiempo de espera.':'No pude aplicar el cambio: '+String(error.message||'Error de conexión.');
+    // Keep the actual brief editable for a native retry instead of making users retype it.
+    if(!entry.value.trim())entry.value=instruction;
     remember('assistant',message+' Conservé la versión anterior del producto.');
     state(message,true);
   }finally{
-    clearTimeout(timeout);busy=false;send.disabled=false;entry.disabled=false;['#wfProjects','#wfNewProject','#wfImportCanvas'].forEach(q=>{const el=$(q);if(el)el.disabled=false});entry.focus();
+    clearTimeout(timeout);busy=false;send.disabled=false;send.textContent='✦ Construir';entry.disabled=false;['#wfProjects','#wfNewProject','#wfImportCanvas'].forEach(q=>{const el=$(q);if(el)el.disabled=false});entry.focus();
   }
 }
 function changeProject(){
@@ -106,7 +108,7 @@ function init(){
   root.insertBefore(stage,body);
   const chat=document.createElement('section');chat.className='wf-agent';
   chat.setAttribute('aria-label','Asistente constructor de productos');
-  chat.innerHTML='<header class="wf-agent-top"><strong>✦ Agente constructor</strong><span>Describe → Construye → Corrige</span></header><div id="wfAgentFeed" class="wf-agent-feed" role="log" aria-live="polite"></div><div class="wf-agent-prompts"><button type="button" data-brief="Crea una página web para mi negocio, moderna, móvil y con botones funcionales.">Página web</button><button type="button" data-brief="Construye un dashboard empresarial responsive con datos demostrativos claramente etiquetados y filtros funcionales.">Dashboard</button><button type="button" data-brief="Crea una presentación ejecutiva interactiva con cinco diapositivas y controles de navegación.">Presentación</button></div><form id="wfAgentForm" class="wf-agent-form"><label for="wfAgentText">¿Qué construimos o mejoramos?</label><textarea id="wfAgentText" rows="3" maxlength="2100" placeholder="Ej.: Crea una app para controlar ventas de mi tienda…"></textarea><div class="wf-agent-actions"><button id="wfAgentBuild" type="submit" class="wf-agent-primary">✦ Construir</button><button id="wfAgentUndo" type="button">↶ Deshacer</button><button id="wfAgentCode" type="button" aria-pressed="false">⌘ Código</button><button id="wfAgentExport" type="button">↓ HTML</button></div><div id="wfAgentStatus" class="wf-agent-status" role="status"></div></form>';
+  chat.innerHTML='<header class="wf-agent-top"><strong>✦ Agente constructor</strong><span>Describe → Construye → Corrige</span></header><div id="wfAgentFeed" class="wf-agent-feed" role="log" aria-live="polite"></div><div class="wf-agent-prompts"><button type="button" data-brief="Crea una página web para mi negocio, moderna, móvil y con botones funcionales.">Página web</button><button type="button" data-brief="Construye un dashboard empresarial responsive con datos demostrativos claramente etiquetados y filtros funcionales.">Dashboard</button><button type="button" data-brief="Crea una presentación ejecutiva interactiva con cinco diapositivas y controles de navegación.">Presentación</button></div><form id="wfAgentForm" class="wf-agent-form"><label for="wfAgentText">¿Qué construimos o mejoramos?</label><textarea id="wfAgentText" rows="3" maxlength="2100" placeholder="Ej.: Crea una app para controlar ventas de mi tienda…"></textarea><div class="wf-agent-actions"><button id="wfAgentBuild" type="submit" class="wf-agent-primary">✦ Construir</button><button id="wfAgentUndo" type="button">↶ Deshacer</button><button id="wfAgentCode" type="button" aria-pressed="false">⌘ Código</button><button id="wfAgentExport" type="button">↓ HTML</button><button id="wfAgentProject" type="button">↓ Proyecto</button><button id="wfAgentPreview" type="button">◉ Vista</button></div><div id="wfAgentStatus" class="wf-agent-status" role="status"></div></form>';
   stage.append(chat,body);
   form=$('#wfAgentForm');feed=$('#wfAgentFeed');entry=$('#wfAgentText');send=$('#wfAgentBuild');status=$('#wfAgentStatus');
   load();renderMessages();
@@ -126,6 +128,8 @@ function init(){
     state('Versión anterior restaurada.');
   });
   $('#wfAgentExport').addEventListener('click',()=>$('#wfExportHTML')?.click());
+  $('#wfAgentProject').addEventListener('click',()=>$('#wfExportProject')?.click());
+  $('#wfAgentPreview').addEventListener('click',()=>{factory().preview();$('#wfPreview')?.scrollIntoView({behavior:'smooth',block:'nearest'});});
   $('#wfProjects')?.addEventListener('change',()=>{if(!busy)changeProject()});
   $('#wfNewProject')?.addEventListener('click',()=>{if(!busy)queueMicrotask(changeProject)});
   $('#wfImportCanvas')?.addEventListener('click',()=>{if(!busy)queueMicrotask(changeProject)});
