@@ -108,7 +108,7 @@ async function getAIReply(message){
     return clean;
   }catch(e){
     console.warn('[WAE IU] runtime unavailable',e?.message||e);
-    return 'No pude recuperar la respuesta de los proveedores de IA en este momento. El texto de tu consulta permanece en esta sesión; puedes volver a intentarlo.';
+    return null; // A failed generation is not an assistant answer and must not enter chat history.
   }finally{clearTimeout(timer)}
 }
 
@@ -219,15 +219,20 @@ function autosizeInput(){
   i.style.height='auto';i.style.height=`${Math.min(i.scrollHeight,120)}px`;
 }
 
+let pendingRetry='';
 async function submitMessage(ev){
   ev.preventDefault();
   const i=$('#messageInput'),m=i.value.trim()||(window.WAECoreTools?.defaultQuestion?.()||'');
   if(!m||state.busy)return;
   state.busy=true;
   const send=$('.send-btn');if(send){send.disabled=true;send.setAttribute('aria-busy','true')}
-  i.value='';autosizeInput();addMessage('user',m);showTyping();
+  i.value='';autosizeInput();
+  if(!(pendingRetry===m&&state.messages.at(-1)?.role==='user'&&state.messages.at(-1)?.text===m))addMessage('user',m);
+  pendingRetry='';showTyping();
   try{
-    const r=await getAIReply(m);hideTyping();addMessage('assistant',r);
+    const r=await getAIReply(m);hideTyping();
+    if(!r){pendingRetry=m;if(!i.value.trim()){i.value=m;autosizeInput()}toast('No se generó una respuesta. Tu consulta está lista para reintentar.');return;}
+    addMessage('assistant',r);
     // A failed multimodal request never discards the user's question or evidence.
     if(window.WAECamera?.status?.().pending&&window.WAECoreTools?.status?.().last?.ok===false&&!i.value.trim()){
       i.value=m;autosizeInput();

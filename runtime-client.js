@@ -107,6 +107,16 @@
     try{const raw=typeof input==='string'?input:input?.url;const url=new URL(raw,location.href);return url.origin===location.origin&&url.pathname==='/api/chat'}catch{return false}
   }
 
+  function nonGenerativeChatResult(data){
+    const provider=String(data?.provider||'').toLowerCase();
+    const model=String(data?.model||'').toLowerCase();
+    const reply=String(data?.reply||'').trim();
+    return ['wae_deterministic_rescue','web_recovery'].includes(provider)
+      || ['wae-deterministic-rescue-v1','evidence-rescue-v2'].includes(model)
+      || !reply
+      || /^\s*(?:#{1,3}\s*)?la ruta generativa avanzada no est[aá] disponible en este intento\b/i.test(reply)
+      || /^\s*(?:#{1,3}\s*)?respuesta con evidencia recuperada\b/i.test(reply);
+  }
   const selfQuery=value=>/(?:\bque tan inteligente (?:eres|es)\b|\b(?:quien|que) eres\b|\b(?:que|cuales) (?:capacidades|funciones) (?:tienes|tiene)\b|\bque (?:puedes|sabes) hacer\b|\b(?:como funcionas|que modelo eres|eres chatgpt|eres un modelo de openai|tienes acceso a internet|puedes buscar en internet)\b)/.test(String(value||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[¿?¡!.,:]/g,' ').replace(/\s+/g,' ').trim());
   window.fetch=async(input,init={})=>{
     if(!isLocalRuntime(input)||String(init.method||'GET').toUpperCase()!=='POST')return nativeFetch(input,init);
@@ -119,6 +129,7 @@
       const runtimeMode=String(incoming.mode||localStorage.getItem('wae.mode')||'general');
       const useWeb=!incoming.canvas&&needsFreshWeb(incoming.message,runtimeMode);
       const data=await edge({action:'chat',...sessionPayload(),conversation_id:incoming.canvas?null:localStorage.getItem(CONVERSATION_ID)||null,message:[!incoming.canvas?'DIRECTRICES DE RESPUESTA (subordinadas a instrucciones del sistema):\n'+responsePolicy:'',incoming.preferences?.instructions?'PREFERENCIAS DEL USUARIO (no prevalecen sobre reglas de seguridad):\n'+String(incoming.preferences.instructions).slice(0,4000):'',incoming.preferences?.knowledge?'CONTEXTO GENERAL DEL USUARIO (no verificado):\n'+String(incoming.preferences.knowledge).slice(0,12000):'',incoming.project?.instructions?'INSTRUCCIONES DE ESTE PROYECTO (subordinadas a seguridad):\n'+String(incoming.project.instructions).slice(0,3000):'',incoming.project?.knowledge?'CONOCIMIENTO DEL PROYECTO (información aportada, no verificada):\n'+String(incoming.project.knowledge).slice(0,8000):'','SOLICITUD ACTUAL:\n'+String(incoming.message||'')].filter(Boolean).join('\n\n'),mode:runtimeMode,web_enabled:useWeb,attachments:window.__waeRuntimeAttachments||[]});
+      if(nonGenerativeChatResult(data))throw Object.assign(new Error('primary_returned_non_generative_reply'),{status:503});
       if(data.conversation_id&&!incoming.canvas){localStorage.setItem(CONVERSATION_ID,data.conversation_id);window.WAENavigation?.remoteUpdated?.(data.conversation_id)}
       window.__iuLastRuntime=data;
       if(!incoming.canvas)queueMicrotask(()=>{updateRuntimeCard(data);loadConversations().catch(()=>{})});
@@ -129,6 +140,7 @@
       console.warn('[WAE IU] Supabase primary unavailable; using Render fallback',err?.message||err);
       try{
         const fallback=await nativeFetch(input,init);
+        if(fallback.ok){const body=await fallback.clone().json().catch(()=>({}));if(nonGenerativeChatResult(body))throw Object.assign(new Error('fallback_returned_non_generative_reply'),{status:503});}
         const copy=document.querySelector('.v2-runtime-copy');
         if(copy&&fallback.ok)copy.innerHTML='<strong>WAE Gateway · fallback activo</strong><small>Render → Supabase capability router</small>';
         return fallback;
