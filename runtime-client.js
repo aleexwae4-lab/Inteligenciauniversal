@@ -30,7 +30,7 @@
     if(!isLocalRuntime(input)||String(init.method||'GET').toUpperCase()!=='POST')return nativeFetch(input,init);
     const request=typeof init.body==='string'?JSON.parse(init.body):{};
     // Capability/identity answers come from the product's real server registry, not a generic upstream persona.
-    if(selfQuery(request.message)||request.canvas_direct===true)return nativeFetch(input,init);
+    if(selfQuery(request.message)||request.canvas_direct===true||request.canvas_blueprint===true)return nativeFetch(input,init);
     try{
       await bootstrap();
       const incoming=request;
