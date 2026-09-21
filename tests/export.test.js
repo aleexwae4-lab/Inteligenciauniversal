@@ -33,6 +33,6 @@ test('UI offers document formats and working Canvas construction controls',async
 
 test('Canvas v2 is loaded after legacy Canvas without replacing the original shell',()=>{
  const html=readFileSync(new URL('../index.html',import.meta.url),'utf8');
- assert.match(html,/canvas-premium-v2\.js\?v=16/);
+ assert.match(html,/canvas-premium-v2\.js\?v=18/);
  assert.match(html,/workspace-premium-v1\.css\?v=13/);
 });
