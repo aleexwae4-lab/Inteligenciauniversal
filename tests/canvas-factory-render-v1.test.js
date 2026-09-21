@@ -80,3 +80,13 @@ test('Render Canvas build keeps external image inference separate and explicitly
  assert.doesNotMatch(pkg.scripts.check,/visual-photo-canary-once\.mjs/);
  assert.equal(pkg.scripts['check:vision:live'],'node scripts/visual-photo-canary-once.mjs');
 });
+
+
+test('generated monetary goals cannot appear without user data or a prominent demo label',()=>{
+ const invented=artifact.replace('Un producto listo para editar','Ventas Hoy: Falta $5000');
+ assert.equal(auditCanvas(invented,'dashboard','App para controlar ventas de mi tienda').pass,false);
+ assert.equal(auditCanvas(invented,'dashboard','App para controlar ventas de mi tienda').checks.noUnrequestedMoney,false);
+ const labeled=invented.replace('</main>','<p>Datos simulados · DEMOSTRACIÓN</p></main>');
+ assert.equal(auditCanvas(labeled,'landing','App para controlar ventas de mi tienda').pass,true);
+ assert.equal(auditCanvas(invented,'landing','App para controlar ventas de $5000').checks.noUnrequestedMoney,true);
+});

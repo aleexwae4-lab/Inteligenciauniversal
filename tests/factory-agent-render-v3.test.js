@@ -24,7 +24,7 @@ test('Render shell installs agent after existing Canvas and factory, without rep
  const html=read('index.html'),server=read('server.js');
  assert.ok(html.indexOf('canvas-premium-v2.js')<html.indexOf('factory-projects-render-v2.js'));
  assert.ok(html.indexOf('factory-projects-render-v2.js')<html.indexOf('factory-agent-render-v3.js'));
- assert.match(html,/factory-agent-render-v3\.css\?v=3/);
+ assert.match(html,/factory-agent-render-v3\.css\?v=4/);
  assert.match(server,/['"]?\/api\/canvas['"]?, canvasHandler/);
  assert.match(server,/['"]?\/api\/chat['"]?, chatHandler/);
 });
@@ -38,9 +38,9 @@ test('agent prioritizes conversation and preview, with code optional; never gran
 });
 test('mobile PWA refreshes chat factory assets and does not cache API responses',()=>{
  const sw=read('sw.js');
- assert.match(sw,/wae-universal-render-canvas-factory-v31/);
- assert.match(sw,/factory-agent-render-v3\.js\?v=3/);
- assert.match(sw,/factory-agent-render-v3\.css\?v=3/);
+ assert.match(sw,/wae-universal-render-canvas-factory-v32/);
+ assert.match(sw,/factory-agent-render-v3\.js\?v=4/);
+ assert.match(sw,/factory-agent-render-v3\.css\?v=4/);
  assert.match(sw,/url\.pathname\.startsWith\('\/api\/'\)/);
 });
 
@@ -52,4 +52,15 @@ test('premium leap preserves recent product intent and still caps the Canvas req
  assert.match(agent,/\.slice\(0,3400\)/);
  assert.match(agent,/request:mission/);
  assert.match(agent,/especialistas.*construcci.n.*QA/i);
+});
+
+
+test('native mobile factory retains briefs and synchronizes the selected product preview',()=>{
+ const agent=read('factory-agent-render-v3.js'),factory=read('factory-projects-render-v2.js'),css=read('factory-agent-render-v3.css');
+ assert.match(agent,/priorGoals\.length>0/);
+ assert.match(agent,/entry\.value=instruction/);
+ assert.match(agent,/wfAgentProject/);
+ assert.match(agent,/wfAgentPreview/);
+ assert.match(factory,/persist\(\);render\(\);preview\(\)/);
+ assert.match(css,/overflow-y:auto;overflow-x:hidden;overscroll-behavior:contain/);
 });
