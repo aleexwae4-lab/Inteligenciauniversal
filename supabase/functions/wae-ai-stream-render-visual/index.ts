@@ -29,6 +29,59 @@ async function bridge(req:Request,body:J,origin:string|null,url:string){const he
 const IU_RENDER='https://inteligenciauniversal.onrender.com',IU_TRACE='iu_visual_v1';
 const IU_MIME=/^data:image\/(jpeg|png|webp);base64,([A-Za-z0-9+/]+={0,2})$/;
 async function iuHash(secret:string){const d=await crypto.subtle.digest('SHA-256',new TextEncoder().encode(secret));return[...new Uint8Array(d)].map(v=>v.toString(16).padStart(2,'0')).join('')}
+
+type IUVisionProvider={provider:'gemini_native'|'openrouter';model:string;key:string};
+async function iuSelectFreeVision(db:any):Promise<IUVisionProvider|null>{
+ const geminiKey=Deno.env.get('GEMINI_API_KEY')||'',
+  geminiModel=Deno.env.get('GEMINI_MODEL')||Deno.env.get('GEMINI_NATIVE_MODEL')||'';
+ if(geminiKey&&geminiModel){
+  const {data,error}=await db.from('iu_adaptive_model_registry_v2')
+   .select('model_name').eq('provider','gemini_native').eq('model_name',geminiModel)
+   .eq('enabled',true).eq('vision_capable',true).eq('access_tier','FREE').limit(1);
+  if(!error&&data?.length)return{provider:'gemini_native',model:geminiModel,key:geminiKey};
+ }
+ const key=Deno.env.get('OPENROUTER_API_KEY')||'';
+ if(!key)return null;
+ // A WAE "FREE" label alone is insufficient. Confirm current live catalog image modality
+ // and all published billable pricing fields are zero BEFORE every image call.
+ const {data:registry,error:registryError}=await db.from('iu_adaptive_model_registry_v2')
+   .select('model_name,priority').eq('provider','openrouter').eq('enabled',true)
+   .eq('vision_capable',true).eq('access_tier','FREE').limit(30);
+ if(registryError)return null;
+ const approved=(registry||[]).filter((m:any)=>String(m.model_name||'').endsWith(':free'))
+  .sort((a:any,b:any)=>Number(b.priority||0)-Number(a.priority||0))
+  .map((m:any)=>String(m.model_name));
+ const {data:freeRouter}=await db.from('wae_ai_models').select('model_name').eq('provider','openrouter')
+  .eq('model_name','openrouter/free').eq('enabled',true).eq('access_tier','FREE').limit(1);
+ if(freeRouter?.length)approved.push('openrouter/free');
+ if(!approved.length)return null;
+ let response:Response;
+ try{
+  response=await fetch('https://openrouter.ai/api/v1/models?input_modalities=image',{
+   headers:{'authorization':'Bearer '+key,'accept':'application/json'},
+   signal:AbortSignal.timeout(12000)
+  });
+ }catch{return null}
+ if(!response.ok)return null;
+ const catalog=o(await response.json().catch(()=>({}))),models=Array.isArray(catalog.data)?catalog.data:[];
+ const canUse=(raw:unknown)=>{
+  const m=o(raw),id=s(m.id),pricing=o(m.pricing),architecture=o(m.architecture),
+   inputs=Array.isArray(architecture.input_modalities)?architecture.input_modalities:[],
+   outputs=Array.isArray(architecture.output_modalities)?architecture.output_modalities:[];
+  if(!approved.includes(id)||!inputs.includes('image')||(outputs.length&&!outputs.includes('text')))return false;
+  if(pricing.prompt===undefined||pricing.completion===undefined)return false;
+  return Object.entries(pricing).every(([name,value])=>
+   ['prompt','completion','image','request','audio','web_search','internal_reasoning','input_cache_read','input_cache_write'].includes(name)
+    ?value!==null&&value!==''&&Number.isFinite(Number(value))&&Number(value)===0
+    :true);
+ };
+ for(const id of approved){
+  const model=models.find((raw:unknown)=>s(o(raw).id)===id&&canUse(raw));
+  if(model)return{provider:'openrouter',model:id,key};
+ }
+ return null;
+}
+
 async function iuVisual(req:Request,b:J,origin:string|null,url:string,service:string){
  if(origin!==IU_RENDER)return js(403,{success:false,error:'iu_origin_denied'},origin);
  if(Number(req.headers.get('content-length')||0)>1450000)return js(413,{success:false,error:'iu_visual_body_too_large'},origin);
@@ -39,11 +92,12 @@ async function iuVisual(req:Request,b:J,origin:string|null,url:string,service:st
  if(authError||!auth||auth.status!=='active'||(auth.expires_at&&Date.parse(auth.expires_at)<=Date.now()))return js(401,{success:false,error:'iu_invalid_session',message:'La sesión visual expiró; actualiza Universal Core.'},origin);
  if(s(b.action)==='iu_visual_readiness_v1'){
   // Non-generative authenticated readiness only: NEVER forward images or consume model tokens.
-  const key=Deno.env.get('GEMINI_API_KEY')||'',model=Deno.env.get('GEMINI_MODEL')||Deno.env.get('GEMINI_NATIVE_MODEL')||'';
-  if(!key||!model)return js(503,{success:false,ready:false,error:'iu_vision_provider_not_configured',keyConfigured:!!key,modelConfigured:!!model,provider:'gemini_native',otherCredentialPresent:{openrouter:!!Deno.env.get('OPENROUTER_API_KEY'),nvidia:!!(Deno.env.get('NVIDIA_API_KEY')||Deno.env.get('NVIDIA_NIM_API_KEY')),groq:!!Deno.env.get('GROQ_API_KEY')}},origin);
-  const {data:eligible,error:eligibleError}=await db.from('iu_adaptive_model_registry_v2').select('model_name').eq('model_name',model).eq('enabled',true).eq('vision_capable',true).eq('access_tier','FREE').limit(1);
-  if(eligibleError||!eligible?.length)return js(503,{success:false,ready:false,error:'iu_free_vision_unverified',model,provider:'gemini_native',freeRegistry:false},origin);
-  return js(200,{success:true,ready:true,provider:'gemini_native',model,freeRegistry:true,actualInferenceTested:false},origin);
+  const selected=await iuSelectFreeVision(db);
+  if(!selected)return js(503,{success:false,ready:false,error:'iu_no_verified_free_visual_provider',
+   geminiConfigured:!!(Deno.env.get('GEMINI_API_KEY')&&(Deno.env.get('GEMINI_MODEL')||Deno.env.get('GEMINI_NATIVE_MODEL'))),
+   otherCredentialPresent:{openrouter:!!Deno.env.get('OPENROUTER_API_KEY'),groq:!!Deno.env.get('GROQ_API_KEY')}},origin);
+  return js(200,{success:true,ready:true,provider:selected.provider,model:selected.model,
+   freeRegistry:true,liveCatalogChecked:selected.provider==='openrouter',actualInferenceTested:false},origin);
  }
  const inputs=Array.isArray(b.frames)?b.frames:[];
  if(inputs.length<1||inputs.length>4)return js(422,{success:false,error:'iu_frames_invalid',message:'Usa de 1 a 4 imágenes.'},origin);
@@ -54,17 +108,16 @@ async function iuVisual(req:Request,b:J,origin:string|null,url:string,service:st
   const start=Number(f.timeSec),end=Number(f.endSec);
   frames.push({mime:'image/'+match[1],data:match[2],start:Number.isFinite(start)&&start>=0&&start<=86400?start:null,end:Number.isFinite(end)&&end>=start&&end<=86400?end:null});
  }
- const key=Deno.env.get('GEMINI_API_KEY')||'',model=Deno.env.get('GEMINI_MODEL')||Deno.env.get('GEMINI_NATIVE_MODEL')||'';
- if(!key||!model)return js(503,{success:false,error:'iu_vision_provider_not_configured',message:'No hay motor visual activo en la infraestructura compartida.'},origin);
- const {data:eligible,error:eligibilityError}=await db.from('iu_adaptive_model_registry_v2').select('model_name').eq('model_name',model).eq('enabled',true).eq('vision_capable',true).eq('access_tier','FREE').limit(1);
- if(eligibilityError||!eligible?.length)return js(503,{success:false,error:'iu_free_vision_unverified',message:'El modelo visual no figura como FREE en el registro WAE; la imagen no se envió al proveedor.'},origin);
+ const selected=await iuSelectFreeVision(db);
+ if(!selected)return js(503,{success:false,error:'iu_no_verified_free_visual_provider',message:'Ningún proveedor visual FREE configurado pasó la validación de modalidad y precio actual. No se enviaron imágenes ni se generaron cargos.'},origin);
+ const {key,model,provider}=selected;
  const {count,error:quotaError}=await db.from('iu_request_traces').select('request_id',{count:'exact',head:true}).eq('session_id',sid).eq('kind',IU_TRACE).gte('created_at',new Date(Date.now()-86400000).toISOString());
  if(quotaError)return js(503,{success:false,error:'iu_quota_unavailable',message:'No se pudo comprobar la cuota del análisis visual.'},origin);
  if((count||0)>=12)return js(429,{success:false,error:'iu_daily_visual_limit',message:'Límite de 12 análisis en 24 horas para proteger el presupuesto.'},origin);
  const kind=b.kind==='video'?'video':'image',question=s(b.question).trim().slice(0,4000)||'Describe lo visible en esta imagen.';
  const mode=['general','research','code','analysis','design','executive'].includes(s(b.mode))?s(b.mode):'general';
  const start=Date.now(),requestId=crypto.randomUUID();
- const {error:reservationError}=await db.from('iu_request_traces').insert({request_id:requestId,session_id:sid,kind:IU_TRACE,status:'processing',provider:'gemini_native',model_name:model,metadata:{surface:'iu_render',mode,media_kind:kind,frames:frames.length,raw_media_saved:false}});
+ const {error:reservationError}=await db.from('iu_request_traces').insert({request_id:requestId,session_id:sid,kind:IU_TRACE,status:'processing',provider,model_name:model,metadata:{surface:'iu_render',mode,media_kind:kind,frames:frames.length,raw_media_saved:false}});
  if(reservationError)return js(503,{success:false,error:'iu_quota_reservation_failed',message:'No fue posible reservar cuota visual.'},origin);
  const guidance:Record<string,string>={general:'Responde con naturalidad y precisión.',research:'No inventes fuentes ni enlaces.',code:'Si hay software, identifica texto de errores legible y pasos concretos de diagnóstico sin inventar logs.',analysis:'Distingue evidencia, incertidumbres e hipótesis verificables.',design:'Describe composición, legibilidad y cambios concretos cuando proceda.',executive:'Separa hechos visibles, riesgos y acciones sin inventar cifras.'};
  const policy=['Eres Universal Core WAE Visual Scan. Responde en español primero a la pregunta del usuario. Da observaciones concretas que realmente se vean.',kind==='video'?'Solo ves hojas visuales con cuatro capturas y etiquetas temporales. No has visto cada segundo ni escuchado el audio: nunca inventes diálogos ni eventos intermedios.':'Solo ves la(s) foto(s) enviadas; no supongas contenido fuera de cuadro.',guidance[mode],'No afirmes causalidad, identidades ni datos invisibles. Señala incertidumbre cuando importe; no agregues bibliografía, enlaces ni relleno.','Solicitud: '+question].join('\n');
@@ -74,16 +127,43 @@ async function iuVisual(req:Request,b:J,origin:string|null,url:string,service:st
    parts.push({text:kind==='video'?'Hoja temporal '+(i+1)+': '+frame.start+'s a '+frame.end+'s; lee las marcas internas de tiempo.':'Imagen '+(i+1)});
    parts.push({inline_data:{mime_type:frame.mime,data:frame.data}});
   });
-  const endpoint='https://generativelanguage.googleapis.com/v1beta/models/'+encodeURIComponent(model)+':generateContent';
-  const response=await fetch(endpoint,{method:'POST',headers:{'content-type':'application/json','x-goog-api-key':key},body:JSON.stringify({contents:[{role:'user',parts}],generationConfig:{maxOutputTokens:1800,temperature:0.2}}),signal:AbortSignal.timeout(45000)});
-  const responseBody=o(await response.json().catch(()=>({})));
-  if(!response.ok)throw Error('gemini_http_'+response.status);
-  const candidates=Array.isArray(responseBody.candidates)?responseBody.candidates:[],first=o(candidates[0]),content=o(first.content),parsedParts=Array.isArray(content.parts)?content.parts:[];
-  const reply=parsedParts.map(x=>s(o(x).text)).filter(Boolean).join('\n').trim();
-  if(!reply)throw Error('empty_visual_response');
-  const usage=o(responseBody.usageMetadata);
-  await db.from('iu_request_traces').update({status:'ok',total_latency_ms:Date.now()-start,input_tokens:Number(usage.promptTokenCount)||null,output_tokens:Number(usage.candidatesTokenCount)||null}).eq('request_id',requestId).eq('session_id',sid);
-  return js(200,{success:true,reply,provider:'gemini_native',model,mediaKind:kind,analyzedFrames:frames.length,videoScope:kind==='video'?'sampled_frames_only':'image',latencyMs:Date.now()-start},origin);
+  let reply='',inputTokens:number|null=null,outputTokens:number|null=null;
+  if(provider==='openrouter'){
+   const content:any[]=[{type:'text',text:policy}];
+   frames.forEach((frame,i)=>{
+    content.push({type:'text',text:kind==='video'?'Hoja temporal '+(i+1)+': '+frame.start+'s a '+frame.end+'s.':'Imagen '+(i+1)});
+    content.push({type:'image_url',image_url:{url:'data:'+frame.mime+';base64,'+frame.data}});
+   });
+   const response=await fetch('https://openrouter.ai/api/v1/chat/completions',{
+    method:'POST',headers:{'content-type':'application/json','authorization':'Bearer '+key,
+     'HTTP-Referer':IU_RENDER,'X-Title':'WAE Universal Core Visual'},
+    body:JSON.stringify({model,messages:[{role:'user',content}],max_tokens:1600,temperature:0.2,
+     provider:{data_collection:'deny',allow_fallbacks:false}}),
+    signal:AbortSignal.timeout(42000)
+   });
+   const result=o(await response.json().catch(()=>({})));
+   if(!response.ok)throw Error('openrouter_http_'+response.status);
+   const choices=Array.isArray(result.choices)?result.choices:[],message=o(o(choices[0]).message),
+    raw=message.content;
+   reply=(typeof raw==='string'?raw:Array.isArray(raw)?raw.map((p:unknown)=>s(o(p).text)).filter(Boolean).join('\n'):'').trim();
+   const usage=o(result.usage);
+   inputTokens=Number(usage.prompt_tokens)||null;outputTokens=Number(usage.completion_tokens)||null;
+   if(Number(usage.cost||0)>0)throw Error('provider_billing_guard_violation');
+  }else{
+   const endpoint='https://generativelanguage.googleapis.com/v1beta/models/'+encodeURIComponent(model)+':generateContent';
+   const response=await fetch(endpoint,{method:'POST',headers:{'content-type':'application/json','x-goog-api-key':key},
+    body:JSON.stringify({contents:[{role:'user',parts}],generationConfig:{maxOutputTokens:1800,temperature:0.2}}),
+    signal:AbortSignal.timeout(45000)});
+   const responseBody=o(await response.json().catch(()=>({})));
+   if(!response.ok)throw Error('gemini_http_'+response.status);
+   const candidates=Array.isArray(responseBody.candidates)?responseBody.candidates:[],first=o(candidates[0]),geminiContent=o(first.content),
+    parsedParts=Array.isArray(geminiContent.parts)?geminiContent.parts:[];
+   reply=parsedParts.map((p:unknown)=>s(o(p).text)).filter(Boolean).join('\n').trim();
+   const usage=o(responseBody.usageMetadata);
+   inputTokens=Number(usage.promptTokenCount)||null;outputTokens=Number(usage.candidatesTokenCount)||null;
+  }
+  await db.from('iu_request_traces').update({status:'ok',total_latency_ms:Date.now()-start,input_tokens:inputTokens,output_tokens:outputTokens}).eq('request_id',requestId).eq('session_id',sid);
+  return js(200,{success:true,reply,provider,model,mediaKind:kind,analyzedFrames:frames.length,videoScope:kind==='video'?'sampled_frames_only':'image',latencyMs:Date.now()-start},origin);
  }catch(e){
   const reason=e instanceof Error?e.message:'visual_provider_failed';
   await db.from('iu_request_traces').update({status:'error',error_code:reason.slice(0,100),total_latency_ms:Date.now()-start}).eq('request_id',requestId).eq('session_id',sid);
