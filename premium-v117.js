@@ -153,14 +153,14 @@
     const body=$('.rich-content,.rich-answer,.assistant-body',node);
     if(!body||!body.textContent?.trim()||body.classList.contains('error-text')||body.querySelector('.typing'))return;
     const sourceBox=$('.iu-sources',node);
-    const sourceLinks=sourceBox?$('a[href^="http"]',sourceBox):[];
+    const sourceLinks=sourceBox?$$('a[href^="http"]',sourceBox):[];
     const attachSourceAction=actions=>{
       if(!sourceLinks.length||$('[data-uc117="sources"]',actions))return;
       actions.appendChild(action('sources','⌕ Fuentes ('+sourceLinks.length+')',()=>{
         sourceBox.scrollIntoView({behavior:matchMedia('(prefers-reduced-motion: reduce)').matches?'auto':'smooth',block:'nearest'});
       }));
     };
-    const legacyRows=$('.answer-actions,.iu-answer-actions,.actions',node)
+    const legacyRows=$$('.answer-actions,.iu-answer-actions,.actions',node)
       .filter(row=>row!==existing&&!row.closest('.rich-content,.rich-answer,.assistant-body')
         &&!(node.matches('.turn.assistant')&&row.classList.contains('actions')));
     // Move real feedback controls, including click handlers, into the premium toolbar.
