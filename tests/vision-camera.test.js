@@ -34,7 +34,7 @@ test('enabled visual provider receives real image parts and video is described o
  const result=await analyzeVisual({kind:'video',frames:[{dataUrl:sample,timeSec:0},{dataUrl:sample,timeSec:3}],question:'¿Qué se ve?'},{WAE_VISION_ENABLED:'true',GEMINI_API_KEY:'test-key',GEMINI_VISION_MODEL:'test-vision'},fetcher);
  assert.equal(result.analyzedFrames,2);
  assert.equal(result.videoScope,'sampled_frames_only');
- assert.match(payload.contents[0].parts[0].text,/No afirmes haber visto todos los fotogramas/);
+ assert.match(payload.contents[0].parts[0].text,/no el audiovisual íntegro/);
  assert.equal(payload.contents[0].parts.filter(p=>p.inline_data).length,2);
 });
 
@@ -47,9 +47,29 @@ test('camera controls genuinely connect to pending capture, API route and x mode
  assert.match(camera,/facingMode:\{ideal:side\}/);
  assert.match(camera,/new MediaRecorder/);
  assert.match(camera,/recordTimer=setTimeout\(stopRecording,MAX_RECORD_MS\)/);
+ assert.match(camera,/const MAX_FRAMES=12/);
+ assert.match(camera,/WAEVideoScanV2\?\.prepare\(samples\)/);
+ assert.match(camera,/WAEVideoScanV2\.prepareFile\(file\)/);
  assert.match(camera,/stopStream\(\);dialog\.close\(\)/);
  assert.match(camera,/fetch\('\/api\/vision'/);
  assert.match(server,/\['\/api\/vision', visionHandler\]/);
  assert.match(html,/camera-v1\.js\?v=1/);
- assert.match(sw,/camera-v1\.js\?v=1/);
+ assert.match(sw,/camera-v1\.js\?v=2/);
+ assert.match(html,/video-scan-v2\.js\?v=1/);
+});
+
+test('WAE local video scan preserves timestamps and never transports the original recording',()=>{
+ const scan=read('video-scan-v2.js'),camera=read('camera-v1.js');
+ assert.match(scan,/MAX_SAMPLES=12,FRAMES_PER_SHEET=4,MAX_SHEETS=3/);
+ assert.match(scan,/function frameDelta/);
+ assert.match(scan,/function signature/);
+ assert.match(scan,/async function prepareFile\(file\)/);
+ assert.match(scan,/URL\.revokeObjectURL\(source\)/);
+ assert.match(scan,/audioTranscribed:false/);
+ assert.match(scan,/originalUploaded:false/);
+ assert.match(camera,/videoScope:kind==='video'\?'sampled_frames_only'/);
+ assert.match(camera,/El original y el audio no se envían a la IA/);
+ const source=read('lib/vision.js');
+ assert.match(source,/Reconstruye el orden visible y los cambios entre tiempos/);
+ assert.match(source,/No inventes costos, identidades ni métricas/);
 });
