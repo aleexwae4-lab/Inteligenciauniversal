@@ -37,7 +37,7 @@ function readStoredMessages(){
   }).filter(Boolean).slice(-60);
 }
 
-localStorage.setItem('wae.endpoint','/api/chat');
+try{localStorage.setItem('wae.endpoint','/api/chat')}catch(error){console.warn('[WAE] endpoint preference not persisted',error)}
 const state={
   mode:localStorage.getItem('wae.mode')||'general',
   endpoint:'/api/chat',
@@ -49,7 +49,12 @@ const state={
 };
 const modeLabels={general:'General',research:'Investigar',code:'Programar',analysis:'Analizar',design:'Diseñar',executive:'Ejecutivo'};
 
-function persistMessages(){try{localStorage.setItem('wae.messages',JSON.stringify(state.messages.slice(-60)))}catch(e){console.warn('[WAE] chat storage full',e);window.toast?.('Almacenamiento lleno: exporta tu historial.')}window.dispatchEvent(new CustomEvent('wae:messages-changed'))}
+function persistMessages(){
+ const recent=state.messages.slice(-60);
+ if(window.WAEStorage){window.WAEStorage.save('active',recent).catch(error=>{console.warn('[WAE] active chat archive failed',error);window.toast?.('No se pudo guardar el chat en este dispositivo. Exporta memoria desde Conversaciones.')})}
+ else try{localStorage.setItem('wae.messages',JSON.stringify(recent))}catch(error){console.warn('[WAE] active chat local storage failed',error);window.toast?.('No se pudo guardar el chat: exporta memoria desde Conversaciones.')}
+ window.dispatchEvent(new CustomEvent('wae:messages-changed'))
+}
 function renderMessages(){
   const t=$('#messages');t.innerHTML='';
   state.messages.forEach(renderMessage);scrollChat();
@@ -113,10 +118,13 @@ function switchWorkspaceTab(tab){
   if(tab==='html')updatePreview();
 }
 function markDirty(){$('#saveState').textContent='Cambios sin guardar'}
-function saveWorkspace(){
-  state.document=$('#documentEditor').innerHTML;state.html=$('#htmlEditor').value;
-  localStorage.setItem('wae.document',state.document);localStorage.setItem('wae.html',state.html);
+async function saveWorkspace(){
+ state.document=$('#documentEditor').innerHTML;state.html=$('#htmlEditor').value;
+ try{
+  if(window.WAEStorage){await window.WAEStorage.ready;await window.WAEStorage.save('document',state.document);await window.WAEStorage.save('html',state.html)}
+  else{localStorage.setItem('wae.document',state.document);localStorage.setItem('wae.html',state.html)}
   $('#saveState').textContent='Guardado';toast('Workspace guardado');
+ }catch(error){console.warn('[WAE] workspace archive failed',error);$('#saveState').textContent='Sin guardar';toast('No se guardó el Workspace. Exporta una copia antes de salir.')}
 }
 let previewTimer;
 function updatePreview(){
@@ -180,9 +188,16 @@ function saveSettings(){
   $('#settingsDialog').close();renderMessages();toast('Configuración guardada');
 }
 function initDocument(){
-  if(state.document)$('#documentEditor').innerHTML=state.document;
-  if(state.html)$('#htmlEditor').value=state.html;
-  updatePreview();
+ const editor=$('#documentEditor'),htmlEditor=$('#htmlEditor');
+ if(state.document)editor.innerHTML=state.document;
+ if(state.html)htmlEditor.value=state.html;
+ const initialDocument=editor.innerHTML,initialHtml=htmlEditor.value;
+ updatePreview();
+ if(window.WAEStorage){window.WAEStorage.ready.then(async()=>{
+  const [doc,html]=await Promise.all([window.WAEStorage.load('document'),window.WAEStorage.load('html')]);
+  if(typeof doc==='string'&&editor.innerHTML===initialDocument){state.document=doc;editor.innerHTML=doc}
+  if(typeof html==='string'&&htmlEditor.value===initialHtml){state.html=html;htmlEditor.value=html;updatePreview()}
+ }).catch(error=>console.warn('[WAE] Workspace archive recovery unavailable',error))}
 }
 function initInteractions(){
   $('#menuBtn').addEventListener('click',openDrawer);
