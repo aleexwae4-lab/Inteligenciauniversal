@@ -67,7 +67,7 @@ test('active mode badge survives the existing mobile polish styling and cache sh
  assert.match(css,/\.v2-mode-hidden/); // checked below separately if selector embeds hidden class
  assert.match(css,/\.wae-mode-visible/);
  assert.match(css,/display:inline-flex!important/);
- assert.match(sw,/wae-universal-render-canvas-factory-v32/);
+ assert.match(sw,/wae-universal-render-canvas-factory-v33/);
  assert.match(sw,/canvas-render-factory-v1\.js\?v=1/);
  assert.match(sw,/mode-feedback-v1\.css\?v=1/);
  assert.match(html,/premium-render-v1\.js\?v=10/);
