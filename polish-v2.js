@@ -3,7 +3,6 @@
   const $$=(s,r=document)=>[...r.querySelectorAll(s)];
 
   // Universal Core is the only intelligence identity exposed by the product UI.
-  localStorage.setItem('wae.autoVoice','false');
   localStorage.setItem('wae.coreName','Universal Core');
   try{state.autoVoice=false;state.coreName='Universal Core'}catch{}
 

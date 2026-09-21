@@ -1,0 +1,39 @@
+name: Universal Core Premium UI Guard
+on:
+  pull_request:
+    paths:
+      - 'premium-v117.js'
+      - 'gpt-experience-v1.js'
+      - 'polish-v2.js'
+      - 'test/universal-core-ui.test.js'
+      - 'test/premium-v117-hardening.test.js'
+      - 'tests/premium-response-actions-v117.test.js'
+      - '.github/workflows/premium-ui-guard.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'premium-v117.js'
+      - 'gpt-experience-v1.js'
+      - 'polish-v2.js'
+      - 'test/universal-core-ui.test.js'
+      - 'test/premium-v117-hardening.test.js'
+      - 'tests/premium-response-actions-v117.test.js'
+      - '.github/workflows/premium-ui-guard.yml'
+  workflow_dispatch:
+jobs:
+  premium-ui:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - name: Validate browser scripts
+        run: |
+          node --check premium-v117.js
+          node --check gpt-experience-v1.js
+          node --check polish-v2.js
+          node --check app.js
+      - name: Run premium frontend regressions
+        run: node --test test/premium-v117-hardening.test.js tests/premium-response-actions-v117.test.js test/universal-core-ui.test.js

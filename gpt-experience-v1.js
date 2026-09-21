@@ -60,11 +60,11 @@
     const latency=Number(data.latency_ms??data.latencyMs),mem=Number(data.memory_count??data.memory?.recalled),sources=sourcesFromRuntime(data),meta=document.createElement('div');meta.className='iu-answer-meta';
     const labels=[];if(Number.isFinite(latency)&&latency>0)labels.push(`${(latency/1000).toFixed(latency>9500?0:1)} s`);if(Number.isFinite(mem)&&mem>0)labels.push(`${mem} memorias`);if(sources.length)labels.push(`${sources.length} fuentes`);if(data.degraded!==true)labels.push('respuesta completa');
     meta.innerHTML=labels.map((x,i)=>`<span class="${i===labels.length-1&&data.degraded!==true?'ok':''}">${esc(x)}</span>`).join('');if(labels.length)node.appendChild(meta);
-    if(sources.length){const box=document.createElement('div');box.className='iu-sources';box.innerHTML='<div class="iu-sources-title">Fuentes</div>'+sources.slice(0,5).map((s,i)=>`<a class="iu-source" href="${esc(safeUrl(s.url))}" target="_blank" rel="noopener noreferrer">${esc(s.title||s.host||`Fuente ${i+1}`)}</a>`).join('');node.appendChild(box)}
+    if(sources.length&&!$('.iu-sources',node)){const box=document.createElement('div');box.className='iu-sources';box.innerHTML='<div class="iu-sources-title">Fuentes</div>'+sources.slice(0,5).map((s,i)=>`<a class="iu-source" href="${esc(safeUrl(s.url))}" target="_blank" rel="noopener noreferrer">${esc(s.title||s.host||`Fuente ${i+1}`)}</a>`).join('');node.appendChild(box)}
   }
   function enhanceMessages(){
     const texts=storedAssistantTexts(),nodes=$$('.message.assistant:not(#typingMessage):not(#iuLiveStream)'),offset=Math.max(0,texts.length-nodes.length);
-    nodes.forEach((node,i)=>{const body=$('.rich-answer',node),text=texts[i+offset];if(body&&text&&body.dataset.premiumRendered!=='1'){body.innerHTML=renderMarkdown(text);body.dataset.premiumRendered='1';attachCodeCopy(body)}});
+    nodes.forEach((node,i)=>{const body=$('.rich-answer',node),text=texts[i+offset];if(body&&text&&!body.classList.contains('rich-content')&&body.dataset.premiumRendered!=='1'){body.innerHTML=renderMarkdown(text);body.dataset.premiumRendered='1';attachCodeCopy(body)}});
     if(nodes.length)decorateLatest(nodes.at(-1));
     const live=$('#iuLiveStream');if(live&&nodes.at(-1)&&nodes.at(-1)!==live&&live.dataset.complete==='1')live.remove();
   }
@@ -75,7 +75,7 @@
     liveNode=document.createElement('article');liveNode.id='iuLiveStream';liveNode.className='message assistant iu-live-stream';liveNode.innerHTML='<div class="message-meta"><strong>Universal Core</strong><span>respondiendo</span></div><div class="rich-answer iu-live-body"></div><div class="iu-processing"><i class="iu-processing-dot"></i><span class="iu-processing-copy">Generando respuesta</span></div>';
     $('#messages')?.appendChild(liveNode);return liveNode;
   }
-  function renderLive(){renderTimer=null;const node=ensureLive(),body=$('.iu-live-body',node);if(body){body.innerHTML=renderMarkdown(liveText)+(node.dataset.complete==='1'?'':'<span class="iu-stream-cursor"></span>');attachCodeCopy(body)}node.scrollIntoView({block:'end',behavior:'smooth'})}
+  function renderLive(){renderTimer=null;const node=ensureLive(),body=$('.iu-live-body',node);if(body){body.innerHTML=renderMarkdown(liveText)+(node.dataset.complete==='1'?'':'<span class="iu-stream-cursor"></span>');attachCodeCopy(body)}const scroller=$('.chat-layout');if(scroller&&scroller.scrollHeight-scroller.scrollTop-scroller.clientHeight<200)scroller.scrollTop=scroller.scrollHeight}
   function scheduleLive(){if(!renderTimer)renderTimer=setTimeout(renderLive,70)}
   window.addEventListener('wae:stream-event',ev=>{
     const {event,data}=ev.detail||{};
