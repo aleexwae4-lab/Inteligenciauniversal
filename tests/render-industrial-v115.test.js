@@ -20,9 +20,11 @@ test('this Render edition has all fourteen industrial and civilization domains',
   const catalog=industrialCatalog();
   assert.equal(catalog.version,UNIVERSAL_INDUSTRIAL_VERSION);
   assert.equal(catalog.domains.length,14);
+  assert.equal(catalog.specialistProfileCount,21);
   for(const id of ['aerospace_aircraft','spaceflight','automotive','motorcycles','marine','engines','manufacturing','universities','computing','robotics','semiconductors','technology_plants','public_administration','society'])assert.ok(catalog.domains.some(x=>x.id===id),id);
   const status=runtimeHealth();
   assert.equal(status.industrialEngineering.version,UNIVERSAL_INDUSTRIAL_VERSION);
+  assert.equal(status.industrialEngineering.specialistProfiles,21);
   assert.equal(status.industrialEngineering.physicalExecution,false);
 });
 test('actual Render and browser classifiers agree on sector missions',()=>{
@@ -41,6 +43,7 @@ test('aircraft and spaceflight instructions require authoritative evidence and h
     const mission=planIndustrialMission(q);
     assert.equal(mission.safetyCritical,true);
     assert.match(industrialSystemInstruction(mission),/manuales autorizados/);
+    assert.match(industrialSystemInstruction(mission),/Arquitectura aeronáutica y espacial/);
     assert.match(industrialSystemInstruction(mission),/No inventes torques/);
     assert.match(industrialSystemInstruction(mission),/firma del personal competente/);
     assert.equal(publicIndustrialPlan(mission).executionPolicy,'human-approved-authoritative-procedures');
