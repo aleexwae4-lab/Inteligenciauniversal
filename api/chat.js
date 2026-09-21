@@ -10,6 +10,7 @@ import { runWithRequestSignal } from '../lib/network-deadlines-v46.js';
 import { userContextStateV92 } from '../lib/user-context-v92.js';
 import { classifySelfAwarenessV99, buildSelfAwarenessReplyV99, selfAwarenessSnapshotV99 } from '../lib/self-awareness-v99.js';
 import { contextualFollowupV103 } from '../lib/context-integrity-v103.js';
+import { classifyGroundedCompetitionV120, buildGroundedCompetitionReplyV120, GROUNDED_COMPETITION_VERSION } from '../lib/grounded-competition-v120.js';
 
 function normalizeFastPath(value='') {
   return String(value || '')
@@ -133,6 +134,19 @@ export default async function handler(req,res) {
   const userContext=userContextStateV92(runtimeBody);
   const contextualFollowup=contextualFollowupV103(runtimeBody.message||runtimeBody.task||'',runtimeBody.history||[]);
   const budget=responseBudgetMs(runtimeBody);
+  // Governed fallback matches the native mobile response when the native
+  // transport is unavailable. Bypass when research, attachments or context
+  // require the normal model/evidence pipeline.
+  const competition=!contextualFollowup&&!userContext.affectsGeneration?classifyGroundedCompetitionV120(runtimeBody):{eligible:false};
+  if(competition.eligible){
+    const reply=buildGroundedCompetitionReplyV120(competition);
+    res.setHeader('X-WAE-Grounded-Competition',GROUNDED_COMPETITION_VERSION);
+    return res.status(200).json({success:true,reply,speech_text:reply,
+      response:{content:reply,speechText:reply,metadata:{fastLane:true,fastLaneVersion:GROUNDED_COMPETITION_VERSION,comparativeSuperiorityVerified:false}},
+      provider:'universal_core',model:GROUNDED_COMPETITION_VERSION,fast_lane:true,
+      web_sources:[],comparison:{verified_superiority:false,targets:competition.targets.map(t=>t.name)},
+      input_interpretation:publicIntent(intent)});
+  }
   res.setHeader('X-WAE-Response-Budget-Ms',String(budget));
   res.setHeader('X-WAE-Long-Session','abortable-v47');
   res.setHeader('X-WAE-Answer-Assurance','v101');
