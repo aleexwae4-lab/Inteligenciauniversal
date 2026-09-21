@@ -93,15 +93,23 @@ async function iuSelectFreeVision(db:any,exclude:string[]=[]):Promise<IUVisionPr
  return null;
 }
 
-// Match Waeosgreen's visible-stream boundary; internal reasoning is never user-facing evidence.
-function iuVisibleFinal(raw:string){
- const text=s(raw);
- const visible=text.replace(/<(thought|think|analysis|reasoning)\b[^>]*>[\s\S]*?<\/\1\s*>/gi,'').trim();
- if(!visible||/<\/?(?:thought|think|analysis|reasoning)\b/i.test(visible))return '';
- if(/^\s*(?:[-*]\s*)?(?:Role|Language|Task|Constraints?|User Question|System Prompt|Developer Prompt)\s*:/i.test(visible))return '';
- if(/\b(?:no (?:has|hay|veo|recib[ií]|puedo ver) (?:adjuntado |una |ninguna )?(?:imagen|archivo)|no image (?:was |is )?(?:attached|provided|received))\b/i.test(visible))return '';
- return visible;
+// Fail closed on model scratchpads. Only the visible final can be released.
+function iuVisibleFinal(value:unknown):string{
+ let reply=s(value).trim();
+ if(!reply||reply.length>18000)return '';
+ for(const tag of ['thought','think','analysis']){
+  const block=new RegExp('<'+tag+'(?:\\s[^>]*)?>[\\s\\S]*?<\\/'+tag+'\\s*>','gi');
+  reply=reply.replace(block,'').trim();
+  if(new RegExp('<\\/?'+tag+'\\b','i').test(reply))return '';
+ }
+ const final=reply.match(/^<final\s*>([\s\S]*?)<\/final\s*>$/i);
+ if(final)reply=final[1].trim();
+ if(!reply||/<\/?(?:thought|think|analysis|final)\b/i.test(reply))return '';
+ if(/(?:^|\n)\s*(?:internal reasoning|chain.of.thought|scratchpad|private analysis|thoughts?)\s*:/im.test(reply))return '';
+ if(/\b(?:no (?:has|hay|veo|recib[ií]|puedo ver) (?:adjuntado |una |ninguna )?(?:imagen|archivo)|no image (?:was |is )?(?:attached|provided|received)|cannot (?:see|access) the image)\b/i.test(reply))return '';
+ return reply;
 }
+
 
 async function iuVisual(req:Request,b:J,origin:string|null,url:string,service:string){
  if(origin!==IU_RENDER)return js(403,{success:false,error:'iu_origin_denied'},origin);
@@ -167,7 +175,6 @@ async function iuVisual(req:Request,b:J,origin:string|null,url:string,service:st
     const choices=Array.isArray(result.choices)?result.choices:[],message=o(o(choices[0]).message),raw=message.content;
     reply=(typeof raw==='string'?raw:Array.isArray(raw)?raw.map((p:unknown)=>s(o(p).text)).filter(Boolean).join('\n'):'').trim();
     reply=iuVisibleFinal(reply);
-    reply=iuVisibleFinal(reply);
     const usage=o(result.usage);inputTokens=Number(usage.prompt_tokens)||null;outputTokens=Number(usage.completion_tokens)||null;
     if(reply)break;
    }
@@ -227,7 +234,7 @@ async function iuVisual(req:Request,b:J,origin:string|null,url:string,service:st
   }
   if(!reply)throw Error('iu_visual_no_visible_final');
   await db.from('iu_request_traces').update({status:'ok',model_name:model,total_latency_ms:Date.now()-start,input_tokens:inputTokens,output_tokens:outputTokens}).eq('request_id',requestId).eq('session_id',sid);
-  return js(200,{success:true,reply,provider,model,mediaKind:kind,analyzedFrames:frames.length,videoScope:kind==='video'?'sampled_frames_only':'image',latencyMs:Date.now()-start},origin);
+  return js(200,{success:true,reply,grounded:true,pixel_transport:'inline_data_uri',provider,model,mediaKind:kind,analyzedFrames:frames.length,videoScope:kind==='video'?'sampled_frames_only':'image',latencyMs:Date.now()-start},origin);
  }catch(e){
   const reason=e instanceof Error?e.message:'visual_provider_failed';
   await db.from('iu_request_traces').update({status:'error',error_code:reason.slice(0,100),total_latency_ms:Date.now()-start}).eq('request_id',requestId).eq('session_id',sid);
