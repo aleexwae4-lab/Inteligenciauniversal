@@ -1,5 +1,5 @@
 import {analyzeVisual,validateVisualRequest} from '../lib/vision.js';
-import {forwardVisual} from '../lib/vision-gateway.js';
+import {forwardVisual,bootstrapVisualSession} from '../lib/vision-gateway.js';
 import {allowRequest,originAllowed,applyHeaders} from '../lib/security.js';
 export default async function handler(req,res){
   applyHeaders(res);
@@ -10,6 +10,7 @@ export default async function handler(req,res){
     const body=req.body||{};
     // Guarded, authenticated WAE route first. Legacy local Gemini route stays opt-in
     // for callers without an IU session: never switch to a paid provider silently.
+    if(body.action==='bootstrap')return res.status(200).json(await bootstrapVisualSession(body));
     const result=body.session_id||body.session_secret
       ?await forwardVisual(body)
       :await analyzeVisual(body);
