@@ -91,7 +91,7 @@ async function getAIReply(message){
     return clean;
   }catch(e){
     console.warn('[WAE IU] runtime unavailable',e?.message||e);
-    return 'El núcleo de inteligencia está reconectando. Tu conversación sigue segura; vuelve a enviar el mensaje en unos segundos.';
+    return 'No pude recuperar la respuesta de los proveedores de IA en este momento. El texto de tu consulta permanece en esta sesión; puedes volver a intentarlo.';
   }finally{clearTimeout(timer)}
 }
 
@@ -198,7 +198,7 @@ function initInteractions(){
   $('#voiceBtn').addEventListener('click',()=>toast('Voz lista'));
   $('#settingsBtn').addEventListener('click',openSettings);
   $('#saveSettingsBtn').addEventListener('click',saveSettings);
-  $$('.nav-list button[data-view]').forEach(b=>b.addEventListener('click',()=>{toast(`${b.querySelector('span').textContent}: módulo preparado`);closeDrawer()}));
+  $$('.nav-list button[data-view]').forEach(b=>b.addEventListener('click',()=>{toast(`${b.querySelector('span').textContent}: no disponible todavía en esta versión`);closeDrawer()}));
   window.addEventListener('keydown',e=>{if(e.key==='Escape'&&$('#workspace').classList.contains('open'))closeWorkspace()});
 }
 function registerSW(){if('serviceWorker'in navigator&&location.protocol!=='file:')navigator.serviceWorker.register('./sw.js').catch(()=>{})}

@@ -25,11 +25,15 @@
     try{const raw=typeof input==='string'?input:input?.url;const url=new URL(raw,location.href);return url.origin===location.origin&&url.pathname==='/api/chat'}catch{return false}
   }
 
+  const selfQuery=value=>/(?:\bque tan inteligente (?:eres|es)\b|\b(?:quien|que) eres\b|\b(?:que|cuales) (?:capacidades|funciones) (?:tienes|tiene)\b|\bque (?:puedes|sabes) hacer\b|\b(?:como funcionas|que modelo eres|eres chatgpt|eres un modelo de openai|tienes acceso a internet|puedes buscar en internet)\b)/.test(String(value||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[¿?¡!.,:]/g,' ').replace(/\s+/g,' ').trim());
   window.fetch=async(input,init={})=>{
     if(!isLocalRuntime(input)||String(init.method||'GET').toUpperCase()!=='POST')return nativeFetch(input,init);
+    const request=typeof init.body==='string'?JSON.parse(init.body):{};
+    // Capability/identity answers come from the product's real server registry, not a generic upstream persona.
+    if(selfQuery(request.message))return nativeFetch(input,init);
     try{
       await bootstrap();
-      const incoming=typeof init.body==='string'?JSON.parse(init.body):{};
+      const incoming=request;
       const data=await edge({action:'chat',...sessionPayload(),conversation_id:localStorage.getItem(CONVERSATION_ID)||null,message:String(incoming.message||''),mode:String(incoming.mode||localStorage.getItem('wae.mode')||'general'),web_enabled:String(incoming.mode||'')==='research',attachments:window.__waeRuntimeAttachments||[]});
       if(data.conversation_id)localStorage.setItem(CONVERSATION_ID,data.conversation_id);
       window.__iuLastRuntime=data;
