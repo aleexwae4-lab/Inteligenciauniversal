@@ -56,3 +56,11 @@ test('mobile tables wrap long cells instead of clipping the second column',async
   assert.match(mobile,/\.assistant-body th,\.assistant-body td\{[^}]*white-space:normal;overflow-wrap:anywhere/);
   assert.doesNotMatch(mobile,/\.assistant-body th,\.assistant-body td\{[^}]*white-space:nowrap/);
 });
+
+
+test('governed chat fallback shares the grounded competition behavior',async()=>{
+  const chat=await readFile(new URL('../api/chat.js',import.meta.url),'utf8');
+  assert.match(chat,/classifyGroundedCompetitionV120\(runtimeBody\)/);
+  assert.match(chat,/buildGroundedCompetitionReplyV120\(competition\)/);
+  assert.match(chat,/X-WAE-Grounded-Competition/);
+});
