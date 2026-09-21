@@ -1,5 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import {readFileSync} from 'node:fs';
 import {sanitizeBlocks} from '../api/export.js';
 test('document export validates content and prevents unlimited server work',()=>{
  assert.deepEqual(sanitizeBlocks([{type:'h2',text:'  Vehículos eléctricos  '},{type:'li',text:'Prueba'}]),[{type:'h2',text:'Vehículos eléctricos'},{type:'li',text:'Prueba'}]);
