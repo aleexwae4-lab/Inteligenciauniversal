@@ -172,6 +172,7 @@ async function init(){
  window.addEventListener('wae:messages-changed',sync);render();
 }
 window.WAENavigation={
+ snapshotLocal:()=>{if(!db)return null;sync();return JSON.parse(JSON.stringify(db))},
  newConversation,
  getProjectContext:()=>{const p=project(active()?.projectId);return p?{instructions:short(p.instructions,3000),knowledge:short(p.knowledge,8000)}:{}},
  setRemoteConversations:(items,open)=>{remote=Array.isArray(items)?items:[];remoteLoad=open;render()},

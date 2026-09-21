@@ -1,0 +1,11 @@
+/* Render Universal Core · continuity archive controls live below native Settings. */
+#drawer .iu-backup-row{display:flex;align-items:center;gap:7px;padding:9px 0 0;min-width:0}
+#drawer .iu-backup-row button{
+ flex:1 1 0;min-width:0;min-height:37px;border:1px solid #304839;border-radius:10px;
+ background:#182720;color:#c9f3db;font:600 .69rem system-ui;cursor:pointer;
+ padding:7px 6px;white-space:nowrap;touch-action:manipulation;
+}
+#drawer .iu-backup-row button:hover{background:#214734}
+#drawer .iu-backup-row button:focus-visible{outline:2px solid #5ae7b0;outline-offset:2px}
+#drawer .iu-backup-help{display:block;margin-top:5px;color:#8aa99a;font-size:.57rem;line-height:1.35;text-align:center}
+@media(max-width:420px){#drawer .iu-backup-row{gap:5px}#drawer .iu-backup-row button{font-size:.66rem;min-height:38px}}

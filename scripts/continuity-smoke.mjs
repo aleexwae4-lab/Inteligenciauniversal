@@ -31,6 +31,9 @@ try{
  await probe('/',{contentType:'text/html'});
  await probe('/sw.js',{contentType:'text/javascript'});
  await probe('/wae-answer-widgets-v1.js',{contentType:'text/javascript'});
+ await probe('/continuity-backup-v7.js',{contentType:'text/javascript'});
+ await probe('/continuity-archive-core-v7.js',{contentType:'text/javascript'});
+ await probe('/continuity-backup-v7.css',{contentType:'text/css'});
  await probe('/api/chat',{statuses:[405]});
  for(const url of ['/api/no-such-route','/lib/providers.js','/server.js','/package.json','/tests/response-quality.test.js','/%2eenv','/missing.js']){
    await probe(url,{statuses:[404]});

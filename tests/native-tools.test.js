@@ -60,6 +60,6 @@ test('native image/video path is shared by camera and ordinary Adjuntar, not tie
   assert.match(runtime,/const media=\[\.\.\.files\]\.some/);
   assert.match(html,/universal-tools-v1\.js\?v=1/);
   assert.match(sw,/universal-tools-v1\.js\?v=1/);
-  assert.match(sw,/wae-universal-render-answer-experience-v35/);
+  assert.match(sw,/wae-universal-render-continuity-v36/);
  assert.match(sw,/canvas-render-factory-v1\.js\?v=1/);
 });
