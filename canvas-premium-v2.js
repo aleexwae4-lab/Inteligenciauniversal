@@ -106,55 +106,67 @@ function isStarter(value){
  const html=String(value||'');
  return /<h1>\s*Hola WAE OS\s*<\/h1>/i.test(html)&&/Edita este HTML y mira la vista previa/i.test(html);
 }
+function blueprintPrompt(kind,brief,shorter=false){
+ const type={landing:'landing page',slides:'presentación HTML con diapositivas',prototype:'prototipo con pantallas navegables',dashboard:'dashboard sin cifras inventadas',blank:'página HTML'}[kind]||kind;
+ const sections=(kind==='slides'||kind==='prototype')
+  ? '"slides":[{"title":"título original","body":"explicación concreta"}] (al menos 3 diapositivas o pantallas)'
+  : '"features":[{"title":"beneficio o producto","description":"descripción específica"}] (al menos 3 elementos distintos)';
+ return [
+  'Responde EXCLUSIVAMENTE un objeto JSON completo y válido. NO HTML, NO Markdown y NO texto fuera del JSON.',
+  'TIPO OBLIGATORIO: '+type+'. Encargo: '+brief,
+  'Usa la marca y el público solicitados. No uses WAE OS o una página genérica. No inventes dirección, precio, teléfono, métricas o resultados reales.',
+  'Campos requeridos: brand, eyebrow, headline, subheadline, cta, story, contact, palette (warm, forest, blue, violet o coral) y '+sections+'.',
+  'Escribe titulares editoriales y descripciones específicas del producto, evita relleno e ideas repetidas. Para presentaciones y prototipos, el tipo solicitado prevalece sobre la palabra landing del encargo.',
+  'Máximo '+(shorter?'1400':'1700')+' caracteres JSON. Cierra correctamente todos los corchetes. Canvas generará CSS, HTML y comportamiento mediante código probado.'
+ ].join('\n');
+}
 async function generate(){
-  const brief=$('#iuCanvasBrief')?.value.trim(),kind=$('#iuCanvasType')?.value||'landing',operation=$('#iuCanvasOperation')?.value||'create';
-  if(!brief)return toast('Describe la página, presentación o prototipo que quieres crear');
-  if(generating)return;
-  const existing=operation==='refine'?current():'';
-  const mode={landing:'landing page',slides:'presentación con diapositivas navegables',prototype:'prototipo interactivo',dashboard:'dashboard',blank:'página HTML'}[kind]||kind;
-  async function run(){
-    generating=true;
-    const button=$('#iuCanvasGenerate');button.disabled=true;button.textContent='Generando…';updateUndo();
-    notice('Diseñando HTML completo y responsivo. Tu versión sigue protegida.');
-    let lastError='';let complete=false;
-    const instructions=[
-      'Crea un solo archivo HTML completo, autocontenido y responsivo. Responde solamente desde <!doctype html> hasta </html>.',
-      'Tipo: '+mode+'. Encargo: '+brief,
-      'Incluye meta viewport, CSS interno y JS mínimo para botones funcionales. Sin CDNs ni claves. No inventes datos reales.',
-      'Primera versión compacta, legible y bien terminada. Máximo 3600 caracteres. Cierra SIEMPRE </body></html>.',
-      existing?'Refina este código y devuelve TODO el HTML final, no un fragmento:\n'+existing.slice(0,5000):'Es una creación nueva.'
+ const brief=$('#iuCanvasBrief')?.value.trim(),kind=$('#iuCanvasType')?.value||'landing',operation=$('#iuCanvasOperation')?.value||'create';
+ if(!brief)return toast('Describe la página, presentación o prototipo que quieres crear');
+ if(generating)return;
+ const previous=current(),creating=operation==='create';
+ async function run(){
+  generating=true;
+  const button=$('#iuCanvasGenerate');button.disabled=true;button.textContent='Generando…';updateUndo();
+  let complete=false,lastError='';
+  notice(creating?'Diseñando contenido original; Canvas construirá después el HTML completo…':'Refinando el HTML existente sin perder el original…');
+  for(let attempt=0;attempt<2;attempt++){
+   const controller=new AbortController(),timeout=setTimeout(()=>controller.abort(),65000);
+   try{
+    const message=creating?blueprintPrompt(kind,brief,attempt>0):[
+     'Devuelve solamente un archivo HTML completo: <!doctype html> ... </html>. Sin Markdown.',
+     'Modifica el siguiente HTML para cumplir: '+brief,
+     'Conserva su identidad, secciones y botones salvo cambios expresamente pedidos. CSS y JS autocontenidos, responsive, sin CDNs, claves o datos inventados.',
+     'Entrega TODO el código final y las etiquetas de cierre.',
+     'HTML existente:\n'+previous.slice(0,attempt===0?11500:6500)
     ].join('\n\n');
-    const fallback=[
-      'REINTENTO: la respuesta anterior se truncó. Responde solo HTML COMPLETO, máximo 1900 caracteres.',
-      'Una sola pantalla para móvil, CSS dentro de style, sin explicaciones, sin fuentes externas, termina </body></html>.',
-      'Tipo '+mode+'. Objetivo: '+brief,
-      existing?'Conserva la función principal del código previo: '+existing.slice(0,1000):''
-    ].filter(Boolean).join('\n\n');
-    for(const [index,message] of [instructions,fallback].entries()){
-      const controller=new AbortController(),timeout=setTimeout(()=>controller.abort(),65000);
-      try{
-        const response=await fetch('/api/chat',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({message,mode:'code',canvas:true,canvas_direct:index===1,preferences:window.WAESettings?.getPromptSettings?.()||{},project:window.WAENavigation?.getProjectContext?.()||{}}),signal:controller.signal});
-        const data=await response.json().catch(()=>({}));
-        if(!response.ok||typeof data.reply!=='string')throw Error(data.error||'El motor no entregó HTML');
-        const html=validate(data.reply);
-        if(!html){lastError='La IA entregó HTML incompleto';if(index===0){notice('Respuesta incompleta; intentando una versión compacta…');continue}break}
-        apply(html,operation==='refine'?'Canvas mejorado. Puedes deshacer el cambio.':'Canvas creado. Revisa la vista previa.');
-        complete=true;break;
-      }catch(error){
-        console.warn('[Canvas AI attempt]',index+1,error);
-        lastError=error.name==='AbortError'?'Tiempo de espera del proveedor agotado':String(error.message||'Error de generación');
-        if(index===0)notice('El motor no completó la solicitud; reintentando en formato compacto…');
-      }finally{clearTimeout(timeout)}
-    }
-    if(!complete){
-      const hint=lastError+'. No modifiqué tu HTML. Puedes usar «＋ Plantilla» y personalizarla, o volver a generar.';
-      notice(hint);toast(hint);
-    }
-    generating=false;button.disabled=false;button.textContent='✦ Generar HTML';updateUndo();
+    const response=await fetch('/api/chat',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({
+     message,mode:'code',canvas:true,canvas_blueprint:creating,canvas_direct:true,
+     preferences:window.WAESettings?.getPromptSettings?.()||{},
+     project:window.WAENavigation?.getProjectContext?.()||{}
+    }),signal:controller.signal});
+    const data=await response.json().catch(()=>({}));
+    if(!response.ok||typeof data.reply!=='string')throw Error(data.message||data.error||'El motor no respondió');
+    let html;
+    if(creating){
+      const builder=window.WAECanvasBuilder;
+      if(!builder)throw Error('El constructor Canvas no cargó; actualiza la página');
+      html=builder.build(builder.parse(data.reply,kind,brief));
+    }else html=validate(data.reply);
+    if(!validate(html))throw Error('La respuesta no contiene HTML completo');
+    apply(html,creating?'Diseño original construido con contenido de IA y HTML completo.':'HTML refinado; puedes recuperar la versión anterior.');
+    complete=true;break;
+   }catch(error){
+    lastError=error?.name==='AbortError'?'Tiempo de espera agotado':String(error?.message||'Generación incompleta');
+    console.warn('[Canvas attempt]',attempt+1,lastError);
+    if(attempt===0)notice('Contenido insuficiente o fuera del encargo; reintentando sin sacrificar el diseño…');
+   }finally{clearTimeout(timeout)}
   }
-  if(operation==='create'&&current().trim()&&!isStarter(current())){
-    ask('Crear una nueva página guardará tu HTML anterior para poder deshacer. ¿Continuar?',run);
-  }else run();
+  if(!complete){const hint=lastError+'. Conservé tu Canvas; prueba otra instrucción o una plantilla editable.';notice(hint);toast(hint)}
+  generating=false;button.disabled=false;button.textContent='✦ Generar HTML';updateUndo();
+ }
+ if(creating&&previous.trim()&&!isStarter(previous))ask('Se guardará tu HTML anterior para poder recuperarlo. ¿Continuar?',run);
+ else run();
 }
 function loadTemplate(){
   if(generating)return;
