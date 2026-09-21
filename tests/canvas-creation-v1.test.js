@@ -111,13 +111,14 @@ test('unrepairable output fails closed without returning a fake artifact', async
 
 test('iterative refinement sends existing HTML to the builder without replacing the revision contract', async () => {
   const calls=[];
+  const completeArtifact=validHtml.replace('</main>', '<section>'+'Diseño final responsable, usable, y plenamente editado. '.repeat(75)+'</section></main>');
   const generated = await createPremiumCanvas({
     request:'Refina la paleta y conserva los controles de mi cafetería',
     kind:'landing',
     baseHtml:validHtml,
     generate:async ({message})=>{
       calls.push(message);
-      return {text:message.includes('Encargo original:')?validHtml:'Brief de diseño estratégico y QA'};
+      return {text:message.includes('Encargo original:')?completeArtifact:'Brief de diseño estratégico y QA'};
     }
   });
   assert.equal(generated.revision,true);
