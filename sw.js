@@ -1,5 +1,12 @@
-const CACHE='wae-universal-v5';
-const ASSETS=['./','./index.html','./styles.css','./polish-v2.css','./runtime-client.js','./app.js','./polish-v2.js','./manifest.webmanifest','./assets/logo.svg','./assets/logo-v2.svg'];
+const CACHE='wae-universal-render-premium-v1';
+const ASSETS=['./','./index.html','./styles.css','./polish-v2.css','./premium-render-v1.css?v=1','./runtime-client.js','./app.js','./polish-v2.js','./premium-render-v1.js?v=1','./manifest.webmanifest','./assets/logo.svg','./assets/logo-v2.svg'];
 self.addEventListener('install',event=>{event.waitUntil(caches.open(CACHE).then(cache=>cache.addAll(ASSETS)));self.skipWaiting()});
 self.addEventListener('activate',event=>{event.waitUntil(caches.keys().then(keys=>Promise.all(keys.filter(key=>key!==CACHE).map(key=>caches.delete(key)))).then(()=>self.clients.claim()))});
-self.addEventListener('fetch',event=>{const url=new URL(event.request.url);if(event.request.method!=='GET'||url.pathname.startsWith('/api/')||url.hostname.endsWith('.supabase.co'))return;event.respondWith(caches.match(event.request).then(cached=>cached||fetch(event.request).then(response=>{const copy=response.clone();caches.open(CACHE).then(cache=>cache.put(event.request,copy));return response}).catch(()=>caches.match('./index.html'))))});
+self.addEventListener('fetch',event=>{
+  const url=new URL(event.request.url);
+  if(event.request.method!=='GET'||url.origin!==self.location.origin||url.pathname.startsWith('/api/'))return;
+  event.respondWith(fetch(event.request).then(response=>{
+    if(response.ok){const copy=response.clone();event.waitUntil(caches.open(CACHE).then(cache=>cache.put(event.request,copy)));}
+    return response;
+  }).catch(()=>caches.match(event.request).then(cached=>cached||(event.request.mode==='navigate'?caches.match('./index.html'):Response.error()))));
+});
