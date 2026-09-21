@@ -132,7 +132,7 @@ function setMode(mode){
     pill?.after(helper);
   }
   if(helper){helper.textContent=modeDescriptions[mode]||'';helper.hidden=mode==='general'}
-  $('.capability-card').forEach(button=>{
+  $$('.capability-card').forEach(button=>{
     const selected=button.dataset.mode===mode;
     button.classList.toggle('active',selected);
     button.setAttribute('aria-pressed',String(selected));
