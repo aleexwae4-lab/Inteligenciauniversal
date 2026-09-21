@@ -1,0 +1,35 @@
+/* WAE Answer Experience v5 · native visual response components, Render only. */
+#messages .iu-rich .iu-widget{box-sizing:border-box;max-width:100%;min-width:0;margin:13px 0;padding:15px;border-radius:15px;background:linear-gradient(155deg,#101f26,#122c28);border:1px solid rgba(114,226,189,.27);box-shadow:0 6px 24px rgba(0,0,0,.12);overflow:hidden;color:#eafff4}
+#messages .iu-rich .iu-widget-head{display:flex;align-items:flex-start;justify-content:space-between;gap:9px}
+#messages .iu-rich .iu-widget-heading{min-width:0}
+#messages .iu-rich .iu-widget-eyebrow{display:block;font-size:.66rem;color:#85cdb0;letter-spacing:.04em;margin:0 0 5px}
+#messages .iu-rich .iu-widget-title{font-size:1.06rem;margin:0!important;line-height:1.34;font-weight:750;letter-spacing:-.014em;color:#eafff4}
+#messages .iu-rich .iu-widget-badge{flex:0 0 auto;border-radius:20px;padding:4px 8px;max-width:43%;font-size:.6rem;line-height:1.2;background:#164435;color:#9bf0c8;border:1px solid #24694b;overflow-wrap:anywhere}
+#messages .iu-rich .iu-widget-description{margin:8px 0 0!important;color:#c2d9cf;line-height:1.55;font-size:.82rem}
+#messages .iu-rich .iu-widget-metrics{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px;margin:12px 0 5px}
+#messages .iu-rich .iu-widget-metric{display:grid;align-content:start;gap:6px;padding:10px;border:1px solid rgba(169,229,206,.13);background:rgba(235,255,247,.065);border-radius:10px;min-width:0}
+#messages .iu-rich .iu-widget-metric-label{font-size:.62rem;color:#9dbdb0;overflow-wrap:anywhere}
+#messages .iu-rich .iu-widget-metric-value{font-size:1.12rem;line-height:1.2;overflow-wrap:anywhere;color:#ebfff4;font-weight:800}
+#messages .iu-rich .iu-widget-disclaimer,#messages .iu-rich .iu-widget-note{display:block;color:#8eb1a1;font-size:.65rem;line-height:1.4;margin:9px 0 0}
+#messages .iu-rich .iu-widget-actions{display:flex;flex-wrap:wrap;gap:7px;margin-top:12px}
+#messages .iu-rich .iu-widget-action{font:600 .74rem system-ui;border:1px solid rgba(111,230,172,.35);background:#1b4739;color:#d6ffe9;border-radius:10px;padding:9px 12px;min-height:36px;cursor:pointer;touch-action:manipulation}
+#messages .iu-rich .iu-widget-action:hover{background:#25624a}
+#messages .iu-rich .iu-widget-action:focus-visible{outline:2px solid #7bffc1;outline-offset:2px}
+#messages .iu-rich .iu-widget-chart{background:linear-gradient(155deg,#101a22,#102e28)}
+#messages .iu-rich .iu-widget-bars{display:grid;gap:10px;margin:14px 0 5px;min-width:0}
+#messages .iu-rich .iu-widget-bar-row{display:grid;grid-template-columns:minmax(55px,100px) minmax(0,1fr) minmax(35px,68px);align-items:center;gap:9px;min-width:0}
+#messages .iu-rich .iu-widget-bar-label{font-size:.72rem;color:#cfebdd;overflow-wrap:anywhere}
+#messages .iu-rich .iu-widget-bar-track{width:100%;min-width:0;height:11px;border-radius:10px;background:rgba(153,208,183,.13);overflow:hidden}
+#messages .iu-rich .iu-widget-bar-fill{display:block;height:100%;border-radius:10px;background:linear-gradient(90deg,#258f77,#61e4b1);min-width:0;transition:width .35s ease}
+#messages .iu-rich .iu-widget-bar-value{text-align:right;font-variant-numeric:tabular-nums;font-size:.7rem;color:#b0ffde;overflow-wrap:anywhere}
+@media(max-width:600px){
+ #messages .iu-rich .iu-widget{padding:11px;margin:10px 0;border-radius:12px}
+ #messages .iu-rich .iu-widget-title{font-size:.94rem}
+ #messages .iu-rich .iu-widget-description{font-size:.77rem}
+ #messages .iu-rich .iu-widget-metrics{gap:5px}
+ #messages .iu-rich .iu-widget-metric{padding:8px}
+ #messages .iu-rich .iu-widget-metric-value{font-size:.95rem}
+ #messages .iu-rich .iu-widget-bar-row{grid-template-columns:minmax(42px,76px) minmax(0,1fr) minmax(32px,57px);gap:6px}
+ #messages .iu-rich .iu-widget-bar-label,#messages .iu-rich .iu-widget-bar-value{font-size:.65rem}
+}
+@media(prefers-reduced-motion:reduce){#messages .iu-rich .iu-widget-bar-fill{transition:none}}

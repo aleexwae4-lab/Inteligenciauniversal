@@ -4,7 +4,7 @@
   const EDGE=`${SUPABASE_URL}/functions/v1/wae-local-voice-demo-v61`;
   const VISUAL_EDGE=`${SUPABASE_URL}/functions/v1/wae-ai-stream`;
   const nativeFetch=window.fetch.bind(window);
-  const responsePolicy='CALIDAD UNIVERSAL CORE: Responde primero a lo pedido, con criterio y especificidad. Distingue hechos, inferencias y límites. Si la pregunta exige actualidad, fundamenta lo que afirmas solo en fuentes recuperadas y pertinentes. No agregues fuentes tangenciales ni un listado de enlaces por defecto; sin evidencia, indica el límite. Para código, entrega cambios reproducibles, pruebas pertinentes y riesgos, sin afirmar ejecuciones que no hiciste. Usa Markdown, tablas o ejemplos únicamente cuando mejoren la explicación. Mantén un tono natural, sin relleno ni texto interno.';
+  const responsePolicy='CALIDAD UNIVERSAL CORE: Responde primero a lo pedido, con criterio y especificidad. Distingue hechos, inferencias y límites. Si la pregunta exige actualidad, fundamenta lo que afirmas solo en fuentes recuperadas y pertinentes. No agregues fuentes tangenciales ni un listado de enlaces por defecto; sin evidencia, indica el límite. Para código, entrega cambios reproducibles, pruebas pertinentes y riesgos, sin afirmar ejecuciones que no hiciste. Usa Markdown, tablas o ejemplos únicamente cuando mejoren la explicación. Mantén un tono natural, sin relleno ni texto interno. Contrato visual opcional WAE: si realmente mejora la respuesta puedes incluir un bloque de código ```wae-card con JSON válido {"title":"Título","description":"Resumen","badge":"Estado","metrics":[{"label":"Indicador","value":"—"}],"actions":[{"type":"workspace","label":"Abrir Workspace"}]}; o un bloque ```wae-chart con JSON válido {"title":"Título","data":[{"label":"Categoría","value":10}],"basis":"demo"}. Cierra ambos con tres acentos graves. No uses estos bloques por defecto ni si bastan párrafos, listas o tablas. Usa basis=user solo si todos los números los dio el usuario; si no hay cifras reales, evita gráficos o etiqueta basis=demo con claridad. No inventes acciones, resultados, enlaces, valores reales ni pruebas ejecutadas. Las acciones disponibles son copy, workspace o ask y deben ser relevantes.';
   function needsFreshWeb(message, mode){
     const q=String(message||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase();
     if(/\b(sin internet|sin buscar en internet|no busques en la web|no uses la web)\b/.test(q))return false;
@@ -123,6 +123,8 @@
       window.__iuLastRuntime=data;
       if(!incoming.canvas)queueMicrotask(()=>{updateRuntimeCard(data);loadConversations().catch(()=>{})});
       if(!String(data.reply||'').trim())throw new Error('empty_supabase_reply');
+      // A degraded upstream status sentence is not a successful answer; let the existing Render fallback try another configured model.
+      if(/la ruta generativa avanzada no est[aá] disponible|no existe evidencia p[uú]blica suficiente para responder sin inventar|ninguna ruta alcanz[oó] el umbral m[ií]nimo/i.test(String(data.reply)))throw new Error('degraded_supabase_reply');
       const reply=incoming.canvas?String(data.reply):withRetrievedSources(data.reply,data.web_sources,incoming.message);
       return new Response(JSON.stringify({reply,runtime:data.runtime,provider:data.provider,model:data.model,web_sources:data.web_sources||[]}),{status:200,headers:{'content-type':'application/json','cache-control':'no-store','x-wae-runtime':'supabase-primary'}});
     }catch(err){
