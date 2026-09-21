@@ -1,0 +1,52 @@
+/* Conversational builder: chat and live product first, technical editor by request. */
+#panel-factory.wf-agent-mode.active{grid-template-rows:auto minmax(0,1fr)!important}
+#panel-factory.wf-agent-mode .wf-toolbar,#panel-factory.wf-agent-mode .wf-footer{display:none!important}
+#panel-factory.wf-agent-mode .wf-head{flex:0 0 auto}
+#panel-factory .wf-stage{min-height:0;min-width:0;display:grid;grid-template-columns:minmax(260px,0.84fr) minmax(0,1.16fr);gap:1px;background:#243a32;overflow:hidden}
+#panel-factory .wf-agent{min-height:0;min-width:0;display:flex;flex-direction:column;background:#0d1915;overflow:hidden}
+#panel-factory .wf-agent-top{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:center;gap:6px;padding:12px;border-bottom:1px solid #253c32}
+#panel-factory .wf-agent-top strong{font-size:13px;color:#e3fff1}
+#panel-factory .wf-agent-top span{font-size:10px;color:#9dc9b2}
+#panel-factory .wf-agent-feed{min-height:0;flex:1 1 auto;overflow:auto;overscroll-behavior:contain;padding:12px;display:flex;flex-direction:column;gap:12px}
+#panel-factory .wf-agent-message{padding:11px 12px;border-radius:12px;max-width:95%;overflow-wrap:anywhere;background:#14251d;border:1px solid #2b473a}
+#panel-factory .wf-agent-message.user{align-self:flex-end;background:#164837;border-color:#286f54}
+#panel-factory .wf-agent-message small{display:block;color:#b3d9c4;font-size:10px;margin-bottom:5px}
+#panel-factory .wf-agent-message p{font-size:13px;line-height:1.55;margin:0;white-space:pre-wrap}
+#panel-factory .wf-agent-prompts{padding:5px 10px;display:flex;gap:6px;overflow-x:auto;scrollbar-width:none}
+#panel-factory .wf-agent-prompts button{font-size:11px;white-space:nowrap;padding:7px 10px}
+#panel-factory .wf-agent-form{padding:10px;border-top:1px solid #253c32;display:grid;gap:7px;flex:0 0 auto;min-width:0}
+#panel-factory .wf-agent-form label{font-size:12px;font-weight:650}
+#panel-factory #wfAgentText{box-sizing:border-box;width:100%;max-width:100%;min-height:56px;max-height:130px;resize:vertical;border:1px solid #355143;border-radius:11px;padding:10px;background:#111f1a;color:#edfff4;font:13px/1.45 system-ui}
+#panel-factory #wfAgentText:focus-visible{outline:2px solid #45e3a4}
+#panel-factory .wf-agent-actions{display:flex;flex-wrap:wrap;gap:6px}
+#panel-factory .wf-agent-actions button{font-size:11px;padding:9px;min-width:0}
+#panel-factory .wf-agent-actions .wf-agent-primary{background:#38dca0;color:#062016;border:0;font-weight:750;flex:1 1 80px}
+#panel-factory .wf-agent-actions .wf-agent-primary:disabled{opacity:.5;cursor:wait}
+#panel-factory .wf-agent-status{font-size:11px;line-height:1.4;color:#a0cbb7;min-height:1em}
+#panel-factory .wf-agent-status[data-error="true"]{color:#ffb4a8}
+#panel-factory.wf-agent-mode .wf-body{grid-template-columns:minmax(0,1fr);grid-template-rows:minmax(0,1fr);height:100%;min-height:0;min-width:0}
+#panel-factory.wf-agent-mode #wfFiles,#panel-factory.wf-agent-mode .wf-code{display:none}
+#panel-factory.wf-agent-mode .wf-preview{min-height:0;min-width:0}
+#panel-factory.wf-agent-mode .wf-preview .wf-label{font-size:12px;color:#c0e5d0}
+#panel-factory.wf-agent-mode.wf-code-visible .wf-toolbar,#panel-factory.wf-agent-mode.wf-code-visible .wf-footer{display:flex!important}
+#panel-factory.wf-agent-mode.wf-code-visible.active{grid-template-rows:auto auto minmax(0,1fr) auto!important}
+#panel-factory.wf-agent-mode.wf-code-visible #wfFiles{display:flex}
+#panel-factory.wf-agent-mode.wf-code-visible .wf-code{display:flex}
+#panel-factory.wf-agent-mode.wf-code-visible .wf-body{grid-template-columns:110px minmax(0,1fr) minmax(0,1fr)}
+@media(max-width:899px){
+ #panel-factory.wf-agent-mode.active{grid-template-rows:auto minmax(0,1fr)!important}
+ #panel-factory .wf-stage{grid-template-columns:minmax(0,1fr);grid-template-rows:minmax(220px,1fr) minmax(170px,.86fr)}
+ #panel-factory .wf-agent-top{padding:6px 10px}
+ #panel-factory .wf-agent-feed{padding:7px 10px;gap:7px}
+ #panel-factory .wf-agent-message{padding:8px 9px}
+ #panel-factory .wf-agent-message p{font-size:12px}
+ #panel-factory .wf-agent-prompts{padding:4px 7px}
+ #panel-factory .wf-agent-form{padding:7px;gap:5px}
+ #panel-factory #wfAgentText{min-height:44px;max-height:80px;resize:none;padding:8px}
+ #panel-factory .wf-agent-actions{flex-wrap:nowrap;overflow-x:auto}
+ #panel-factory .wf-agent-actions button{white-space:nowrap;padding:7px 9px}
+ #panel-factory .wf-agent-status{font-size:10px}
+ #panel-factory.wf-agent-mode.wf-code-visible.active{grid-template-rows:auto auto minmax(0,1fr) auto!important}
+ #panel-factory.wf-agent-mode.wf-code-visible .wf-body{grid-template-columns:minmax(0,1fr);grid-template-rows:auto minmax(110px,1fr) minmax(110px,1fr)}
+ #panel-factory.wf-agent-mode.wf-code-visible .wf-stage{grid-template-rows:minmax(185px,.8fr) minmax(0,1fr)}
+}
