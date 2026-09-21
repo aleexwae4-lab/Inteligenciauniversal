@@ -29,4 +29,9 @@ test('UI offers document formats and working Canvas construction controls',async
  for(const key of ['iuCanvasType','iuCanvasGenerate','iuCanvasTemplate','iuCanvasDownload'])assert.match(ui,new RegExp(key));
  assert.match(html,/workspace-premium-v1\.js\?v=10/);
 });
-\ntest('Canvas v2 is loaded after legacy Canvas without replacing the original shell',()=>{\n const html=readFileSync(new URL('../index.html',import.meta.url),'utf8');\n assert.match(html,/canvas-premium-v2\\.js\\?v=11/);\n assert.match(html,/workspace-premium-v1\\.css\\?v=11/);\n});\n
+
+test('Canvas v2 is loaded after legacy Canvas without replacing the original shell',()=>{
+ const html=readFileSync(new URL('../index.html',import.meta.url),'utf8');
+ assert.match(html,/canvas-premium-v2\.js\?v=11/);
+ assert.match(html,/workspace-premium-v1\.css\?v=11/);
+});
