@@ -7,6 +7,7 @@ import chatHandler from './api/chat.js';
 import healthHandler from './api/health.js';
 import capabilitiesHandler from './api/capabilities.js';
 import tasksHandler from './api/tasks.js';
+import exportHandler from './api/export.js';
 
 const ROOT = fileURLToPath(new URL('.', import.meta.url));
 const PORT = Number(process.env.PORT || 10000);
@@ -18,6 +19,7 @@ const apiRoutes = new Map([
   ['/api/health', healthHandler],
   ['/api/capabilities', capabilitiesHandler],
   ['/api/tasks', tasksHandler],
+  ['/api/export', exportHandler],
 ]);
 
 const contentTypes = {
