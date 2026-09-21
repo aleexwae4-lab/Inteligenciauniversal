@@ -40,7 +40,7 @@ function rich(raw){
       const heads=cells(line); i+=1;
       let html='<div class="iu-table-scroll" role="region" tabindex="0" aria-label="Tabla de respuesta"><table><thead><tr>'+heads.map(c=>'<th>'+inline(c)+'</th>').join('')+'</tr></thead><tbody>';
       while(i+1<lines.length&&lines[i+1].includes('|')&&lines[i+1].trim()){
-        const row=cells(lines[++i]);html+='<tr>'+heads.map((_h,j)=>'<td>'+inline(row[j]||'')+'</td>').join('')+'</tr>';
+        const row=cells(lines[++i]);html+='<tr>'+heads.map((h,j)=>'<td data-label="'+esc(text(h).replace(/[\x60*_~]/g,'').slice(0,90))+'">'+inline(row[j]||'')+'</td>').join('')+'</tr>';
       }
       html+='</tbody></table></div>';out.push(html);continue;
     }
