@@ -6,7 +6,7 @@ const all=(s,r=document)=>[...r.querySelectorAll(s)];
 const toast=t=>window.toast?.(t);
 let playing=null;
 function stop(){
- try{window.__waeVoice?.stop?.();window.__waeMobileVoice?.stop?.();speechSynthesis?.cancel?.()}catch{}
+ try{window.__waeVoice?.stop?.();window.__waeMobileVoice?.stop?.();window.speechSynthesis?.cancel?.()}catch{}
  if(playing){playing.textContent='▶ Escuchar';playing.setAttribute('aria-pressed','false')}
  playing=null;
 }
@@ -113,7 +113,7 @@ document.addEventListener('click',e=>{
  const node=b.closest('.message.assistant,.turn.assistant');
  if(node&&b.matches('.speak-answer')){e.preventDefault();e.stopImmediatePropagation();void speak(b,node);return}
  if(node&&b.matches('.copy-answer')){e.preventDefault();e.stopImmediatePropagation();void copy(messageText(node));return}
- if(b.matches('.avatar')){e.preventDefault();e.stopImmediatePropagation();window.__WAE_PRODUCT_MODULES_V92__?.openSettings?.()||q('#settingsBtn')?.click();return}
+ if(b.matches('.avatar')){e.preventDefault();e.stopImmediatePropagation();window.__WAE_PRODUCT_MODULES_V92__?.openSettings?q('#settingsBtn')&&window.__WAE_PRODUCT_MODULES_V92__.openSettings():q('#settingsBtn')?.click();return}
  const nav=b.closest('.nav-list button[data-view]');
  if(nav&&nav.dataset.view!=='projects'){e.preventDefault();e.stopImmediatePropagation();void navigate(nav.dataset.view)}
 },true);
