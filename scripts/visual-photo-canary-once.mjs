@@ -35,7 +35,10 @@ try{
   ...session,question:'Describe únicamente los dos colores de esta imagen, de izquierda a derecha. Evita inventar objetos.',
   kind:'image',frames:[{dataUrl:image,timeSec:0}],mode:'analysis'
  });
- const visible=String(result.reply||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase();
+ const safeReply=String(result.reply||'').trim();
+ if(!safeReply||/<\/?(?:thought|think|analysis|reasoning)\b/i.test(safeReply)||/^\s*(?:Role|Task|Constraints?)\s*:/i.test(safeReply))
+  throw Object.assign(Error('visual_visible_boundary_failed'),{code:'visual_visible_boundary_failed'});
+ const visible=safeReply.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase();
  console.log('[WAE Vision PHOTO CANARY] provider='+String(result.provider||'none').slice(0,55),
   'model='+String(result.model||'none').slice(0,85),
   'reply='+String(result.reply||'').slice(0,240).replace(/[\r\n]+/g,' '));
