@@ -15,7 +15,7 @@ test('Render multi-file project factory parses without altering backend or provi
 test('Render shell retains premium Canvas before additive multi-file project tab',()=>{
   const html=read('index.html');
   const canvas=html.indexOf('canvas-render-factory-v1.js?v=1');
-  const project=html.indexOf('factory-projects-render-v2.js?v=2');
+  const project=html.indexOf('factory-projects-render-v2.js?v=3');
   assert.ok(canvas>=0&&project>canvas);
   assert.match(html,/factory-projects-render-v2\.css\?v=2/);
   assert.match(html,/id="workspace"/);
