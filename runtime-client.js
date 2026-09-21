@@ -10,17 +10,27 @@
     if(mode==='research')return true;
     return /\b(hoy|ahora|actualizad[oa]s?|reciente[s]?|ultim[oa]s?|noticias|tiempo real|en vivo|vigente[s]?|cotizacion|tipo de cambio|precio[s]? actual(?:es)?|verifica|verificar|comprueba|busca en internet|busca en la web|investiga en la web|fuentes actuales|con fuentes|cita fuentes|jurisprudencia vigente|reforma legal|normativa vigente)\b/.test(q);
   }
-  function withRetrievedSources(reply, sources){
-    const answer=String(reply||'').trim();if(!answer||!Array.isArray(sources))return answer;
+  const wantsSources=question=>/\b(fuentes?|referencias?|bibliografia|cit[ae]s?|enlaces?|links?|sources?|references?)\b/i.test(String(question||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase());
+  const commonTerms=new Set('que como cual cuales donde cuando porque para sobre entre desde hasta acerca tema libro libros autor autores quiero dame dime conoces sabes explicame tienes con sin los las unas unos una uno del por fue son esta este estos estas ese esa esos esas mas muy todo toda todos todas fuente fuentes referencias bibliografia cita citas enlace enlaces link links actual actualidad informacion original pagina paginas sitio sitios oficial confiable verificada'.split(' '));
+  function topicTerms(value){
+    const normalized=String(value||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/\b4\b/g,'cuatro');
+    return new Set((normalized.match(/[a-z0-9]{4,}/g)||[]).filter(t=>!commonTerms.has(t)));
+  }
+  function withRetrievedSources(reply,sources,question){
+    const answer=String(reply||'').trim();
+    if(!answer||!Array.isArray(sources)||!wantsSources(question))return answer;
+    const queryTerms=topicTerms(question);if(!queryTerms.size)return answer;
     const seen=new Set(),lines=[];
     for(const item of sources){
-      const raw=typeof item==='string'?item:item?.url;if(typeof raw!=='string')continue;
-      let url;try{url=new URL(raw);if(!['https:','http:'].includes(url.protocol)||!url.hostname||/[<>\"\s]/.test(raw))continue}catch{continue}
-      if(seen.has(url.href))continue;seen.add(url.href);
-      const title=String(typeof item==='string'?url.hostname:item.title||item.name||url.hostname).replace(/[\r\n\[\]()]/g,' ').replace(/\s+/g,' ').slice(0,130).trim()||url.hostname;
-      lines.push('- ['+title+']('+url.href+')');if(lines.length>=6)break;
+      if(!item||typeof item!=='object'||typeof item.url!=='string'||!item.title)continue;
+      let url;try{url=new URL(item.url);if(!['https:','http:'].includes(url.protocol)||!url.hostname||/[<>"\s]/.test(item.url))continue}catch{continue}
+      if(seen.has(url.href)||answer.includes(url.href))continue;
+      const title=String(item.title).replace(/[\r\n\[\]()]/g,' ').replace(/\s+/g,' ').slice(0,130).trim();
+      const overlaps=[...topicTerms(title+' '+url.pathname)].filter(t=>queryTerms.has(t));
+      if(overlaps.length<Math.min(2,queryTerms.size)||(queryTerms.size===1&&overlaps[0].length<6))continue;
+      seen.add(url.href);lines.push('- ['+title+']('+url.href+')');if(lines.length>=3)break;
     }
-    return lines.length?answer+'\n\n### Fuentes recuperadas\n'+lines.join('\n'):answer;
+    return lines.length?answer+'\n\n### Fuentes relacionadas\n'+lines.join('\n'):answer;
   }
   const SESSION_ID='iu.sessionId',SESSION_SECRET='iu.sessionSecret',CONVERSATION_ID='iu.conversationId';
   if(!localStorage.getItem('wae.endpoint')||localStorage.getItem('wae.endpoint')==='/api/chat')localStorage.setItem('wae.endpoint','/api/chat');
@@ -60,7 +70,7 @@
       window.__iuLastRuntime=data;
       if(!incoming.canvas)queueMicrotask(()=>{updateRuntimeCard(data);loadConversations().catch(()=>{})});
       if(!String(data.reply||'').trim())throw new Error('empty_supabase_reply');
-      const reply=incoming.canvas?String(data.reply):withRetrievedSources(data.reply,data.web_sources);
+      const reply=incoming.canvas?String(data.reply):withRetrievedSources(data.reply,data.web_sources,incoming.message);
       return new Response(JSON.stringify({reply,runtime:data.runtime,provider:data.provider,model:data.model,web_sources:data.web_sources||[]}),{status:200,headers:{'content-type':'application/json','cache-control':'no-store','x-wae-runtime':'supabase-primary'}});
     }catch(err){
       console.warn('[WAE IU] Supabase primary unavailable; using Render fallback',err?.message||err);
