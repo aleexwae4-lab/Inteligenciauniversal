@@ -126,7 +126,7 @@ function enhance(article){
   article.dataset.iuRich='1';article.dataset.iuRaw=raw;
   const body=document.createElement('div');body.className='iu-rich';body.innerHTML=rich(raw);p.replaceWith(body);
   article.append(toolbar(article,raw));
-  if(allowAuto&&auto&&article===QA('#messages .message.assistant').at(-1)&&!/^El núcleo de inteligencia está reconectando/.test(raw)){
+  if(allowAuto&&auto&&!window.__waeHydratingHistory&&article===QA('#messages .message.assistant').at(-1)&&!/^El núcleo de inteligencia está reconectando/.test(raw)){
     const b=article.querySelector('.iu-voice');if(b)speak(article,b);
   }
 }

@@ -49,7 +49,7 @@ const state={
 };
 const modeLabels={general:'General',research:'Investigar',code:'Programar',analysis:'Analizar',design:'Diseñar',executive:'Ejecutivo'};
 
-function persistMessages(){localStorage.setItem('wae.messages',JSON.stringify(state.messages.slice(-60)))}
+function persistMessages(){try{localStorage.setItem('wae.messages',JSON.stringify(state.messages.slice(-60)))}catch(e){console.warn('[WAE] chat storage full',e);window.toast?.('Almacenamiento lleno: exporta tu historial.')}window.dispatchEvent(new CustomEvent('wae:messages-changed'))}
 function renderMessages(){
   const t=$('#messages');t.innerHTML='';
   state.messages.forEach(renderMessage);scrollChat();
@@ -81,7 +81,7 @@ async function getAIReply(message){
     const r=await fetch('/api/chat',{
       method:'POST',
       headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({message,mode:state.mode,history:state.messages.slice(0,-1).slice(-12),sessionId:localStorage.getItem('iu.sessionId')||'',attachments:window.__waeRuntimeAttachments||[],preferences:window.WAESettings?.getPromptSettings?.()||{}}),
+      body:JSON.stringify({message,mode:state.mode,history:state.messages.slice(0,-1).slice(-12),sessionId:localStorage.getItem('iu.sessionId')||'',attachments:window.__waeRuntimeAttachments||[],preferences:window.WAESettings?.getPromptSettings?.()||{},project:window.WAENavigation?.getProjectContext?.()||{}}),
       signal:c.signal
     });
     const d=await r.json().catch(()=>({}));
@@ -101,7 +101,7 @@ function setMode(mode){
   $$('.capability-card').forEach(b=>b.classList.toggle('active',b.dataset.mode===mode));
   $('#messageInput')?.focus();
 }
-function resetConversation(){state.messages=[];persistMessages();renderMessages();toast('Nueva conversación creada')}
+function resetConversation(){if(window.WAENavigation?.newConversation?.())return;state.messages=[];persistMessages();renderMessages();toast('Nueva conversación creada')}
 function openDrawer(){$('#drawer').classList.add('open');$('#drawer').setAttribute('aria-hidden','false');$('#scrim').classList.add('visible')}
 function closeDrawer(){$('#drawer').classList.remove('open');$('#drawer').setAttribute('aria-hidden','true');$('#scrim').classList.remove('visible')}
 function openWorkspace(){$('#workspace').classList.add('open');$('#workspace').setAttribute('aria-hidden','false');closeDrawer()}
@@ -205,4 +205,5 @@ function initInteractions(){
 }
 function registerSW(){if('serviceWorker'in navigator&&location.protocol!=='file:')navigator.serviceWorker.register('./sw.js').catch(()=>{})}
 
+window.WAEChatState={snapshot:()=>state.messages.map(m=>({...m})),restore:(messages,mode)=>{state.messages=Array.isArray(messages)?messages.map(m=>({...m})):[];persistMessages();renderMessages();if(mode)setMode(mode)},busy:()=>state.busy,mode:()=>state.mode};
 renderMessages();initDocument();initInteractions();setMode(state.mode);registerSW();

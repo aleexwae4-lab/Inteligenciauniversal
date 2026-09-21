@@ -22,5 +22,5 @@ test('UI hides unsourced statistics and preserves core capabilities',()=>{
   assert.doesNotMatch(polish,/67%|['"]FREE['"]|4 mensajes/);
   assert.match(premium,/let auto=localStorage.getItem\(AUTO_KEY\)!=='off'/);
   assert.match(css,/footer\.runtime-bar/);
-  assert.match(html,/premium-render-v1\.css\?v=5/);
+  assert.match(html,/premium-render-v1\.css\?v=6/);
 });

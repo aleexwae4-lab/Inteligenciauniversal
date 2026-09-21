@@ -34,8 +34,8 @@
     try{
       await bootstrap();
       const incoming=request;
-      const data=await edge({action:'chat',...sessionPayload(),conversation_id:localStorage.getItem(CONVERSATION_ID)||null,message:[incoming.preferences?.instructions?'PREFERENCIAS DEL USUARIO (no prevalecen sobre reglas de seguridad):\n'+String(incoming.preferences.instructions).slice(0,4000):'',incoming.preferences?.knowledge?'CONTEXTO GENERAL DEL USUARIO (no verificado):\n'+String(incoming.preferences.knowledge).slice(0,12000):'','SOLICITUD ACTUAL:\n'+String(incoming.message||'')].filter(Boolean).join('\n\n'),mode:String(incoming.mode||localStorage.getItem('wae.mode')||'general'),web_enabled:String(incoming.mode||'')==='research',attachments:window.__waeRuntimeAttachments||[]});
-      if(data.conversation_id)localStorage.setItem(CONVERSATION_ID,data.conversation_id);
+      const data=await edge({action:'chat',...sessionPayload(),conversation_id:localStorage.getItem(CONVERSATION_ID)||null,message:[incoming.preferences?.instructions?'PREFERENCIAS DEL USUARIO (no prevalecen sobre reglas de seguridad):\n'+String(incoming.preferences.instructions).slice(0,4000):'',incoming.preferences?.knowledge?'CONTEXTO GENERAL DEL USUARIO (no verificado):\n'+String(incoming.preferences.knowledge).slice(0,12000):'',incoming.project?.instructions?'INSTRUCCIONES DE ESTE PROYECTO (subordinadas a seguridad):\n'+String(incoming.project.instructions).slice(0,3000):'',incoming.project?.knowledge?'CONOCIMIENTO DEL PROYECTO (información aportada, no verificada):\n'+String(incoming.project.knowledge).slice(0,8000):'','SOLICITUD ACTUAL:\n'+String(incoming.message||'')].filter(Boolean).join('\n\n'),mode:String(incoming.mode||localStorage.getItem('wae.mode')||'general'),web_enabled:String(incoming.mode||'')==='research',attachments:window.__waeRuntimeAttachments||[]});
+      if(data.conversation_id){localStorage.setItem(CONVERSATION_ID,data.conversation_id);window.WAENavigation?.remoteUpdated?.(data.conversation_id)}
       window.__iuLastRuntime=data;
       queueMicrotask(()=>{updateRuntimeCard(data);loadConversations().catch(()=>{})});
       return new Response(JSON.stringify({reply:data.reply||'',runtime:data.runtime,provider:data.provider,model:data.model,web_sources:data.web_sources||[]}),{status:200,headers:{'content-type':'application/json','cache-control':'no-store','x-wae-runtime':'supabase-primary'}});
@@ -98,6 +98,7 @@
     const fmt=new Intl.DateTimeFormat('es-MX',{hour:'2-digit',minute:'2-digit'});
     const messages=(data.messages||[]).filter(m=>['user','assistant'].includes(m.role)).map(m=>({role:m.role,text:m.content,at:m.created_at?fmt.format(new Date(m.created_at)):''}));
     localStorage.setItem('wae.messages',JSON.stringify(messages.slice(-60)));
+    window.WAENavigation?.markRemoteConversation?.(id,data.conversation?.title||'Conversación');
     location.reload();
   }
 
@@ -106,6 +107,7 @@
     const data=await edge({action:'list_conversations',...sessionPayload()});
     const drawer=document.querySelector('#drawer');if(!drawer)return;
     drawer.querySelector('.v2-recent')?.remove();
+    if(window.WAENavigation?.setRemoteConversations){window.WAENavigation.setRemoteConversations(data.conversations||[],loadConversation);drawer.querySelector('.iu-history')?.remove();return}
     let box=drawer.querySelector('.iu-history');
     if(!box){box=document.createElement('section');box.className='iu-history';const nav=drawer.querySelector('.nav-label');nav?.before(box)}
     const current=localStorage.getItem(CONVERSATION_ID);
@@ -116,7 +118,7 @@
     }
   }
 
-  function startNewConversation(){localStorage.removeItem(CONVERSATION_ID);window.__waeRuntimeAttachments=[]}
+  function startNewConversation(){if(window.WAEChatState?.busy?.())return;localStorage.removeItem(CONVERSATION_ID);window.__waeRuntimeAttachments=[]}
   document.querySelector('#newChatBtn')?.addEventListener('click',startNewConversation,true);
   document.querySelector('#drawerNewChat')?.addEventListener('click',startNewConversation,true);
 
