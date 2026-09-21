@@ -8,7 +8,7 @@ import {
   hardenCanvasHtml,
 } from '../lib/canvas-engine-v1.js';
 
-const validHtml = '<!doctype html><html lang="es"><head><meta name="viewport" content="width=device-width,initial-scale=1"><style>body{font-family:system-ui}@media(max-width:600px){body{padding:1rem}}</style></head><body><main><h1>Cafetería de especialidad</h1><section>Producto real</section></main></body></html>' + ' '.repeat(1800);
+const validHtml = '<!doctype html><html lang="es"><head><title>Cafetería</title><meta name="viewport" content="width=device-width,initial-scale=1"><style>body{font-family:system-ui}@media(max-width:600px){body{padding:1rem}}</style></head><body><main><h1>Cafetería de especialidad</h1><section>Producto real</section></main></body></html>' + ' '.repeat(1800);
 
 test('canvas supports landing, presentation, dashboard and app intent', () => {
   assert.equal(CANVAS_ENGINE_VERSION, 'universal-canvas-creation/v1');
@@ -39,4 +39,21 @@ test('removes externally loaded scripts and embeds while retaining inline script
   assert.ok(safe.includes('Content-Security-Policy'));
   assert.ok(!safe.includes('example.com'));
   assert.ok(safe.includes('document.title="Demo"'));
+});
+
+
+test('production QA rejects apparent complete files that contain dead CTAs or external dependencies', () => {
+  assert.equal(auditCanvas(validHtml.replace('</main>', '<a href="#">Comprar</a></main>')).checks.noPlaceholders, false);
+  assert.equal(auditCanvas(validHtml.replace('</main>', '<img src="https://example.org/photo.png"></main>')).checks.noExternalDependencies, false);
+  assert.equal(auditCanvas(validHtml.replace('Cafetería', 'Lorem ipsum')).checks.noPlaceholders, false);
+});
+
+test('security hardening removes external resource loading and strips embeds', () => {
+  const candidate=validHtml.replace('</head>', '<link rel="stylesheet" href="https://example.org/style.css"><style>@import url(https://example.org/a.css);</style></head>')
+    .replace('</main>', '<object data="x"></object><embed src="https://example.org/x"></main>');
+  const safe=hardenCanvasHtml(candidate);
+  assert.ok(!safe.includes('example.org'));
+  assert.ok(!safe.includes('<object'));
+  assert.ok(!safe.includes('<embed'));
+  assert.equal(auditCanvas(safe).pass,true);
 });
