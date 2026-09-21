@@ -93,6 +93,16 @@ async function iuSelectFreeVision(db:any,exclude:string[]=[]):Promise<IUVisionPr
  return null;
 }
 
+// Match Waeosgreen's visible-stream boundary; internal reasoning is never user-facing evidence.
+function iuVisibleFinal(raw:string){
+ const text=s(raw);
+ const visible=text.replace(/<(thought|think|analysis|reasoning)\b[^>]*>[\s\S]*?<\/\1\s*>/gi,'').trim();
+ if(!visible||/<\/?(?:thought|think|analysis|reasoning)\b/i.test(visible))return '';
+ if(/^\s*(?:[-*]\s*)?(?:Role|Language|Task|Constraints?|User Question|System Prompt|Developer Prompt)\s*:/i.test(visible))return '';
+ if(/\b(?:no (?:has|hay|veo|recib[ií]|puedo ver) (?:adjuntado |una |ninguna )?(?:imagen|archivo)|no image (?:was |is )?(?:attached|provided|received))\b/i.test(visible))return '';
+ return visible;
+}
+
 async function iuVisual(req:Request,b:J,origin:string|null,url:string,service:string){
  if(origin!==IU_RENDER)return js(403,{success:false,error:'iu_origin_denied'},origin);
  if(Number(req.headers.get('content-length')||0)>1450000)return js(413,{success:false,error:'iu_visual_body_too_large'},origin);
@@ -156,6 +166,8 @@ async function iuVisual(req:Request,b:J,origin:string|null,url:string,service:st
     if(!response.ok){if(attempt===0&&[429,502,503].includes(response.status))continue;throw Error('google_gemma_http_'+response.status)}
     const choices=Array.isArray(result.choices)?result.choices:[],message=o(o(choices[0]).message),raw=message.content;
     reply=(typeof raw==='string'?raw:Array.isArray(raw)?raw.map((p:unknown)=>s(o(p).text)).filter(Boolean).join('\n'):'').trim();
+    reply=iuVisibleFinal(reply);
+    reply=iuVisibleFinal(reply);
     const usage=o(result.usage);inputTokens=Number(usage.prompt_tokens)||null;outputTokens=Number(usage.completion_tokens)||null;
     if(reply)break;
    }
@@ -209,9 +221,11 @@ async function iuVisual(req:Request,b:J,origin:string|null,url:string,service:st
    const candidates=Array.isArray(responseBody.candidates)?responseBody.candidates:[],first=o(candidates[0]),geminiContent=o(first.content),
     parsedParts=Array.isArray(geminiContent.parts)?geminiContent.parts:[];
    reply=parsedParts.map((p:unknown)=>s(o(p).text)).filter(Boolean).join('\n').trim();
+   reply=iuVisibleFinal(reply);
    const usage=o(responseBody.usageMetadata);
    inputTokens=Number(usage.promptTokenCount)||null;outputTokens=Number(usage.candidatesTokenCount)||null;
   }
+  if(!reply)throw Error('iu_visual_no_visible_final');
   await db.from('iu_request_traces').update({status:'ok',model_name:model,total_latency_ms:Date.now()-start,input_tokens:inputTokens,output_tokens:outputTokens}).eq('request_id',requestId).eq('session_id',sid);
   return js(200,{success:true,reply,provider,model,mediaKind:kind,analyzedFrames:frames.length,videoScope:kind==='video'?'sampled_frames_only':'image',latencyMs:Date.now()-start},origin);
  }catch(e){
