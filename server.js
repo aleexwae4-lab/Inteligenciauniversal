@@ -30,6 +30,23 @@ const ROOT = fileURLToPath(new URL('.', import.meta.url));
 const PORT = Number(process.env.PORT || 10000);
 const HOST = '0.0.0.0';
 const MAX_BODY_BYTES = Number(process.env.WAE_MAX_BODY_BYTES || 2_000_000);
+const UI_PROFILE = String(process.env.WAE_UI_PROFILE || 'enterprise').trim().toLowerCase();
+const UI_PROFILE_CLASS = UI_PROFILE === 'premium' ? 'wae-ui-premium' : 'wae-ui-enterprise';
+
+function applyUiProfile(html) {
+  if (typeof html !== 'string' || !html.includes('<body')) return html;
+  const marker = `<meta name="wae-ui-profile" content="${UI_PROFILE}">`;
+  let output = html.includes('name="wae-ui-profile"')
+    ? html.replace(/<meta name="wae-ui-profile" content="[^"]*">/, marker)
+    : html.replace('</head>', `  ${marker}\n</head>`);
+  output = output.replace(/<body([^>]*)>/, (match, attrs) => {
+    if (/class=/.test(attrs)) {
+      return '<body' + attrs.replace(/class=(["'])(.*?)\1/, (_m, q, classes) => `class=${q}${classes} ${UI_PROFILE_CLASS}${q}`) + '>';
+    }
+    return `<body${attrs} class="${UI_PROFILE_CLASS}">`;
+  });
+  return output;
+}
 
 // Compatibility markers retained for historical regression contracts only.
 // They are NOT injected by the v115 mobile shell:
@@ -210,7 +227,20 @@ async function serveFile(req, res, pathname) {
     res.setHeader('Cache-Control','public, max-age=300');
   }
 
+  res.setHeader('X-WAE-UI-Profile', UI_PROFILE);
   if (req.method === 'HEAD') return res.end();
+
+  if (ext === '.html') {
+    try {
+      const chunks = [];
+      for await (const chunk of createReadStream(filePath)) chunks.push(chunk);
+      return res.end(applyUiProfile(Buffer.concat(chunks).toString('utf8')));
+    } catch {
+      if (!res.headersSent) res.statusCode = 500;
+      return res.end('Internal Server Error');
+    }
+  }
+
   createReadStream(filePath)
     .on('error', () => {
       if (!res.headersSent) res.statusCode = 500;
