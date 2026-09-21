@@ -109,12 +109,12 @@ function safeStaticPath(pathname) {
   const segments=decoded.split('/').filter(Boolean);
   if(!segments.length||segments.some(part=>part==='..'||part.startsWith('.')))return null;
   const requested=segments.join('/');
-  if(/^(?:api|lib|scripts|tests|node_modules|\\.github|\\.git)(?:\\/|$)/i.test(requested))return null;
-  if(/^(?:server\\.js|package(?:-lock)?\\.json|yarn\\.lock|README\\.md)$/i.test(requested))return null;
+  if(/^(?:api|lib|scripts|tests|node_modules|\.github|\.git)(?:\/|$)/i.test(requested))return null;
+  if(/^(?:server\.js|package(?:-lock)?\.json|yarn\.lock|README\.md)$/i.test(requested))return null;
   if(segments.length>1&&segments[0]!=='assets')return null;
   const ext=extname(requested).toLowerCase();
   if(!contentTypes[ext])return null;
-  if(segments[0]==='assets'&&!/^\\.(?:svg|png|jpg|jpeg|webp|ico|woff|woff2)$/.test(ext))return null;
+  if(segments[0]==='assets'&&!/^\.(?:svg|png|jpg|jpeg|webp|ico|woff|woff2)$/.test(ext))return null;
   return join(ROOT,normalize(requested));
 }
 
