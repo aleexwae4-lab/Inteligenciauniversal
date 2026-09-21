@@ -48,5 +48,13 @@
  #panel-factory .wf-agent-status{font-size:10px}
  #panel-factory.wf-agent-mode.wf-code-visible.active{grid-template-rows:auto auto minmax(0,1fr) auto!important}
  #panel-factory.wf-agent-mode.wf-code-visible .wf-body{grid-template-columns:minmax(0,1fr);grid-template-rows:auto minmax(110px,1fr) minmax(110px,1fr)}
- #panel-factory.wf-agent-mode.wf-code-visible .wf-stage{grid-template-rows:minmax(185px,.8fr) minmax(0,1fr)}
+  #panel-factory.wf-agent-mode.wf-code-visible .wf-stage{grid-template-rows:minmax(185px,.8fr) minmax(0,1fr)}
+ /* One scrollable native workspace: avoid clipping the conversation, controls or
+    generated product when the Android keyboard reduces the viewport. */
+ #panel-factory .wf-stage{display:flex;flex-direction:column;overflow-y:auto;overflow-x:hidden;overscroll-behavior:contain;scrollbar-gutter:stable}
+ #panel-factory .wf-agent{flex:0 0 auto;overflow:visible;min-height:0}
+ #panel-factory .wf-agent-feed{flex:0 1 auto;min-height:112px;max-height:210px;overflow-y:auto}
+ #panel-factory.wf-agent-mode .wf-body{flex:0 0 440px;height:440px!important;min-height:440px;overflow:hidden}
+ #panel-factory.wf-agent-mode .wf-preview{height:100%}
+ #panel-factory.wf-agent-mode.wf-code-visible .wf-body{flex-basis:580px;height:580px!important;min-height:580px}
 }
