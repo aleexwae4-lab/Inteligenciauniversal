@@ -74,3 +74,9 @@ test('endpoint validates brief and revision size before consuming provider quota
  res=reply();await handler(request({request:'Necesito una landing para café',baseHtml:'x'.repeat(100001)}),res);
  assert.equal(res.statusCode,413);
 });
+test('Render Canvas build keeps external image inference separate and explicitly runnable',()=>{
+ const pkg=JSON.parse(read('package.json'));
+ assert.match(pkg.scripts.check,/tests\/canvas-factory-render-v1\.test\.js/);
+ assert.doesNotMatch(pkg.scripts.check,/visual-photo-canary-once\.mjs/);
+ assert.equal(pkg.scripts['check:vision:live'],'node scripts/visual-photo-canary-once.mjs');
+});
