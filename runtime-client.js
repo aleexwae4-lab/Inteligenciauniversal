@@ -3,7 +3,7 @@
   const SUPABASE_KEY='sb_publishable_2zXa35U9Z--xuy_mQekG9w_kY7AVlv-';
   const EDGE=`${SUPABASE_URL}/functions/v1/wae-local-voice-demo-v61`;
   const nativeFetch=window.fetch.bind(window);
-  const responsePolicy='CALIDAD UNIVERSAL CORE: Responde primero a lo pedido, con criterio y especificidad. Distingue hechos, inferencias y límites. Si la pregunta exige actualidad, solo usa fuentes realmente recuperadas y cita sus URLs; sin evidencia, indica el límite. Para código, entrega cambios reproducibles, pruebas pertinentes y riesgos, sin afirmar ejecuciones que no hiciste. Usa Markdown, tablas o ejemplos únicamente cuando mejoren la explicación. Mantén un tono natural, sin relleno ni texto interno.';
+  const responsePolicy='CALIDAD UNIVERSAL CORE: Responde primero a lo pedido, con criterio y especificidad. Distingue hechos, inferencias y límites. Si la pregunta exige actualidad, fundamenta lo que afirmas solo en fuentes recuperadas y pertinentes. No agregues fuentes tangenciales ni un listado de enlaces por defecto; sin evidencia, indica el límite. Para código, entrega cambios reproducibles, pruebas pertinentes y riesgos, sin afirmar ejecuciones que no hiciste. Usa Markdown, tablas o ejemplos únicamente cuando mejoren la explicación. Mantén un tono natural, sin relleno ni texto interno.';
   function needsFreshWeb(message, mode){
     const q=String(message||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase();
     if(/\b(sin internet|sin buscar en internet|no busques en la web|no uses la web)\b/.test(q))return false;
