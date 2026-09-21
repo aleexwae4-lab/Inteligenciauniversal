@@ -1,4 +1,18 @@
-import { allowRequest, originAllowed, applyHeaders } from '../lib/security.js';
+import { getClientIp, originAllowed, applyHeaders } from '../lib/security.js';
+
+// Canvas generation is costlier than chat; its quota MUST NOT consume the chat bucket.
+const canvasBuckets = new Map();
+function allowCanvasRequest(req) {
+  const now=Date.now(),ip=getClientIp(req);
+  const configured=Number(process.env.WAE_CANVAS_RATE_LIMIT_PER_MINUTE || 6);
+  const limit=Number.isFinite(configured)?Math.max(1,Math.min(60,configured)):6;
+  const bucket=canvasBuckets.get(ip)||{start:now,count:0};
+  if(now-bucket.start>=60000){bucket.start=now;bucket.count=0;}
+  bucket.count++;
+  canvasBuckets.set(ip,bucket);
+  if(canvasBuckets.size>5000)for(const [key,value] of canvasBuckets)if(now-value.start>120000)canvasBuckets.delete(key);
+  return bucket.count<=limit;
+}
 import { createPremiumCanvas, CANVAS_ENGINE_VERSION } from '../lib/canvas-factory-render-v1.js';
 
 export default async function handler(req, res) {
@@ -14,7 +28,7 @@ export default async function handler(req, res) {
       if (new URL(origin).host !== host) return res.status(403).json({ error:'origin_not_allowed' });
     } catch { return res.status(403).json({ error:'invalid_origin' }); }
   }
-  if (!allowRequest(req, Number(process.env.WAE_CANVAS_RATE_LIMIT_PER_MINUTE || 6), Number(process.env.WAE_CANVAS_IP_RATE_LIMIT_PER_MINUTE || 6))) {
+  if (!allowCanvasRequest(req)) {
     return res.status(429).json({ error: 'rate_limited', message: 'Espera un momento antes de crear otro producto.' });
   }
   const body = req.body && typeof req.body === 'object' ? req.body : {};
