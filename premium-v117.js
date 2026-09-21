@@ -152,12 +152,21 @@
     const existing=$('.uc117-actions',node);
     const body=$('.rich-content,.rich-answer,.assistant-body',node);
     if(!body||!body.textContent?.trim()||body.classList.contains('error-text')||body.querySelector('.typing'))return;
-    const legacyRows=$$('.answer-actions,.iu-answer-actions,.actions',node)
+    const sourceBox=$('.iu-sources',node);
+    const sourceLinks=sourceBox?$('a[href^="http"]',sourceBox):[];
+    const attachSourceAction=actions=>{
+      if(!sourceLinks.length||$('[data-uc117="sources"]',actions))return;
+      actions.appendChild(action('sources','⌕ Fuentes ('+sourceLinks.length+')',()=>{
+        sourceBox.scrollIntoView({behavior:matchMedia('(prefers-reduced-motion: reduce)').matches?'auto':'smooth',block:'nearest'});
+      }));
+    };
+    const legacyRows=$('.answer-actions,.iu-answer-actions,.actions',node)
       .filter(row=>row!==existing&&!row.closest('.rich-content,.rich-answer,.assistant-body')
         &&!(node.matches('.turn.assistant')&&row.classList.contains('actions')));
     // Move real feedback controls, including click handlers, into the premium toolbar.
     const feedbackButtons=legacyRows.flatMap(row=>$$('button[data-feedback]',row));
     if(existing){
+      attachSourceAction(existing);
       feedbackButtons.forEach(button=>existing.appendChild(button));
       legacyRows.forEach(row=>row.remove());
       return;
@@ -174,6 +183,7 @@
       action('auto','○ Voz desactivada',toggleAutoVoice),
       action('workspace','◇ Workspace',()=>openWorkspaceFrom(node))
     );
+    attachSourceAction(actions);
     feedbackButtons.forEach(button=>actions.appendChild(button));
     legacyRows.forEach(row=>row.remove());
     node.appendChild(actions);
