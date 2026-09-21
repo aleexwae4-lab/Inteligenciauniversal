@@ -87,7 +87,7 @@ async function build(){
     save();
     const action=refining?'Actualicé tu producto.':'Construí la primera versión de tu producto.';
     const detail=multiFile
-      ?'Proyecto de '+data.project.files.length+' archivos guardado y vista previa actualizada. Cambios: '+(data.changes||[]).map(c=>c.name).join(', ').slice(0,180)+'. La auditoría es estructural: no se ha desplegado un backend ni ejecutado una prueba de navegador.'
+      ?'Plan: '+String(data.plan||'Proyecto construido').slice(0,220)+'\nArchivos guardados: '+data.project.files.length+'. Cambios: '+(data.changes||[]).map(c=>c.name).join(', ').slice(0,130)+'. Vista previa actualizada. Auditoría estructural aprobada; backend y pruebas de navegador no ejecutados.'
       :'QA estructural aprobado. '+(data.experts?.length||0)+' responsabilidades registradas. La vista previa ya está actualizada; comprueba los botones y el contenido antes de publicarlo.';
     remember('assistant',action+' '+detail);
     state('Producto construido y guardado. Puedes pedirme otro cambio.');
