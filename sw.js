@@ -1,5 +1,5 @@
-const CACHE='wae-universal-render-premium-v15';
-const ASSETS=['./','./index.html','./styles.css','./polish-v2.css','./premium-render-v1.css?v=7','./workspace-premium-v1.css?v=13','./runtime-client.js?v=15','./app.js?v=11','./polish-v2.js?v=4','./speech-chunks.js?v=9','./premium-render-v1.js?v=9','./settings-premium-v1.js?v=5','./navigation-premium-v1.js?v=7','./workspace-premium-v1.js?v=11','./canvas-builder-v1.js?v=15','./canvas-premium-v2.js?v=15','./manifest.webmanifest','./assets/logo.svg','./assets/logo-v2.svg'];
+const CACHE='wae-universal-render-premium-v16';
+const ASSETS=['./','./index.html','./styles.css','./polish-v2.css','./premium-render-v1.css?v=7','./workspace-premium-v1.css?v=13','./runtime-client.js?v=15','./app.js?v=11','./polish-v2.js?v=4','./speech-chunks.js?v=9','./premium-render-v1.js?v=9','./settings-premium-v1.js?v=5','./navigation-premium-v1.js?v=7','./workspace-premium-v1.js?v=11','./canvas-builder-v1.js?v=16','./canvas-premium-v2.js?v=16','./manifest.webmanifest','./assets/logo.svg','./assets/logo-v2.svg'];
 self.addEventListener('install',event=>{event.waitUntil(caches.open(CACHE).then(cache=>cache.addAll(ASSETS)));self.skipWaiting()});
 self.addEventListener('activate',event=>{event.waitUntil(caches.keys().then(keys=>Promise.all(keys.filter(key=>key!==CACHE).map(key=>caches.delete(key)))).then(()=>self.clients.claim()))});
 self.addEventListener('fetch',event=>{
