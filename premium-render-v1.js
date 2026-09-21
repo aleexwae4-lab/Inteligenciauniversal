@@ -144,6 +144,22 @@ function initialize(){
     function refresh(){voiceControl.textContent=auto?'◉ Voz ON':'◎ Voz OFF';voiceControl.setAttribute('aria-pressed',String(auto));voiceControl.setAttribute('aria-label',auto?'Desactivar respuestas con voz':'Activar respuestas con voz')}
     voiceControl.addEventListener('click',e=>{e.stopImmediatePropagation();auto=!auto;localStorage.setItem(AUTO_KEY,auto?'on':'off');if(!auto)resetVoice();refresh();notify(auto?'Voz automática activada':'Voz automática desactivada')},true);refresh();
   }
+  const Recognition=window.SpeechRecognition||window.webkitSpeechRecognition;
+  if(Recognition&&voiceControl&&!Q('#iuMicBtn')){
+    const mic=document.createElement('button');mic.type='button';mic.id='iuMicBtn';mic.className='mini-btn iu-mic';mic.textContent='🎙';mic.title='Dictar mensaje';mic.setAttribute('aria-label','Dictar mensaje por micrófono');mic.setAttribute('aria-pressed','false');
+    voiceControl.after(mic);
+    let rec=null,active=false;
+    function micState(value){active=value;mic.setAttribute('aria-pressed',String(value));mic.title=value?'Detener dictado':'Dictar mensaje';mic.textContent=value?'■ Mic':'🎙'}
+    mic.addEventListener('click',()=>{
+      if(active){try{rec.stop()}catch(_){}micState(false);return}
+      try{
+        rec=new Recognition();rec.lang='es-MX';rec.interimResults=false;rec.continuous=false;
+        rec.onresult=(event)=>{const words=Array.from(event.results).map(r=>r[0]?.transcript||'').join(' ').trim();const input=Q('#messageInput');if(input&&words){input.value=[input.value.trim(),words].filter(Boolean).join(' ');input.dispatchEvent(new Event('input',{bubbles:true}));input.focus()}};
+        rec.onerror=(event)=>{micState(false);if(event.error!=='no-speech')notify('Micrófono no disponible: '+event.error)};
+        rec.onend=()=>micState(false);rec.start();micState(true);
+      }catch(_){micState(false);notify('Tu navegador no pudo iniciar el dictado')}
+    });
+  }
   QA('.v2-tool').forEach(b=>{if(b.title==='Escuchar'){b.textContent='■';b.title='Detener voz';b.addEventListener('click',e=>{e.stopImmediatePropagation();resetVoice();notify('Voz detenida')},true)}});
   const runtime=Q('.v2-runtime-copy');if(runtime&&/0 req|100%/.test(runtime.textContent||''))runtime.innerHTML='<strong>Universal Core</strong><small>Comprobando conexión…</small>';
   const efficiency=Q('.v2-efficiency');if(efficiency&&/100%/.test(efficiency.textContent||''))efficiency.innerHTML='<strong>CORE</strong><small>ONLINE</small>';
