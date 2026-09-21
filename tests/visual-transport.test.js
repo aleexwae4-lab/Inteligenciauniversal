@@ -90,7 +90,7 @@ test('real visual browser transport stays on Render origin for photo/video, reta
  assert.match(api,/bootstrapVisualSession\(body\)/);
  assert.match(camera,/window.WAEVisualRuntime.analyze/);
  assert.match(camera,/if\(preparation\)await preparation/);
- assert.match(runtime,/await ensureVisualSession\(\)/);
+ assert.doesNotMatch(block,/await ensureVisualSession\(\)/);
  assert.match(runtime,/if\(error\?\.code!=='iu_invalid_session'/);
 });
 
@@ -111,4 +111,15 @@ test('live readiness is IU-session-authenticated, zero-token and never claims im
  assert.match(canary,/session_secret:data\.session_secret/,'the authenticated health probe must supply the IU secret without logging it');
  assert.doesNotMatch(canary,/console\.log\([^\n]*session_secret/,'never print the IU secret');
  assert.match(edge,/if\(s\(b.action\)==='video_evidence_v131'\)return video/);
+});
+
+
+test('API prefers explicitly enabled Render-native vision and does not require IU bootstrap first',()=>{
+ const api=read('api/vision.js'),runtime=read('runtime-client.js');
+ assert.match(api,/process\.env\.WAE_VISION_ENABLED==='true'&&process\.env\.GEMINI_API_KEY/);
+ assert.match(api,/result=await analyzeVisual\(body\)/);
+ assert.match(api,/result\.transport='render_native_provider'/);
+ const block=runtime.slice(runtime.indexOf('window.WAEVisualRuntime='),runtime.indexOf('function isLocalRuntime'));
+ assert.doesNotMatch(block,/await ensureVisualSession\(\);/);
+ assert.match(block,/try\{return await visualRequest\(payload\)\}/);
 });

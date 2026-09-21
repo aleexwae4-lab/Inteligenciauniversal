@@ -91,17 +91,17 @@
   }
   window.WAEVisualRuntime=Object.freeze({
     analyze:async payload=>{
-      await ensureVisualSession();
+      // /api/vision is same-origin and may use the Render-native provider directly.
+      // Existing IU credentials are attached when available for the guarded gateway fallback,
+      // but lack/expiry of that session must not block a configured native provider.
       try{return await visualRequest(payload)}
       catch(error){
-        // An authentication rejection happens before any provider call. It is
-        // safe to renew once; never repeat a costly/in-flight model inference.
         if(error?.code!=='iu_invalid_session'&&error?.code!=='iu_session_required')throw error;
         await ensureVisualSession(true);
         return visualRequest(payload);
       }
     },
-    transport:'render_same_origin_iu'
+    transport:'render_native_or_guarded_gateway'
   });
 
   function isLocalRuntime(input){
