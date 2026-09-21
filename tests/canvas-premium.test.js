@@ -53,3 +53,11 @@ test('Canvas selected pane fills workspace regardless of device-width breakpoint
  assert.match(js,/Respuesta incompleta; intentando una versión compacta/);
  assert.match(js,/No modifiqué tu HTML/);
 });
+
+test('Canvas compact retry uses independent Render route with HTML-only system guidance',()=>{
+ const canvas=read('canvas-premium-v2.js'),client=read('runtime-client.js'),server=read('lib/runtime.js');
+ assert.match(canvas,/canvas_direct:index===1/);
+ assert.match(client,/request\.canvas_direct===true/);
+ assert.match(server,/payload\.canvas === true/);
+ assert.match(server,/exclusivamente un archivo HTML COMPLETO/);
+});

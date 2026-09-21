@@ -133,7 +133,7 @@ async function generate(){
     for(const [index,message] of [instructions,fallback].entries()){
       const controller=new AbortController(),timeout=setTimeout(()=>controller.abort(),65000);
       try{
-        const response=await fetch('/api/chat',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({message,mode:'code',canvas:true,preferences:window.WAESettings?.getPromptSettings?.()||{},project:window.WAENavigation?.getProjectContext?.()||{}}),signal:controller.signal});
+        const response=await fetch('/api/chat',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({message,mode:'code',canvas:true,canvas_direct:index===1,preferences:window.WAESettings?.getPromptSettings?.()||{},project:window.WAENavigation?.getProjectContext?.()||{}}),signal:controller.signal});
         const data=await response.json().catch(()=>({}));
         if(!response.ok||typeof data.reply!=='string')throw Error(data.error||'El motor no entregó HTML');
         const html=validate(data.reply);
