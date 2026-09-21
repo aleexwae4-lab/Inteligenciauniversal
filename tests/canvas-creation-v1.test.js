@@ -1,5 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
 import {
   CANVAS_ENGINE_VERSION,
   canvasKind,
@@ -105,4 +106,26 @@ test('unrepairable output fails closed without returning a fake artifact', async
     }),
     error=>error.code==='canvas_quality_gate_failed' && error.statusCode===422
   );
+});
+
+
+test('premium and enterprise shells mount the additive Canvas layer independently', () => {
+  const premium=readFileSync(new URL('../index.html',import.meta.url),'utf8');
+  const enterprise=readFileSync(new URL('../ui/enterprise/index.html',import.meta.url),'utf8');
+  for(const html of [premium,enterprise]){
+    assert.match(html,/canvas-creation-v1\.js\?v=1/);
+    assert.match(html,/id="htmlEditor"/);
+    assert.match(html,/sandbox="allow-scripts"/);
+  }
+  assert.match(premium,/data-wae-ui="premium"/);
+  assert.match(enterprise,/data-wae-ui="enterprise"/);
+});
+
+test('Render registers the new Canvas route without diverting main chat', () => {
+  const server=readFileSync(new URL('../server.js',import.meta.url),'utf8');
+  assert.match(server,/\['\/api\/canvas', canvasHandler\]/);
+  assert.match(server,/\['\/api\/chat', chatHandler\]/);
+  const sw=readFileSync(new URL('../sw.js',import.meta.url),'utf8');
+  assert.match(sw,/canvas-creation-v1\.js/);
+  assert.match(sw,/url\.pathname\.startsWith\('\/api\/'\)/);
 });
