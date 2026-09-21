@@ -107,7 +107,15 @@
     try{const raw=typeof input==='string'?input:input?.url;const url=new URL(raw,location.href);return url.origin===location.origin&&url.pathname==='/api/chat'}catch{return false}
   }
 
-  const selfQuery=value=>/(?:\bque tan inteligente (?:eres|es)\b|\b(?:quien|que) eres\b|\b(?:que|cuales) (?:capacidades|funciones) (?:tienes|tiene)\b|\bque (?:puedes|sabes) hacer\b|\b(?:como funcionas|que modelo eres|eres chatgpt|eres un modelo de openai|tienes acceso a internet|puedes buscar en internet)\b)/.test(String(value||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[¿?¡!.,:]/g,' ').replace(/\s+/g,' ').trim());
+  // Mirror lib/core-self-description.js. Broad substring matching caused
+  // "Se podría decir que eres equivalente a Google?" to bypass the AI.
+  const selfQuery=value=>{
+    const question=String(value||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase()
+      .replace(/[¿?¡!.,:]/g,' ').replace(/\s+/g,' ').trim()
+      .replace(/^(?:hola|oye|hey|buenas|disculpa|por favor)\s+/,'')
+      .replace(/^(?:dime|cuentame|puedes decirme|me puedes decir)\s+/,'');
+    return /^(?:(?:que|quien) eres(?: tu| exactamente| en realidad)?|que tan inteligente (?:eres|es)(?: tu)?|que modelo eres(?: tu)?|(?:que|cuales) (?:capacidades|funciones) (?:tienes|tiene)(?: tu)?|que (?:puedes|sabes) hacer(?: tu)?|como funcionas(?: tu)?|eres chatgpt|eres un modelo de openai|tienes acceso a internet|puedes buscar en internet)$/.test(question);
+  };
   window.fetch=async(input,init={})=>{
     if(!isLocalRuntime(input)||String(init.method||'GET').toUpperCase()!=='POST')return nativeFetch(input,init);
     const request=typeof init.body==='string'?JSON.parse(init.body):{};
