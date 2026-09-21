@@ -109,6 +109,40 @@ test('unrepairable output fails closed without returning a fake artifact', async
 });
 
 
+test('iterative refinement sends existing HTML to the builder without replacing the revision contract', async () => {
+  const calls=[];
+  const generated = await createPremiumCanvas({
+    request:'Refina la paleta y conserva los controles de mi cafetería',
+    kind:'landing',
+    baseHtml:validHtml,
+    generate:async ({message})=>{
+      calls.push(message);
+      return {text:message.includes('Encargo original:')?validHtml:'Brief de diseño estratégico y QA'};
+    }
+  });
+  assert.equal(generated.revision,true);
+  assert.equal(generated.quality.structural,'passed');
+  assert.equal(calls.length,4);
+  assert.ok(calls[3].includes('MODO REVISIÓN'));
+  assert.ok(calls[3].includes('HTML ACTUAL'));
+  await assert.rejects(createPremiumCanvas({request:'Refina este diseño',baseHtml:'<html>roto</html>',generate:async()=>({text:validHtml})}),error=>error.code==='invalid_canvas_revision');
+});
+
+test('desktop and native mobile expose revision, rollback and export controls', () => {
+  const desktop=readFileSync(new URL('../canvas-creation-v1.js',import.meta.url),'utf8');
+  const mobile=readFileSync(new URL('../canvas-native-mobile-v1.js',import.meta.url),'utf8');
+  const api=readFileSync(new URL('../api/canvas.js',import.meta.url),'utf8');
+  for(const source of [desktop,mobile]){
+    assert.match(source,/baseHtml/);
+    assert.match(source,/history/);
+    assert.match(source,/\[\.\.\.previous/);
+  }
+  assert.match(desktop,/waeCanvasRefine/);
+  assert.match(mobile,/wncRefine/);
+  assert.match(mobile,/wncExport/);
+  assert.match(api,/canvas_revision_too_large/);
+});
+
 test('premium and enterprise shells mount the additive Canvas layer independently', () => {
   const premium=readFileSync(new URL('../index.html',import.meta.url),'utf8');
   const enterprise=readFileSync(new URL('../ui/enterprise/index.html',import.meta.url),'utf8');
