@@ -82,7 +82,7 @@
     notify('Respuesta abierta en Workspace');
   }
   function renderVoiceLabels(){
-    const enabled=window.__waeVoice?.enabled??(localStorage.getItem('wae.autoVoice')!=='false');
+    const enabled=(window.__waeVoice||window.__waeMobileVoice)?.enabled??(localStorage.getItem('wae.autoVoice')!=='false');
     $$('.uc117-actions').forEach(actions=>{
       const auto=$('[data-uc117="auto"]',actions);
       const listen=$('[data-uc117="listen"]',actions);
@@ -100,7 +100,7 @@
     const main=$('#voiceBtn');if(main)main.setAttribute('aria-pressed',String(enabled));
   }
   async function toggleAutoVoice(){
-    const voice=window.__waeVoice;
+    const voice=window.__waeVoice||window.__waeMobileVoice;
     if(voice?.setEnabled){
       try{const enabled=await voice.setEnabled(!voice.enabled);if(!enabled)activeVoiceNode=null;renderVoiceLabels();notify(enabled?'Voz automática activada':'Voz automática desactivada');return}
       catch{notify('No se pudo cambiar la preferencia de voz');return}
@@ -112,7 +112,7 @@
     notify(enabled?'Voz automática activada':'Voz automática desactivada');
   }
   async function listen(node,raw){
-    const voice=window.__waeVoice;
+    const voice=window.__waeVoice||window.__waeMobileVoice;
     if(activeVoiceNode===node){
       activeVoiceNode=null;
       voice?.stop?.();
@@ -121,12 +121,21 @@
     }
     if(activeVoiceNode)voice?.stop?.();
     activeVoiceNode=node;renderVoiceLabels();
+    let temporarilyEnabled=false;
     try{
-      if(voice?.speak)await voice.speak(raw,{force:true});
-      else if(typeof window.speakAnswer==='function')window.speakAnswer(raw);
+      if(voice?.speak){
+        if(!voice.enabled&&voice===window.__waeMobileVoice){
+          await voice.setEnabled(true);temporarilyEnabled=true;
+          activeVoiceNode=node;renderVoiceLabels();
+        }
+        await voice.speak(raw,{force:true});
+      }else if(typeof window.speakAnswer==='function')window.speakAnswer(raw);
       else throw new Error('voice_unavailable');
     }catch{notify('La voz no está disponible en este dispositivo')}
-    finally{if(activeVoiceNode===node){activeVoiceNode=null;renderVoiceLabels()}}
+    finally{
+      if(temporarilyEnabled)await voice.setEnabled(false);
+      if(activeVoiceNode===node){activeVoiceNode=null;renderVoiceLabels()}
+    }
   }
   function action(kind,label,handler){
     const button=document.createElement('button');
@@ -137,12 +146,12 @@
   function decorate(node){
     if(!node?.isConnected||node.dataset.uc117Actions==='true'&&$('.uc117-actions',node))return;
     const body=$('.rich-content,.rich-answer,.assistant-body',node);
-    if(!body||!body.textContent?.trim())return;
+    if(!body||!body.textContent?.trim()||body.classList.contains('error-text')||body.querySelector('.typing'))return;
     const raw=responseText(node);
     if(!raw||raw===legacyGreeting)return;
     // Replace only legacy action rows, leaving sources, feedback and the message body intact.
     $$('.answer-actions,.iu-answer-actions,.actions',node)
-      .filter(row=>!row.closest('.rich-content,.rich-answer,.assistant-body'))
+      .filter(row=>!row.closest('.rich-content,.rich-answer,.assistant-body')&&!(node.matches('.turn.assistant')&&row.classList.contains('actions')))
       .forEach(row=>row.remove());
     const actions=document.createElement('div');
     actions.className='iu-answer-actions uc117-actions wae-actions';
