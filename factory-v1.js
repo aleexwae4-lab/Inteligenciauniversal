@@ -53,6 +53,6 @@ $('#wfInsertResponse').addEventListener('click',insertResponse);$('#wfRun').addE
 $('#wfExportFile').addEventListener('click',exportFile);$('#wfExportHTML').addEventListener('click',exportBundle);$('#wfExportProject').addEventListener('click',exportProject);
 $('#wfImport').addEventListener('click',()=>$('#wfImportFile').click());$('#wfImportFile').addEventListener('change',importProject);
 $('#exportBtn')?.addEventListener('click',onExport,true);$('#saveBtn')?.addEventListener('click',onSave,true);
-window.__waeFactoryV1={version:'1',save,preview,diagnostics,exportProject};}
+window.__waeFactoryV1={version:'1',save,preview,diagnostics,exportProject};if(new URLSearchParams(location.search).get('wae_factory')==='1'){setTimeout(()=>{$('#workspaceBtn')?.click();tab.click()},80)}}
 document.readyState==='loading'?document.addEventListener('DOMContentLoaded',init,{once:true}):init();
 })();
