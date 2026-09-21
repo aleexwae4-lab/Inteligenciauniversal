@@ -43,3 +43,13 @@ test('mobile PWA refreshes chat factory assets and does not cache API responses'
  assert.match(sw,/factory-agent-render-v3\.css\?v=3/);
  assert.match(sw,/url\.pathname\.startsWith\('\/api\/'\)/);
 });
+
+
+test('premium leap preserves recent product intent and still caps the Canvas request',()=>{
+ const agent=read('factory-agent-render-v3.js');
+ assert.match(agent,/Contexto acumulado del proyecto/);
+ assert.match(agent,/filter\(m=>m\.role==='user'\)\.slice\(-5\)/);
+ assert.match(agent,/\.slice\(0,3400\)/);
+ assert.match(agent,/request:mission/);
+ assert.match(agent,/especialistas.*construcci.n.*QA/i);
+});
