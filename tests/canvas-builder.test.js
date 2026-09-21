@@ -41,3 +41,15 @@ test('presentation and prototype are interactive, contextual, and not fake numer
   assert.match(html,/<\/body><\/html>$/);
  }
 });
+
+test('offline drafts are clearly labeled, specific to user brief, and generated for chosen artifact kind',()=>{
+ for(const kind of ['landing','slides','prototype']){
+  const result=builder.draft('Crear una landing para Café Aroma',kind);
+  assert.match(result.html,/Café Aroma/i);
+  assert.match(result.html,/Borrador local ilustrativo/);
+  assert.match(result.html,/no generado por IA/);
+  assert.doesNotMatch(result.html,/WAE OS · LANDING PAGE|Tu próximo gran producto/);
+  if(kind==='slides')assert.match(result.html,/Diapositiva 3/);
+  if(kind==='prototype')assert.match(result.html,/Paso 03/);
+ }
+});
