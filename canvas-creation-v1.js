@@ -4,7 +4,7 @@
   if (window.__waeCanvasCreationV1) return;
   const $ = (selector, root=document) => root.querySelector(selector);
   const KIND = {
-    landing:'Landing page', presentation:'Presentación', dashboard:'Dashboard', app:'Aplicación'
+    landing:'Landing page', presentation:'Presentación', dashboard:'Dashboard', app:'Aplicación', website:'Sitio web', ecommerce:'E-commerce', report:'Informe'
   };
   let busy = false, lastAutomatic = '', lastAutomaticAt = 0;
   const css = document.createElement('style');
@@ -46,6 +46,9 @@
     const q=String(message).normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase();
     if (/\b(presentacion|diapositivas|pitch deck|slides)\b/.test(q)) return 'presentation';
     if (/\b(dashboard|tablero|panel de control|cuadro de mando)\b/.test(q)) return 'dashboard';
+    if (/\b(tienda|ecommerce|e-commerce|catalogo|shop)\b/.test(q)) return 'ecommerce';
+    if (/\b(informe|reporte|report)\b/.test(q)) return 'report';
+    if (/\b(sitio web|website|portal|micrositio)\b/.test(q)) return 'website';
     if (/\b(app|aplicacion|prototipo|interfaz)\b/.test(q)) return 'app';
     return 'landing';
   }
@@ -53,7 +56,7 @@
   function productRequest(text) {
     const q=String(text||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().trim();
     return /^(crea|haz|construye|disena|genera|necesito|quiero|prepara|desarrolla|construyeme|generame)\b/.test(q)
-      && /\b(landing|pagina web|pagina de venta|presentacion|diapositivas|pitch deck|dashboard|tablero|panel de control|aplicacion|prototipo)\b/.test(q);
+      && /\b(landing|pagina web|pagina de venta|sitio web|website|portal|presentacion|diapositivas|pitch deck|dashboard|tablero|panel de control|aplicacion|prototipo|tienda|ecommerce|e-commerce|catalogo|informe|reporte)\b/.test(q);
   }
 
   async function create(request, kind, brand='', automatic=false, refine=false) {
@@ -130,7 +133,7 @@
     details.open=true;
     details.innerHTML='<summary>✦ Motor creativo multiagente <span>Canvas Pro</span></summary>'
       +'<textarea id="waeCanvasBrief" aria-label="Describe el producto" placeholder="Ej. Landing premium para una cafetería artesanal: marca, público, oferta, tono y contacto." maxlength="3500"></textarea>'
-      +'<div class="wae-canvas-grid"><select id="waeCanvasKind" aria-label="Tipo de producto"><option value="landing">Landing page</option><option value="presentation">Presentación</option><option value="dashboard">Dashboard</option><option value="app">Aplicación</option></select>'
+      +'<div class="wae-canvas-grid"><select id="waeCanvasKind" aria-label="Tipo de producto"><option value="landing">Landing page</option><option value="presentation">Presentación</option><option value="dashboard">Dashboard</option><option value="app">Aplicación</option><option value="website">Sitio web</option><option value="ecommerce">E-commerce</option><option value="report">Informe</option></select>'
       +'<input id="waeCanvasBrand" aria-label="Nombre de marca" placeholder="Marca (opcional)" maxlength="100"></div>'
       +'<button id="waeCanvasCreate" type="button">✦ Crear producto premium</button>'
       +'<button id="waeCanvasRefine" type="button" style="margin-top:5px;background:#24493b;color:#e7fff2">↻ Perfeccionar producto actual</button>'
