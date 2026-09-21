@@ -1,5 +1,5 @@
 import { executeMission } from '../lib/runtime.js';
-import { allowRequest, originAllowed, applyHeaders, getClientIp } from '../lib/security.js';
+import { allowRequest, originAllowed, applyHeaders } from '../lib/security.js';
 
 export default async function handler(req,res) {
   applyHeaders(res);
@@ -8,7 +8,8 @@ export default async function handler(req,res) {
   if (!allowRequest(req)) return res.status(429).json({error:'rate_limited'});
   try {
     const body = req.body || {};
-    const result = await executeMission({ ...body, userKey:body.userKey || body.sessionId || getClientIp(req) });
+    // Never use a shared public IP or a caller-selected cross-user key as a memory identity.
+    const result = await executeMission({ ...body, userKey:typeof body.sessionId==='string' ? body.sessionId : '' });
     return res.status(200).json(result);
   } catch (error) {
     const status = error.statusCode || (error.code === 'NO_PROVIDER' ? 503 : 502);

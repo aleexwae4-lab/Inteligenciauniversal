@@ -120,7 +120,8 @@
     if(data.conversation?.mode)localStorage.setItem('wae.mode',data.conversation.mode);
     const fmt=new Intl.DateTimeFormat('es-MX',{hour:'2-digit',minute:'2-digit'});
     const messages=(data.messages||[]).filter(m=>['user','assistant'].includes(m.role)).map(m=>({role:m.role,text:m.content,at:m.created_at?fmt.format(new Date(m.created_at)):''}));
-    localStorage.setItem('wae.messages',JSON.stringify(messages.slice(-60)));
+    if(window.WAEStorage){await window.WAEStorage.ready;await window.WAEStorage.save('active',messages.slice(-60))}
+    else localStorage.setItem('wae.messages',JSON.stringify(messages.slice(-60)));
     window.WAENavigation?.markRemoteConversation?.(id,data.conversation?.title||'Conversación');
     location.reload();
   }
