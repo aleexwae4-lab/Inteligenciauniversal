@@ -28,7 +28,8 @@ function initializeData(){
 }
 function sync(){
  if(muted||!db)return;
- const c=active();if(!c)return;
+ let c=active();if(!c&&messages().length&&db.conversations.length<30){c={id:uuid(),title:nameFrom(messages()),projectId:null,remoteId:localStorage.getItem(CLOUD)||null,mode:window.WAEChatState?.mode?.()||'general',messages:[],createdAt:now(),updatedAt:now()};db.conversations.unshift(c);db.active=c.id}
+ if(!c)return;
  c.messages=messages();c.mode=window.WAEChatState?.mode?.()||c.mode||'general';c.updatedAt=now();
  c.remoteId=localStorage.getItem(CLOUD)||c.remoteId||null;
  if(c.title==='Nueva conversación'&&c.messages.some(m=>m.role==='user'))c.title=nameFrom(c.messages);
@@ -38,7 +39,7 @@ function closeMenu(){$('#drawer')?.classList.remove('open');$('#drawer')?.setAtt
 function restore(c){
  muted=true;
  if(c.remoteId)localStorage.setItem(CLOUD,c.remoteId);else localStorage.removeItem(CLOUD);
- window.__waeRuntimeAttachments=[];window.WAEChatState?.restore?.(c.messages,c.mode||'general');muted=false;
+ window.__waeRuntimeAttachments=[];window.__waeHydratingHistory=true;window.WAEChatState?.restore?.(c.messages,c.mode||'general');muted=false;queueMicrotask(()=>{window.__waeHydratingHistory=false});
 }
 function newConversation(pid){
  if(window.WAEChatState?.busy?.()){window.toast?.('Termina la respuesta antes de cambiar de chat');return true}
