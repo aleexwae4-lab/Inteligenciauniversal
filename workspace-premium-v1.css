@@ -156,3 +156,120 @@
   max-width:none!important;
   justify-self:center!important;
 }
+
+
+/* Canvas + Document v13: fix the actual child count in mobile document grid. */
+#workspace #panel-document.active{
+  display:grid!important;
+  grid-template-columns:minmax(0,1fr)!important;
+  grid-template-rows:auto auto minmax(0,1fr)!important;
+  min-height:0!important;
+  height:100%!important;
+  overflow:hidden!important;
+  align-content:stretch!important;
+}
+#workspace #panel-document.active .toolbar{
+  grid-row:1!important;min-width:0!important;
+  max-width:100%!important;min-height:0!important;
+  overflow-x:auto!important;
+}
+#workspace #panel-document.active .iu-doc-export{
+  grid-row:2!important;
+  display:grid!important;
+  grid-template-columns:minmax(0,1fr) minmax(96px,.7fr) auto!important;
+  align-items:center!important;
+  gap:6px!important;
+  margin:0!important;
+  min-width:0!important;
+  padding:7px 9px!important;
+}
+#workspace #panel-document.active .iu-doc-export input,
+#workspace #panel-document.active .iu-doc-export select,
+#workspace #panel-document.active .iu-doc-export button{
+  width:100%!important;min-width:0!important;max-width:100%!important;
+  height:36px!important;min-height:36px!important;
+  margin:0!important;padding:7px 8px!important;
+  line-height:1.2!important;
+}
+#workspace #panel-document.active .iu-doc-export button{
+  width:auto!important;min-width:73px!important;
+}
+#workspace #panel-document.active #documentEditor{
+  box-sizing:border-box!important;
+  grid-row:3!important;
+  min-height:0!important;
+  height:auto!important;
+  width:calc(100% - 20px)!important;
+  max-width:calc(100% - 20px)!important;
+  margin:10px!important;
+  padding:clamp(16px,3vw,30px)!important;
+  overflow-y:auto!important;
+  overflow-x:auto!important;
+  align-self:stretch!important;
+  justify-self:stretch!important;
+  white-space:normal;
+  overscroll-behavior:contain;
+  -webkit-overflow-scrolling:touch;
+}
+#workspace #panel-document.active #documentEditor .placeholder-line{
+  margin-top:0!important;max-width:100%!important;
+}
+@media(max-width:420px){
+  #workspace #panel-document.active .iu-doc-export{
+    grid-template-columns:minmax(0,1fr) auto!important;
+    padding:6px 9px!important;
+  }
+  #workspace #panel-document.active .iu-doc-export input{
+    grid-column:1/-1!important;grid-row:1!important;
+  }
+  #workspace #panel-document.active .iu-doc-export select{
+    grid-column:1!important;grid-row:2!important;
+  }
+  #workspace #panel-document.active .iu-doc-export button{
+    grid-column:2!important;grid-row:2!important;
+  }
+}
+
+/* Canvas selection owns the whole available work area regardless of browser viewport quirks. */
+#workspace #panel-html.split-panel.active{
+  display:grid!important;
+  grid-template-columns:minmax(0,1fr)!important;
+  grid-template-rows:auto minmax(0,1fr)!important;
+  min-height:0!important;max-width:100%!important;
+  overflow:hidden!important;
+}
+#workspace #panel-html #iuCanvasViewBar{
+  grid-column:1!important;grid-row:1!important;
+  min-width:0!important;max-width:100%!important;
+  flex-wrap:nowrap!important;
+}
+#workspace #panel-html .code-pane,
+#workspace #panel-html .preview-pane{
+  grid-column:1!important;grid-row:2!important;
+  min-height:0!important;
+  width:100%!important;max-width:100%!important;
+  overflow:hidden!important;
+}
+#workspace #panel-html[data-iu-view="code"] .code-pane{
+  display:flex!important;flex-direction:column!important;
+}
+#workspace #panel-html[data-iu-view="code"] .preview-pane{display:none!important}
+#workspace #panel-html[data-iu-view="preview"] .code-pane{display:none!important}
+#workspace #panel-html[data-iu-view="preview"] .preview-pane{
+  display:grid!important;grid-template-rows:auto minmax(0,1fr)!important;
+  justify-content:stretch!important;align-items:stretch!important;
+  overflow:auto!important;
+}
+#workspace #panel-html[data-iu-view="code"] #htmlEditor{
+  min-height:0!important;height:100%!important;
+  width:100%!important;max-width:100%!important;
+  overflow:auto!important;
+}
+#workspace #panel-html[data-iu-view="preview"] #htmlPreview{
+  min-height:0!important;height:100%!important;
+  width:var(--iu-preview-width,100%)!important;
+  max-width:none!important;
+}
+#workspace #panel-html #iuCanvasControls{
+  max-height:min(34dvh,220px)!important;overflow-y:auto!important;
+}
