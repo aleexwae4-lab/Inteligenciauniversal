@@ -68,6 +68,8 @@ function applyUiProfile(html) {
 // X-WAE-Mobile-Response-Lifecycle','mobile-response-lifecycle/v97'
 // universal-core-mobile-v47-long-session
 // long-session-backpressure-v47
+// Historical capacity gateway token retained for regression traceability; current runtime uses v60.
+// api/capacity-chat-v58.js
 // mobile-v26.js?v=97
 // telemetry-throttle-v47.js?v=47
 // mobile-runtime-v47.js?v=47
