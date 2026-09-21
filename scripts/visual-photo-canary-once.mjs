@@ -1,6 +1,7 @@
 // One-time real photo canary. Synthetic colors, no user media; selected model must pass
 // live free-price + image-capability gate in iuSelectFreeVision or the call fails closed.
 import {bootstrapVisualSession,forwardVisual} from '../lib/vision-gateway.js';
+import {extractVisibleVisualReply} from '../lib/visual-final.js';
 import {deflateSync,inflateSync} from 'node:zlib';
 // Build a valid RGB PNG instead of relying on an accidentally truncated base64 literal.
 function crc32(bytes){
@@ -35,13 +36,12 @@ try{
   ...session,question:'Describe únicamente los dos colores de esta imagen, de izquierda a derecha. Evita inventar objetos.',
   kind:'image',frames:[{dataUrl:image,timeSec:0}],mode:'analysis'
  });
- const safeReply=String(result.reply||'').trim();
- if(!safeReply||/<\/?(?:thought|think|analysis|reasoning)\b/i.test(safeReply)||/^\s*(?:Role|Task|Constraints?)\s*:/i.test(safeReply))
-  throw Object.assign(Error('visual_visible_boundary_failed'),{code:'visual_visible_boundary_failed'});
- const visible=safeReply.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase();
+ const final=extractVisibleVisualReply(result.reply);
+ if(!final||result.grounded!==true||result.pixelTransport!=='inline_data_uri')throw Object.assign(Error('visual_final_unverified'),{code:'visual_final_unverified'});
+ const visible=final.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase();
  console.log('[WAE Vision PHOTO CANARY] provider='+String(result.provider||'none').slice(0,55),
   'model='+String(result.model||'none').slice(0,85),
-  'reply='+String(result.reply||'').slice(0,240).replace(/[\r\n]+/g,' '));
+  'reply='+final.slice(0,240).replace(/[\r\n]+/g,' '));
  if(!visible.includes('roj')&&!visible.includes('red')||!visible.includes('azul')&&!visible.includes('blue'))
   throw Object.assign(Error('synthetic_color_verification_failed'),{code:'synthetic_color_verification_failed'});
  console.log('[WAE Vision PHOTO CANARY] REAL MULTIMODAL INFERENCE PASS; synthetic-only, free-catalog-gated');
