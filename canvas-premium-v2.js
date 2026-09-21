@@ -36,6 +36,7 @@ function updatePreview(force=false){
   frame.style.width=device==='desktop'?'980px':device==='mobile'?'min(390px, 100%)':'100%';
   frame.style.maxWidth=device==='desktop'?'none':'100%';
   frame.style.setProperty('--iu-preview-width',frame.style.width);
+  frame.setAttribute('referrerpolicy','no-referrer');
   // Preserve interactive slide/prototype state while switching modes without code changes.
   const source=current();
   if(!force&&source===lastPreviewSource&&device===lastPreviewDevice)return;
@@ -89,15 +90,20 @@ function validate(raw){
 function preparePreview(source){
   let value=String(source||'');
   if(!value.trim())return '';
+  value=value.replace(/<base\b[^>]*>/gi,'').replace(/<meta\b[^>]*http-equiv\s*=\s*["']?refresh["']?[^>]*>/gi,'');
   const viewport=/<meta\b[^>]*name\s*=\s*["']?viewport\b/i.test(value);
   if(!viewport){
     const meta='<meta name="viewport" content="width=device-width,initial-scale=1">';
     if(/<head\b[^>]*>/i.test(value))value=value.replace(/<head\b[^>]*>/i,match=>match+meta);
     else if(/<html\b[^>]*>/i.test(value))value=value.replace(/<html\b[^>]*>/i,match=>match+'<head>'+meta+'</head>');
   }
+  const csp='<meta http-equiv="Content-Security-Policy" content="default-src \'none\'; script-src \'unsafe-inline\'; style-src \'unsafe-inline\'; img-src data: blob:; font-src data:; connect-src \'none\'; form-action \'none\'; base-uri \'none\'; navigate-to \'none\'">';
+  const guard='<script data-iu-preview-guard>(function(){document.addEventListener("click",function(e){var a=e.target.closest&&e.target.closest("a[href]");if(a&&!String(a.getAttribute("href")||"").startsWith("#"))e.preventDefault()},true);document.addEventListener("submit",function(e){e.preventDefault()},true)})();<\/script>';
   const fallback='<style data-iu-preview="mobile-fallback">@media(max-width:700px){html,body{max-width:100%;overflow-x:auto}main,section,header,footer,nav,.container,.slide{max-width:100%}img,video,svg,canvas{max-width:100%;height:auto}pre{max-width:100%;white-space:pre-wrap;overflow-wrap:anywhere}}</style>';
-  if(/<\/head>/i.test(value))return value.replace(/<\/head>/i,fallback+'</head>');
-  return value.replace(/<body\b[^>]*>/i,match=>fallback+match);
+  if(/<\/head>/i.test(value))value=value.replace(/<\/head>/i,csp+fallback+'</head>');
+  else value=csp+fallback+value;
+  if(/<\/body>/i.test(value))return value.replace(/<\/body>/i,guard+'</body>');
+  return value+guard;
 }
 window.WAECanvasPreparePreview=preparePreview;
 window.WAECanvasRefreshPreview=updatePreview;
