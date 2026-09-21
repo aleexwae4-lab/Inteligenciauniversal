@@ -1,0 +1,2 @@
+/* Enterprise UI surface v119. Changes here must not affect the Premium shell. */
+html[data-wae-ui="enterprise"] { --wae-surface-edition: enterprise; }
