@@ -32,6 +32,7 @@ const HOST = '0.0.0.0';
 const MAX_BODY_BYTES = Number(process.env.WAE_MAX_BODY_BYTES || 2_000_000);
 const UI_PROFILE = String(process.env.WAE_UI_PROFILE || 'enterprise').trim().toLowerCase();
 const UI_PROFILE_CLASS = UI_PROFILE === 'premium' ? 'wae-ui-premium' : 'wae-ui-enterprise';
+const UI_ENTRY = UI_PROFILE === 'premium' ? 'index.html' : 'ui/enterprise/index.html';
 
 function applyUiProfile(html) {
   if (typeof html !== 'string' || !html.includes('<body')) return html;
@@ -195,7 +196,7 @@ async function runApi(req, res, handler) {
 
 function safeStaticPath(pathname) {
   const decoded = decodeURIComponent(pathname);
-  const requested = decoded === '/' ? 'index.html' : decoded.replace(/^\/+/, '');
+  const requested = decoded === '/' || decoded === '/index.html' ? UI_ENTRY : decoded.replace(/^\/+/, '');
   const normalized = normalize(requested).replace(/^(\.\.[/\\])+/, '');
   return join(ROOT, normalized);
 }
@@ -210,7 +211,7 @@ async function serveFile(req, res, pathname) {
     }
     if (!info.isFile()) throw new Error('not_file');
   } catch {
-    filePath = join(ROOT, 'index.html');
+    filePath = join(ROOT, UI_ENTRY);
   }
 
   const ext = extname(filePath).toLowerCase();
@@ -271,7 +272,9 @@ const server = createServer(async (req, res) => {
     return res.end(JSON.stringify({ error: 'method_not_allowed' }));
   }
 
-  if (url.pathname === '/' && isMobileRequest(req, url)) {
+  // Keep Enterprise's established native mobile shell; Premium uses its own responsive shell.
+  if (url.pathname === '/' && UI_PROFILE !== 'premium' && isMobileRequest(req, url)) {
+    res.setHeader('X-WAE-UI-Profile', UI_PROFILE);
     return mobilePremiumHandler(req, res);
   }
 
