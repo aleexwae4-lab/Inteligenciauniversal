@@ -149,8 +149,49 @@ function button(label,handler,extraClass=''){
   const el=document.createElement('button');el.type='button';el.className='wae-camera-control '+extraClass;el.textContent=label;
   el.addEventListener('click',handler);return el;
 }
+// The same native tool accepts camera captures AND files from the ordinary Adjuntar control.
+async function loadPhoto(file){
+  if(file.size>8_000_000)throw Error('La fotografía supera 8 MB.');
+  const bitmap=await createImageBitmap(file);
+  try{
+    const canvas=document.createElement('canvas'),ratio=bitmap.height/bitmap.width;
+    let width=Math.min(960,bitmap.width),dataUrl='';
+    for(const quality of [.68,.52,.42]){
+      canvas.width=width;canvas.height=Math.max(1,Math.round(width*ratio));
+      const ctx=canvas.getContext('2d',{alpha:false});
+      if(!ctx)throw Error('No se pudo preparar la foto en este dispositivo.');
+      ctx.drawImage(bitmap,0,0,canvas.width,canvas.height);
+      dataUrl=canvas.toDataURL('image/jpeg',quality);
+      if(dataUrl.length<=350000)break;
+      width=Math.min(640,width);
+    }
+    if(dataUrl.length>350000)throw Error('Foto demasiado grande para analizar; intenta otra toma.');
+    return [{dataUrl,timeSec:0}];
+  }finally{bitmap.close()}
+}
+async function prepareFile(file){
+  if(!file)throw Error('Selecciona una fotografía o video.');
+  if(file.type.startsWith('image/')){
+    const frames=await loadPhoto(file);
+    pending={kind:'photo',frames,source:'attachment'};
+  }else if(file.type.startsWith('video/')||/\\.(?:mp4|webm|mov|m4v)$/i.test(file.name)){
+    if(!window.WAEVideoScanV2?.prepareFile)throw Error('El analizador temporal de video no está disponible.');
+    const prepared=await window.WAEVideoScanV2.prepareFile(file);
+    pending={kind:'video',frames:prepared.frames,source:'attachment',videoScope:'sampled_frames_only'};
+  }else throw Error('El archivo no es una imagen o video compatible.');
+  renderBadge();
+  notify(pending.kind==='video'?'Video preparado para WAE Visual Scan; el audio no se analiza.':'Foto lista para análisis nativo en el chat.');
+  return {kind:pending.kind,frameCount:pending.frames.length};
+}
 function initialize(){
   const controls=$('.composer-actions>div');if(!controls||$('#waeCameraBtn'))return;
+  $('#fileInput')?.addEventListener('change',async event=>{
+    const visuals=[...(event.target.files||[])].filter(f=>f.type.startsWith('image/')||f.type.startsWith('video/')||/\\.(?:mp4|webm|mov|m4v)$/i.test(f.name));
+    if(!visuals.length)return;
+    if(visuals.length>1){notify('Analizaré el primer archivo visual; adjunta los demás por separado.')}
+    if(window.WAEChatState?.busy?.()){notify('Termina la respuesta actual antes de adjuntar otra imagen.');return}
+    try{await prepareFile(visuals[0])}catch(error){notify('No se preparó el archivo: '+String(error?.message||error).slice(0,150))}
+  });
   const camera=button('📷',open,'wae-camera-trigger');camera.id='waeCameraBtn';camera.title='Abrir cámara frontal o trasera';camera.setAttribute('aria-label','Abrir cámara');
   ($('#attachBtn')||controls.lastElementChild)?.after(camera);
   badge=button('',()=>{clear();notify('Captura retirada')},'wae-camera-badge');badge.id='waeCameraBadge';badge.hidden=true;
@@ -224,11 +265,31 @@ window.WAECamera={
   defaultQuestion:()=>pending?.kind==='video'?'Analiza la secuencia de estas hojas temporales: resume qué cambia, identifica texto visible y anomalías, y separa observaciones de hipótesis. No supongas audio ni video completo.':'Analiza esta fotografía: elementos visibles, detalles relevantes, dudas y recomendaciones prácticas.',
   clear,
   open,
-  analyze:async question=>{
+  prepareFile,
+  status:()=>({pending:!!pending,kind:pending?.kind||null,frameCount:pending?.frames.length||0,source:pending?.source||null}),
+  analyze:async context=>{
     if(!pending)throw Error('No hay captura preparada');
     if(!window.WAEVisualRuntime?.analyze)throw Error('No se cargó el motor visual. Actualiza la página y conserva tu captura.');
-    return window.WAEVisualRuntime.analyze({question,kind:pending.kind,frames:pending.frames,mode:window.WAEChatState?.mode?.()||'general'});
+    const args=typeof context==='string'?{message:context}:context||{};
+    const relevantHistory=(Array.isArray(args.history)?args.history:[]).slice(-4)
+      .map(item=>String(item?.role||'')+': '+String(item?.text||'').slice(0,220)).join('\\n');
+    const question=String(args.message||'').slice(0,3000);
+    const contextual= relevantHistory?question+'\\n\\nContexto conversacional (puede ser incompleto; no lo trates como evidencia visual):\\n'+relevantHistory:question;
+    return window.WAEVisualRuntime.analyze({question:contextual.slice(0,4000),kind:pending.kind,frames:pending.frames,mode:args.mode||window.WAEChatState?.mode?.()||'general'});
   }
 };
+window.WAECoreTools?.register({
+  id:'visual.inspect',
+  label:'WAE Visual Scan',
+  kind:'multimodal',
+  canHandle:()=>!!pending,
+  run:async context=>{
+    const mediaKind=pending?.kind,frameCount=pending?.frames.length||0;
+    const result=await window.WAECamera.analyze(context);
+    // Only clear after real inference succeeded. No fabricated success or lost evidence on provider failure.
+    clear();
+    return {reply:result.reply,metadata:{mediaKind,frameCount,scope:result.videoScope||'image',model:result.model||null}};
+  }
+});
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',initialize,{once:true});else initialize();
 })();
