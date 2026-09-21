@@ -21,6 +21,8 @@ const apiRoutes = new Map([
   ['/api/chat', chatHandler],
   ['/api/vision', visionHandler],
   ['/api/health', healthHandler],
+  ['/api/health/liveness', healthHandler],
+  ['/api/health/readiness', healthHandler],
   ['/api/capabilities', capabilitiesHandler],
   ['/api/tasks', tasksHandler],
   ['/api/export', exportHandler],
@@ -98,38 +100,39 @@ async function runApi(req, res, handler) {
 }
 
 function safeStaticPath(pathname) {
-  const decoded = decodeURIComponent(pathname);
-  const requested = decoded === '/' ? 'index.html' : decoded.replace(/^\/+/, '');
-  const normalized = normalize(requested).replace(/^(\.\.[/\\])+/, '');
-  return join(ROOT, normalized);
+  let decoded;
+  try{decoded=decodeURIComponent(pathname)}catch{return null}
+  if(decoded==='/'||decoded==='/index.html')return join(ROOT,'index.html');
+  // Static hosting is deliberately not a source-code or config file browser.
+  // Never serve backend code, tests, build scripts or server configuration.
+  if(!decoded.startsWith('/')||decoded.includes('\\')||decoded.includes('\0'))return null;
+  const segments=decoded.split('/').filter(Boolean);
+  if(!segments.length||segments.some(part=>part==='..'||part.startsWith('.')))return null;
+  const requested=segments.join('/');
+  if(/^(?:api|lib|scripts|tests|node_modules|\.github|\.git)(?:\/|$)/i.test(requested))return null;
+  if(/^(?:server\.js|package(?:-lock)?\.json|yarn\.lock|README\.md)$/i.test(requested))return null;
+  if(segments.length>1&&segments[0]!=='assets')return null;
+  const ext=extname(requested).toLowerCase();
+  if(!contentTypes[ext])return null;
+  if(segments[0]==='assets'&&!/^\.(?:svg|png|jpg|jpeg|webp|ico|woff|woff2)$/.test(ext))return null;
+  return join(ROOT,normalize(requested));
 }
 
-async function serveFile(req, res, pathname) {
-  let filePath = safeStaticPath(pathname);
-  try {
-    let info = await stat(filePath);
-    if (info.isDirectory()) {
-      filePath = join(filePath, 'index.html');
-      info = await stat(filePath);
-    }
-    if (!info.isFile()) throw new Error('not_file');
-  } catch {
-    filePath = join(ROOT, 'index.html');
-  }
-
-  const ext = extname(filePath).toLowerCase();
-  res.statusCode = 200;
-  res.setHeader('Content-Type', contentTypes[ext] || 'application/octet-stream');
-  res.setHeader('X-Content-Type-Options', 'nosniff');
-  res.setHeader('Referrer-Policy', 'same-origin');
-  res.setHeader('Cache-Control', ext === '.html' ? 'no-cache' : 'public, max-age=300');
-
-  if (req.method === 'HEAD') return res.end();
+async function serveFile(req,res,pathname) {
+  const filePath=safeStaticPath(pathname);
+  res.setHeader('X-Content-Type-Options','nosniff');
+  res.setHeader('Referrer-Policy','same-origin');
+  if(!filePath){res.statusCode=404;res.setHeader('Cache-Control','no-store');return res.end(req.method==='HEAD'?'':'Not Found')}
+  let info;
+  try{info=await stat(filePath);if(!info.isFile())throw new Error('not_file')}
+  catch{res.statusCode=404;res.setHeader('Cache-Control','no-store');return res.end(req.method==='HEAD'?'':'Not Found')}
+  const ext=extname(filePath).toLowerCase();
+  res.statusCode=200;
+  res.setHeader('Content-Type',contentTypes[ext]||'application/octet-stream');
+  res.setHeader('Cache-Control',ext==='.html'?'no-cache':'public, max-age=300');
+  if(req.method==='HEAD')return res.end();
   createReadStream(filePath)
-    .on('error', () => {
-      if (!res.headersSent) res.statusCode = 500;
-      if (!res.writableEnded) res.end('Internal Server Error');
-    })
+    .on('error',()=>{if(!res.headersSent)res.statusCode=500;if(!res.writableEnded)res.end('Internal Server Error')})
     .pipe(res);
 }
 

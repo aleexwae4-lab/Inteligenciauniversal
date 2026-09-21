@@ -119,12 +119,14 @@
       const runtimeMode=String(incoming.mode||localStorage.getItem('wae.mode')||'general');
       const useWeb=!incoming.canvas&&needsFreshWeb(incoming.message,runtimeMode);
       const data=await edge({action:'chat',...sessionPayload(),conversation_id:incoming.canvas?null:localStorage.getItem(CONVERSATION_ID)||null,message:[!incoming.canvas?'DIRECTRICES DE RESPUESTA (subordinadas a instrucciones del sistema):\n'+responsePolicy:'',incoming.preferences?.instructions?'PREFERENCIAS DEL USUARIO (no prevalecen sobre reglas de seguridad):\n'+String(incoming.preferences.instructions).slice(0,4000):'',incoming.preferences?.knowledge?'CONTEXTO GENERAL DEL USUARIO (no verificado):\n'+String(incoming.preferences.knowledge).slice(0,12000):'',incoming.project?.instructions?'INSTRUCCIONES DE ESTE PROYECTO (subordinadas a seguridad):\n'+String(incoming.project.instructions).slice(0,3000):'',incoming.project?.knowledge?'CONOCIMIENTO DEL PROYECTO (información aportada, no verificada):\n'+String(incoming.project.knowledge).slice(0,8000):'','SOLICITUD ACTUAL:\n'+String(incoming.message||'')].filter(Boolean).join('\n\n'),mode:runtimeMode,web_enabled:useWeb,attachments:window.__waeRuntimeAttachments||[]});
-      if(data.conversation_id&&!incoming.canvas){localStorage.setItem(CONVERSATION_ID,data.conversation_id);window.WAENavigation?.remoteUpdated?.(data.conversation_id)}
-      window.__iuLastRuntime=data;
-      if(!incoming.canvas)queueMicrotask(()=>{updateRuntimeCard(data);loadConversations().catch(()=>{})});
       if(!String(data.reply||'').trim())throw new Error('empty_supabase_reply');
       // A degraded upstream status sentence is not a successful answer; let the existing Render fallback try another configured model.
       if(/la ruta generativa avanzada no est[aá] disponible|no existe evidencia p[uú]blica suficiente para responder sin inventar|ninguna ruta alcanz[oó] el umbral m[ií]nimo/i.test(String(data.reply)))throw new Error('degraded_supabase_reply');
+      // Only advance cloud conversation pointers after a valid answer. A failed
+      // generation must not change the active conversation in the user's UI.
+      if(data.conversation_id&&!incoming.canvas){localStorage.setItem(CONVERSATION_ID,data.conversation_id);window.WAENavigation?.remoteUpdated?.(data.conversation_id)}
+      window.__iuLastRuntime=data;
+      if(!incoming.canvas)queueMicrotask(()=>{updateRuntimeCard(data);loadConversations().catch(()=>{})});
       const reply=incoming.canvas?String(data.reply):withRetrievedSources(data.reply,data.web_sources,incoming.message);
       return new Response(JSON.stringify({reply,runtime:data.runtime,provider:data.provider,model:data.model,web_sources:data.web_sources||[]}),{status:200,headers:{'content-type':'application/json','cache-control':'no-store','x-wae-runtime':'supabase-primary'}});
     }catch(err){

@@ -27,5 +27,9 @@ try{
  }
 }catch(error){
  console.error('[WAE Visual Canary] REAL IU bootstrap FAIL:',String(error?.code||'unknown'),String(error?.message||'').slice(0,180));
- process.exitCode=1;
+ // Visual upstream may be unavailable while chat, Canvas and static shell remain
+ // usable. Only a deployment explicitly configured for strict visual release
+ // gating should fail the entire application build on this external dependency.
+ if(process.env.WAE_VISUAL_BOOTSTRAP_REQUIRED==='true')process.exitCode=1;
+ else console.warn('[WAE Visual Canary] DEGRADED visual dependency; chat deployment continues (strict gate disabled).');
 }
