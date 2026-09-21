@@ -1,0 +1,15 @@
+/* Response-scoped polish; the existing shell, palette and navigation remain untouched. */
+#messages .wae-response-enhanced { min-width: 0; }
+#messages .wae-response-enhanced .rich-answer,
+#messages .wae-response-enhanced .rich-content,
+#messages .wae-response-enhanced .assistant-body { min-width: 0; max-width: 100%; overflow-wrap: anywhere; }
+#messages .wae-response-enhanced .rich-table-wrap,
+#messages .wae-response-enhanced .iu-table-wrap,
+#messages .wae-response-enhanced .wae-table-scroll { max-width: 100%; overflow-x: auto; -webkit-overflow-scrolling: touch; }
+#messages .wae-response-enhanced .iu-chart { max-width: 100%; overflow: hidden; }
+#messages .wae-response-enhanced .iu-chart svg { max-width: 100%; height: auto; }
+#messages .wae-response-enhanced [data-wae-finish] { cursor: pointer; touch-action: manipulation; }
+#messages .wae-response-controls { display: flex; flex-wrap: wrap; gap: 7px; margin-top: 10px; }
+#messages .wae-response-controls button { color: #dcece5; border: 1px solid rgba(125,211,252,.2); border-radius: 10px; background: rgba(125,211,252,.06); padding: 8px 11px; font-size: .76rem; font-weight: 600; line-height: 1.2; }
+#messages [data-wae-finish="voice"][aria-pressed="true"] { color: #92efc7; border-color: rgba(52,211,153,.32); }
+@media(prefers-reduced-motion:reduce) { #messages .wae-response-enhanced * { scroll-behavior: auto !important; } }
