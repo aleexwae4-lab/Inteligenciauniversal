@@ -2,9 +2,9 @@
 'use strict';
 const $=s=>document.querySelector(s);
 const notify=message=>window.toast?.(message);
-const MAX_FRAMES=4, MAX_RECORD_MS=12000;
+const MAX_FRAMES=12, MAX_RECORD_MS=12000;
 let stream=null,recorder=null,recordTimer=null,sampleTimer=null,recordStarted=0;
-let side='environment',kind='photo',samples=[],chunks=[],pending=null,previewURL=null,opening=0;
+let side='environment',kind='photo',samples=[],chunks=[],pending=null,previewURL=null,opening=0,processing=false,lastSignature=null;
 let dialog,video,image,videoPreview,status,go,modePhoto,modeVideo,switchBtn,captureBtn,stopBtn,useBtn,discardBtn,badge;
 const cleanURL=()=>{if(previewURL){URL.revokeObjectURL(previewURL);previewURL=null}};
 function stopStream(){
@@ -18,7 +18,7 @@ function renderBadge(){
   badge.textContent=pending?(pending.kind==='video'?'🎬 Video: '+pending.frames.length+' fotogramas preparados · × quitar':'📷 Foto preparada · × quitar'):'';
 }
 function clear(){
-  pending=null;samples=[];chunks=[];cleanURL();
+  pending=null;samples=[];chunks=[];lastSignature=null;processing=false;cleanURL();
   if(image){image.removeAttribute('src');image.hidden=true}
   if(videoPreview){videoPreview.pause();videoPreview.removeAttribute('src');videoPreview.load();videoPreview.hidden=true}
   renderBadge();
@@ -66,9 +66,9 @@ function updateControls(){
   switchBtn.textContent=side==='environment'?'↻ Usar frontal':'↻ Usar trasera';
   captureBtn.hidden=kind!=='photo'||!!pending;
   stopBtn.hidden=kind!=='video'||recorder?.state==='inactive'||!recorder;
-  go.hidden=kind!=='video'||!!pending;
-  useBtn.hidden=!samples.length;
-  discardBtn.hidden=!samples.length;
+  go.hidden=kind!=='video'||!!pending||recorder?.state==='recording'||processing;
+  useBtn.hidden=!samples.length||recorder?.state==='recording'||processing;
+  discardBtn.hidden=!samples.length||processing;
 }
 async function chooseMode(next){
   if(recorder?.state==='recording'){recorder.onstop=null;stopRecording()}
@@ -103,32 +103,39 @@ function startRecording(){
   catch(_){setStatus('El dispositivo no admite el formato de grabación.');return}
   recorder.ondataavailable=event=>{if(event.data?.size)chunks.push(event.data)};
   recorder.onerror=()=>{stopTimers();setStatus('No fue posible grabar el video.')};
-  recorder.onstop=()=>{
-    stopTimers();
+  recorder.onstop=async()=>{
+    stopTimers();processing=true;updateControls();
     if(!samples.length){const frame=grabFrame(0);if(frame)samples.push(frame)}
     const blob=new Blob(chunks,{type:recorder.mimeType||'video/webm'});
     if(blob.size>0){
       previewURL=URL.createObjectURL(blob);videoPreview.src=previewURL;videoPreview.hidden=false;
     }
     video.hidden=true;
-    setStatus('Video local preparado. La IA solo analizará '+samples.length+' fotogramas seleccionados; no el audio ni el video completo.');
-    updateControls();
+    try{
+      const visual=await window.WAEVideoScanV2?.prepare(samples);
+      if(!visual)throw Error('No está disponible el muestreador local');
+      samples=visual.frames;
+      setStatus('WAE Video Scan · '+visual.frameCount+' momentos de video → '+visual.sheetCount+' hojas temporales con hora visible. El original y el audio no se envían a la IA.');
+    }catch(error){samples=[];setStatus('No fue posible preparar el análisis visual: '+String(error.message||error))}
+    finally{processing=false;updateControls()}
+
   };
   try{recorder.start(1000)}
   catch(_){setStatus('No se pudo iniciar la grabación.');return}
   recordStarted=performance.now();const first=grabFrame(0);if(first)samples.push(first);
   sampleTimer=setInterval(()=>{
     if(samples.length>=MAX_FRAMES)return;
-    const frame=grabFrame((performance.now()-recordStarted)/1000);
-    if(frame)samples.push(frame);
-  },3000);
+    const frame=grabFrame((performance.now()-recordStarted)/1000),signature=window.WAEVideoScanV2?.signature(video);
+    const change=window.WAEVideoScanV2?.frameDelta(lastSignature,signature)??100;
+    if(frame&&(change>=1.35||samples.length<2||Math.round(frame.timeSec)%3===0)){samples.push(frame);lastSignature=signature}
+  },1000);
   recordTimer=setTimeout(stopRecording,MAX_RECORD_MS);
-  setStatus('Grabando… máximo 12 segundos. Toca Detener para finalizar.');
+  setStatus('Grabando… hasta 12 segundos; se seleccionarán momentos distintos y se construirán hojas temporales para la IA.');
   updateControls();
 }
 function accept(){
-  if(!samples.length)return;
-  pending={kind,frames:samples.map(f=>({...f}))};
+  if(!samples.length||processing||recorder?.state==='recording')return;
+  pending={kind,frames:samples.map(f=>({...f})),videoScope:kind==='video'?'sampled_frames_only':'image'};
   stopStream();dialog.close();renderBadge();notify(kind==='video'?'Video preparado: se analizarán solo fotogramas, no audio.':'Foto preparada para análisis visual.');
 }
 function close(){
@@ -196,12 +203,12 @@ function initialize(){
 }
 window.WAECamera={
   hasPending:()=>!!pending,
-  defaultQuestion:()=>pending?.kind==='video'?'Analiza estos fotogramas del video y aclara lo que no se puede determinar sin el video completo.':'Analiza esta fotografía y describe lo que se observa.',
+  defaultQuestion:()=>pending?.kind==='video'?'Analiza la secuencia de estas hojas temporales: resume qué cambia, identifica texto visible y anomalías, y separa observaciones de hipótesis. No supongas audio ni video completo.':'Analiza esta fotografía: elementos visibles, detalles relevantes, dudas y recomendaciones prácticas.',
   clear,
   open,
   analyze:async question=>{
     if(!pending)throw Error('No hay captura preparada');
-    const response=await fetch('/api/vision',{method:'POST',headers:{'Content-Type':'application/json'},cache:'no-store',body:JSON.stringify({question,kind:pending.kind,frames:pending.frames})});
+    const response=await fetch('/api/vision',{method:'POST',headers:{'Content-Type':'application/json'},cache:'no-store',body:JSON.stringify({question,kind:pending.kind,frames:pending.frames,mode:window.WAEChatState?.mode?.()||'general'})});
     const data=await response.json().catch(()=>({}));
     if(!response.ok||typeof data.reply!=='string'||!data.reply.trim())throw Error(data.message||'El análisis visual no está disponible.');
     return data;
