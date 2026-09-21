@@ -3,7 +3,6 @@
   'use strict';
   if (window.__waeCanvasCreationV1) return;
   const $ = (selector, root=document) => root.querySelector(selector);
-  const escapeHtml = value => String(value ?? '').replace(/[&<>"']/g, ch => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]));
   const KIND = {
     landing:'Landing page', presentation:'Presentación', dashboard:'Dashboard', app:'Aplicación'
   };
@@ -61,6 +60,8 @@
     if (busy) return;
     const prompt=String(request||'').trim();
     if (prompt.length<8) {setStatus('Describe el producto que deseas construir.',true);return;}
+    const editorBefore=$('#htmlEditor');
+    const revisionAtStart=editorBefore?.value ?? '';
     busy=true;
     const action=$('#waeCanvasCreate');
     if(action){action.disabled=true;action.textContent='Construyendo producto…';}
@@ -82,6 +83,18 @@
       const editor=$('#htmlEditor');
       const preview=$('#htmlPreview');
       if (!editor || !preview) throw new Error('El editor Canvas no está disponible.');
+      if(editor.value!==revisionAtStart) {
+        throw new Error('Detecté cambios en el editor durante la generación. No se sustituyó tu trabajo: guarda una copia y vuelve a solicitar el producto.');
+      }
+      // Keep one prior revision scoped to the currently active conversation.
+      const revisionKey='wae.canvas.previous.'+(localStorage.getItem('iu.conversationId')||'default');
+      if(editor.value && editor.value!==data.html) {
+        try {
+          localStorage.setItem(revisionKey,editor.value);
+        } catch {
+          throw new Error('No hay espacio para respaldar el diseño anterior. Expórtalo antes de reemplazarlo.');
+        }
+      }
       editor.value=data.html;
       applied=true;
       editor.dispatchEvent(new Event('input',{bubbles:true}));
@@ -111,12 +124,27 @@
       +'<div class="wae-canvas-grid"><select id="waeCanvasKind" aria-label="Tipo de producto"><option value="landing">Landing page</option><option value="presentation">Presentación</option><option value="dashboard">Dashboard</option><option value="app">Aplicación</option></select>'
       +'<input id="waeCanvasBrand" aria-label="Nombre de marca" placeholder="Marca (opcional)" maxlength="100"></div>'
       +'<button id="waeCanvasCreate" type="button">✦ Crear producto premium</button>'
+      +'<button id="waeCanvasRestore" type="button" style="margin-top:5px;background:transparent;border:1px solid #426854;color:#a8e8c4">↶ Recuperar versión anterior</button>'
       +'<div id="waeCanvasStatus" class="wae-canvas-status" role="status" aria-live="polite">Diseño, negocio, color, UX, ingeniería y QA.</div>';
     const label=$('.pane-label',pane);
     if (label) label.insertAdjacentElement('afterend',details); else pane.prepend(details);
     $('#waeCanvasCreate').addEventListener('click',()=>create(
       $('#waeCanvasBrief').value, $('#waeCanvasKind').value, $('#waeCanvasBrand').value
     ));
+    $('#waeCanvasRestore').addEventListener('click',()=>{
+      if(busy) return setStatus('Finaliza o cancela la generación antes de restaurar.',true);
+      const revisionKey='wae.canvas.previous.'+(localStorage.getItem('iu.conversationId')||'default');
+      const old=localStorage.getItem(revisionKey);
+      const editor=$('#htmlEditor');
+      if(!old || !editor) return setStatus('No existe una versión anterior para esta conversación.',true);
+      if(!confirm('¿Sustituir el Canvas actual por la versión anterior guardada?')) return;
+      const current=editor.value;
+      editor.value=old;
+      editor.dispatchEvent(new Event('input',{bubbles:true}));
+      $('#saveBtn')?.click();
+      try { localStorage.setItem(revisionKey,current); } catch {}
+      setStatus('Versión anterior restaurada. Puedes recuperar la otra versión usando el mismo botón.');
+    });
     const previewLabel=$('#panel-html .preview-pane .pane-label');
     if (previewLabel && !$('#waeCanvasPreviewToggle')) {
       const toggle=document.createElement('button');
@@ -138,6 +166,7 @@
     if (value===lastAutomatic && now-lastAutomaticAt<2500) return;
     lastAutomatic=value;lastAutomaticAt=now;
     injectUi();
+    if (!$('#waeCanvasBrief') || !$('#waeCanvasKind')) return;
     $('#waeCanvasBrief').value=value;
     $('#waeCanvasKind').value=detectKind(value);
     create(value,detectKind(value),'',true);
