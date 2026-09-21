@@ -136,3 +136,17 @@ test('zero-budget visual provider fallback checks live image modality and all ch
  assert.match(edge,/iu_no_verified_free_visual_provider/);
  assert.match(edge,/if\(s\(b.action\)==='video_evidence_v131'\)return video/);
 });
+
+test('FREE-only multimodal failover retries distinct catalog-verified models on rate limiting',()=>{
+ const edge=read('supabase/functions/wae-ai-stream-render-visual/index.ts');
+ const gateway=read('lib/vision-gateway.js');
+ assert.match(edge,/async function iuSelectFreeVision\(db:any,exclude:string\[\]=\[\]\)/);
+ assert.match(edge,/\.filter\(\(id:string\)=>!exclude\.includes\(id\)\)/);
+ assert.match(edge,/for\(let attempt=0;attempt<3;attempt\+\+\)/);
+ assert.match(edge,/iuSelectFreeVision\(db,failed\)/);
+ assert.match(edge,/\[404,429,502,503\]\.includes\(response\.status\)/);
+ assert.match(edge,/provider:\{data_collection:'deny',allow_fallbacks:false\}/);
+ assert.match(edge,/openrouter_free_models_exhausted_429/);
+ assert.match(gateway,/iu_free_vision_rate_limited/);
+ assert.match(gateway,/proveedor de pago/);
+});
