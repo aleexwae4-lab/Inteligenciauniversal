@@ -23,7 +23,7 @@ test('empty chat has no injected fake assistant message and old fake greeting is
 
 test('every finished assistant answer has working user actions and no synthetic citations',()=>{
   const js=read('premium-v117.js');
-  for(const token of ['data-uc117','copyText(raw)','toggleAutoVoice','listen(node,raw)','openWorkspaceFrom(node)','window.__waeVoice||window.__waeMobileVoice','wae:voice-state','MutationObserver']){
+  for(const token of ['data-uc117','copyText(responseText(node))','toggleAutoVoice','listen(node,responseText(node))','openWorkspaceFrom(node)','window.__waeVoice||window.__waeMobileVoice','wae:voice-state','MutationObserver']){
     assert.ok(js.includes(token),'missing '+token);
   }
   assert.match(js,/node\.matches\('\.turn\.assistant'\)&&row\.classList\.contains\('actions'\)/);
