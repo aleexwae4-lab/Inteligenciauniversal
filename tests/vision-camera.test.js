@@ -53,7 +53,7 @@ test('camera controls genuinely connect to pending capture, API route and x mode
  assert.match(camera,/stopStream\(\);dialog\.close\(\)/);
  assert.match(camera,/fetch\('\/api\/vision'/);
  assert.match(server,/\['\/api\/vision', visionHandler\]/);
- assert.match(html,/camera-v1\.js\?v=1/);
+ assert.match(html,/camera-v1\.js\?v=2/);
  assert.match(sw,/camera-v1\.js\?v=2/);
  assert.match(html,/video-scan-v2\.js\?v=1/);
 });
