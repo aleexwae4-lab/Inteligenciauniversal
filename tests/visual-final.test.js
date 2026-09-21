@@ -30,9 +30,9 @@ test('gateway fails closed on ungrounded success or thinking-only response',asyn
 
 test('edge release gate runs before trace success and synthetic canary checks visible final only',()=>{
  const edge=read('supabase/functions/wae-ai-stream-render-visual/index.ts'),canary=read('scripts/visual-photo-canary-once.mjs');
- const guard=edge.indexOf('const visible=iuVisibleFinal(reply)'),ok=edge.indexOf("status:'ok'",guard),respond=edge.indexOf('reply:visible',ok);
+ const guard=edge.lastIndexOf('reply=iuVisibleFinal(reply)'),ok=edge.indexOf("status:'ok'",guard),respond=edge.indexOf("grounded:true,pixel_transport:'inline_data_uri'",ok);
  assert.ok(guard>0&&ok>guard&&respond>ok);
- assert.match(edge,/if\(!visible\)throw Error\('iu_visual_final_not_grounded'\)/);
+ assert.match(edge,/if\(!reply\)throw Error\('iu_visual_no_visible_final'\)/);
  assert.match(edge,/grounded:true,pixel_transport:'inline_data_uri'/);
  assert.match(canary,/extractVisibleVisualReply/);
  assert.match(canary,/synthetic_color_verification_failed/);
