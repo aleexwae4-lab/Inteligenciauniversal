@@ -26,13 +26,13 @@ function cells(line){const a=text(line).trim().replace(/^\|/,'').replace(/\|$/,'
 function tableRule(line){return /^\s*\|?\s*:?-{3,}:?\s*(?:\|\s*:?-{3,}:?\s*)+\|?\s*$/.test(line)}
 function rich(raw){
   const lines=text(raw).replace(/\r\n?/g,'\n').split('\n');
-  const out=[];let paragraph=[],list=null,fence=false,code=[];
+  const out=[];let paragraph=[],list=null,fence=false,code=[],blockType='';
   function closePara(){if(paragraph.length){out.push('<p>'+paragraph.map(inline).join('<br>')+'</p>');paragraph=[]}}
   function closeList(){if(list){out.push('</'+list+'>');list=null}}
   function block(s){closePara();closeList();out.push(s)}
   for(let i=0;i<lines.length;i++){
     let line=lines[i], t=line.trim(), marker=t.match(/^(?:\x60{3}|~{3})/);
-    if(marker){if(fence){out.push('<pre><code>'+esc(code.join('\n'))+'</code></pre>');fence=false;code=[]}else{closePara();closeList();fence=true}continue}
+    if(marker){if(fence){out.push('<pre'+(blockType?' data-wae-block="'+blockType+'"':'')+'><code>'+esc(code.join('\n'))+'</code></pre>');fence=false;code=[];blockType=''}else{closePara();closeList();fence=true;blockType=/^(?:\x60{3}|~{3})wae-(card|chart)\s*$/i.exec(t)?.[1]?.toLowerCase()||''}continue}
     if(fence){code.push(line);continue}
     if(!t){closePara();closeList();continue}
     if(i+1<lines.length&&line.includes('|')&&tableRule(lines[i+1])){
@@ -52,11 +52,11 @@ function rich(raw){
     if(bullet||number){closePara();const type=bullet?'ul':'ol';if(list!==type){closeList();out.push('<'+type+'>');list=type}out.push('<li>'+inline((bullet||number)[1])+'</li>');continue}
     closeList();paragraph.push(line.trim());
   }
-  closePara();closeList();if(fence)out.push('<pre><code>'+esc(code.join('\n'))+'</code></pre>');
+  closePara();closeList();if(fence)out.push('<pre'+(blockType?' data-wae-block="'+blockType+'"':'')+'><code>'+esc(code.join('\n'))+'</code></pre>');
   return out.join('')||'<p>'+esc(raw)+'</p>';
 }
 function rawOf(article){return article.dataset.iuRaw||article.querySelector('p')?.textContent||''}
-function speechText(raw){return text(raw).replace(/\[([^\]]+)\]\(https?:\/\/[^)]+\)/g,'$1').replace(/https?:\/\/\S+/g,'').replace(/[\x60*_#>|~]/g,'').replace(/\s+/g,' ').trim().slice(0,9000)}
+function speechText(raw){return text(raw).replace(/(?:\x60{3}|~{3})wae-(?:card|chart)[\s\S]*?(?:\x60{3}|~{3})/gi,' ').replace(/\[([^\]]+)\]\(https?:\/\/[^)]+\)/g,'$1').replace(/https?:\/\/\S+/g,'').replace(/[\x60*_#>|~]/g,'').replace(/\s+/g,' ').trim().slice(0,9000)}
 function resetVoice(){
   voice.token++;voice.active=null;voice.paused=false;voice.utterances=[];
   if(supported)try{synth.cancel()}catch(_){}
