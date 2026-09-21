@@ -6,6 +6,7 @@ on:
       - 'index.html'
       - 'ui/**'
       - 'test/dual-ui-variant-v120.test.js'
+      - 'tests/product-modules-v92.test.js'
       - '.github/workflows/independent-editions-guard.yml'
   push:
     branches: [main]
@@ -14,6 +15,7 @@ on:
       - 'index.html'
       - 'ui/**'
       - 'test/dual-ui-variant-v120.test.js'
+      - 'tests/product-modules-v92.test.js'
       - '.github/workflows/independent-editions-guard.yml'
   workflow_dispatch:
 jobs:
@@ -30,4 +32,4 @@ jobs:
           node --check server.js
           node --check app.js
           node --check premium-v117.js
-          node --test test/dual-ui-variant-v120.test.js test/ui-profile-isolation-v119.test.js test/premium-v117-hardening.test.js
+          node --test test/dual-ui-variant-v120.test.js test/ui-profile-isolation-v119.test.js test/premium-v117-hardening.test.js tests/product-modules-v92.test.js
