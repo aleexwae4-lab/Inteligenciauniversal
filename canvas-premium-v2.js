@@ -108,6 +108,9 @@ function preparePreview(source){
 window.WAECanvasPreparePreview=preparePreview;
 window.WAECanvasRefreshPreview=updatePreview;
 window.WAECanvasValidateHTML=validate;
+// Stable integration surface: the Render factory reuses Canvas v2 history, save, preview and Undo.
+window.WAECanvasCommit=apply;
+window.WAECanvasIsStarter=isStarter;
 function isStarter(value){
  const html=String(value||'');
  return /<h1>\s*Hola WAE OS\s*<\/h1>/i.test(html)&&/Edita este HTML y mira la vista previa/i.test(html);
