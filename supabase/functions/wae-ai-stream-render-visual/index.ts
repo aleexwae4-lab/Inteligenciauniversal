@@ -30,6 +30,23 @@ const IU_RENDER='https://inteligenciauniversal.onrender.com',IU_TRACE='iu_visual
 const IU_MIME=/^data:image\/(jpeg|png|webp);base64,([A-Za-z0-9+/]+={0,2})$/;
 async function iuHash(secret:string){const d=await crypto.subtle.digest('SHA-256',new TextEncoder().encode(secret));return[...new Uint8Array(d)].map(v=>v.toString(16).padStart(2,'0')).join('')}
 
+// Fail closed on model scratchpads. Only the visible final can be released.
+function iuVisibleFinal(value:unknown):string{
+ let reply=s(value).trim();
+ if(!reply||reply.length>18000)return '';
+ for(const tag of ['thought','think','analysis']){
+  const block=new RegExp('<'+tag+'(?:\\s[^>]*)?>[\\s\\S]*?<\\/'+tag+'\\s*>','gi');
+  reply=reply.replace(block,'').trim();
+  if(new RegExp('<\\/?'+tag+'\\b','i').test(reply))return '';
+ }
+ const final=reply.match(/^<final\\s*>([\\s\\S]*?)<\\/final\\s*>$/i);
+ if(final)reply=final[1].trim();
+ if(!reply||/<\\/?(?:thought|think|analysis|final)\\b/i.test(reply))return '';
+ if(/(?:^|\\n)\\s*(?:internal reasoning|chain.of.thought|scratchpad|private analysis|thoughts?)\\s*:/im.test(reply))return '';
+ if(/\\b(?:no (?:has|hay|veo|recib[ií]|puedo ver) (?:adjuntado |una |ninguna )?(?:imagen|archivo)|no image (?:was |is )?(?:attached|provided|received)|cannot (?:see|access) the image)\\b/i.test(reply))return '';
+ return reply;
+}
+
 type IUVisionProvider={provider:'gemini_native'|'google_gemma'|'openrouter';model:string;key:string};
 async function iuSelectFreeVision(db:any,exclude:string[]=[]):Promise<IUVisionProvider|null>{
  const geminiKey=Deno.env.get('GEMINI_API_KEY')||'',
@@ -212,8 +229,10 @@ async function iuVisual(req:Request,b:J,origin:string|null,url:string,service:st
    const usage=o(responseBody.usageMetadata);
    inputTokens=Number(usage.promptTokenCount)||null;outputTokens=Number(usage.candidatesTokenCount)||null;
   }
+  const visible=iuVisibleFinal(reply);
+  if(!visible)throw Error('iu_visual_final_not_grounded');
   await db.from('iu_request_traces').update({status:'ok',model_name:model,total_latency_ms:Date.now()-start,input_tokens:inputTokens,output_tokens:outputTokens}).eq('request_id',requestId).eq('session_id',sid);
-  return js(200,{success:true,reply,provider,model,mediaKind:kind,analyzedFrames:frames.length,videoScope:kind==='video'?'sampled_frames_only':'image',latencyMs:Date.now()-start},origin);
+  return js(200,{success:true,reply:visible,grounded:true,pixel_transport:'inline_data_uri',provider,model,mediaKind:kind,analyzedFrames:frames.length,videoScope:kind==='video'?'sampled_frames_only':'image',latencyMs:Date.now()-start},origin);
  }catch(e){
   const reason=e instanceof Error?e.message:'visual_provider_failed';
   await db.from('iu_request_traces').update({status:'error',error_code:reason.slice(0,100),total_latency_ms:Date.now()-start}).eq('request_id',requestId).eq('session_id',sid);
