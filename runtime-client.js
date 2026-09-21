@@ -116,6 +116,25 @@
       .replace(/^(?:dime|cuentame|puedes decirme|me puedes decir)\s+/,'');
     return /^(?:(?:que|quien) eres(?: tu| exactamente| en realidad)?|que tan inteligente (?:eres|es)(?: tu)?|que modelo eres(?: tu)?|(?:que|cuales) (?:capacidades|funciones) (?:tienes|tiene)(?: tu)?|que (?:puedes|sabes) hacer(?: tu)?|como funcionas(?: tu)?|eres chatgpt|eres un modelo de openai|tienes acceso a internet|puedes buscar en internet)$/.test(question);
   };
+  // Relevant product context, not a canned answer. Do not confuse this
+  // application with ChatGPT, Google Search, Gemini or Google as a company.
+  const coreComparison=value=>{
+    const q=String(value||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/\s+/g,' ').trim();
+    return q.length>=12&&q.length<=650&&
+      /\b(google|gemini|chatgpt|gpt|claude|copilot|grok|buscador(?:es)?|motor(?:es)? de busqueda|asistente(?:s)? de ia)\b/.test(q)&&
+      /\b(universal core|wae os|waeos|eres|serias|puedes|podrias|tu sistema|este sistema|esta plataforma|tu inteligencia)\b/.test(q)&&
+      /\b(equivalent[ea]|igual(?:es)?|compara(?:r|cion)?|comparad[oa]|diferente[s]?|distint[oa]s?|mejor|peor|versus|vs|como|parecid[oa]s?|simil(?:ar|ares)|compet(?:ir|encia)|alternativa|sustitu(?:ir|ye)|supera|mismo nivel)\b/.test(q);
+  };
+  const comparisonBrief='CONTEXTO DE IDENTIDAD, NO RESPUESTA PREFABRICADA: La persona conversa con Universal Core, producto WAE OS Enterprise; NO está conversando con ChatGPT como producto. Universal Core combina chat, rutas de IA, Workspace, Canvas y Fábrica. Google puede significar Search, Gemini o la empresa/ecosistema: distingue solo los sentidos pertinentes. No atribuyas a Universal Core el índice web, la infraestructura, el entrenamiento ni los servicios de Google. No declares herramientas, búsquedas actuales ni pruebas que no estén verificadas. Responde con naturalidad en 2–4 frases si es una comparación informal; no hagas una tabla salvo que te la pidan. Habla sobre Universal Core, no sobre ChatGPT.';
+  const comparisonIssue=(answer,question)=>{
+    if(!coreComparison(question))return '';
+    const raw=String(answer||'').trim(),q=String(question||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase(),plain=raw.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase();
+    if(!/\b(universal core|wae os|waeos)\b/.test(plain))return 'wrong_product_subject';
+    if(!/\b(google|gemini|chatgpt|gpt|claude|copilot|grok|buscador|motor de busqueda)\b/.test(plain))return 'missing_comparison_target';
+    if(!/\b(tabla|cuadro comparativo|comparativa tabular|matriz)\b/.test(q)&&question.length<180&&/\|\s*:?-{3,}:?\s*\|/.test(raw))return 'unrequested_mobile_table';
+    if(raw.length>3200&&question.length<180)return 'disproportionate_comparison';
+    return '';
+  };
   window.fetch=async(input,init={})=>{
     if(!isLocalRuntime(input)||String(init.method||'GET').toUpperCase()!=='POST')return nativeFetch(input,init);
     const request=typeof init.body==='string'?JSON.parse(init.body):{};
@@ -126,10 +145,12 @@
       const incoming=request;
       const runtimeMode=String(incoming.mode||localStorage.getItem('wae.mode')||'general');
       const useWeb=!incoming.canvas&&needsFreshWeb(incoming.message,runtimeMode);
-      const data=await edge({action:'chat',...sessionPayload(),conversation_id:incoming.canvas?null:localStorage.getItem(CONVERSATION_ID)||null,message:[!incoming.canvas?'DIRECTRICES DE RESPUESTA (subordinadas a instrucciones del sistema):\n'+responsePolicy:'',incoming.preferences?.instructions?'PREFERENCIAS DEL USUARIO (no prevalecen sobre reglas de seguridad):\n'+String(incoming.preferences.instructions).slice(0,4000):'',incoming.preferences?.knowledge?'CONTEXTO GENERAL DEL USUARIO (no verificado):\n'+String(incoming.preferences.knowledge).slice(0,12000):'',incoming.project?.instructions?'INSTRUCCIONES DE ESTE PROYECTO (subordinadas a seguridad):\n'+String(incoming.project.instructions).slice(0,3000):'',incoming.project?.knowledge?'CONOCIMIENTO DEL PROYECTO (información aportada, no verificada):\n'+String(incoming.project.knowledge).slice(0,8000):'','SOLICITUD ACTUAL:\n'+String(incoming.message||'')].filter(Boolean).join('\n\n'),mode:runtimeMode,web_enabled:useWeb,attachments:window.__waeRuntimeAttachments||[]});
+      const data=await edge({action:'chat',...sessionPayload(),conversation_id:incoming.canvas?null:localStorage.getItem(CONVERSATION_ID)||null,message:[!incoming.canvas?'DIRECTRICES DE RESPUESTA (subordinadas a instrucciones del sistema):\n'+responsePolicy:'',incoming.preferences?.instructions?'PREFERENCIAS DEL USUARIO (no prevalecen sobre reglas de seguridad):\n'+String(incoming.preferences.instructions).slice(0,4000):'',incoming.preferences?.knowledge?'CONTEXTO GENERAL DEL USUARIO (no verificado):\n'+String(incoming.preferences.knowledge).slice(0,12000):'',incoming.project?.instructions?'INSTRUCCIONES DE ESTE PROYECTO (subordinadas a seguridad):\n'+String(incoming.project.instructions).slice(0,3000):'',incoming.project?.knowledge?'CONOCIMIENTO DEL PROYECTO (información aportada, no verificada):\n'+String(incoming.project.knowledge).slice(0,8000):'',!incoming.canvas&&coreComparison(incoming.message)?comparisonBrief:'','SOLICITUD ACTUAL:\n'+String(incoming.message||'')].filter(Boolean).join('\n\n'),mode:runtimeMode,web_enabled:useWeb,attachments:window.__waeRuntimeAttachments||[]});
       if(!String(data.reply||'').trim())throw new Error('empty_supabase_reply');
       // A degraded upstream status sentence is not a successful answer; let the existing Render fallback try another configured model.
       if(/la ruta generativa avanzada no est[aá] disponible|no existe evidencia p[uú]blica suficiente para responder sin inventar|ninguna ruta alcanz[oó] el umbral m[ií]nimo/i.test(String(data.reply)))throw new Error('degraded_supabase_reply');
+      const comparisonFailure=!incoming.canvas?comparisonIssue(data.reply,incoming.message):'';
+      if(comparisonFailure)throw new Error('comparison_quality_'+comparisonFailure);
       // Only advance cloud conversation pointers after a valid answer. A failed
       // generation must not change the active conversation in the user's UI.
       if(data.conversation_id&&!incoming.canvas){localStorage.setItem(CONVERSATION_ID,data.conversation_id);window.WAENavigation?.remoteUpdated?.(data.conversation_id)}
