@@ -29,7 +29,7 @@ function readStoredMessages(){
     if(!m||!['user','assistant'].includes(m.role))return null;
     let text=String(m.text??'');
     if(m.role==='assistant'){
-      if(/No pude usar el endpoint configurado|configura tu endpoint IA|sustituir este motor local por inferencia real/i.test(text))return null;
+      if(/No pude usar el endpoint configurado|configura tu endpoint IA|sustituir este motor local por inferencia real/i.test(text)||text==='Sistema listo. Investiga, programa, analiza, diseña o escribe directamente lo que necesitas.')return null;
       text=sanitizeAssistantText(text);
       if(!text)return null;
     }
@@ -52,10 +52,6 @@ const modeLabels={general:'General',research:'Investigar',code:'Programar',analy
 function persistMessages(){localStorage.setItem('wae.messages',JSON.stringify(state.messages.slice(-60)))}
 function renderMessages(){
   const t=$('#messages');t.innerHTML='';
-  if(!state.messages.length){
-    state.messages=[{role:'assistant',text:'Sistema listo. Investiga, programa, analiza, diseña o escribe directamente lo que necesitas.',at:nowLabel()}];
-    persistMessages();
-  }
   state.messages.forEach(renderMessage);scrollChat();
 }
 function renderMessage(m){
@@ -85,7 +81,7 @@ async function getAIReply(message){
     const r=await fetch('/api/chat',{
       method:'POST',
       headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({message,mode:state.mode}),
+      body:JSON.stringify({message,mode:state.mode,history:state.messages.slice(0,-1).slice(-12),sessionId:localStorage.getItem('iu.sessionId')||'',attachments:window.__waeRuntimeAttachments||[]}),
       signal:c.signal
     });
     const d=await r.json().catch(()=>({}));
