@@ -165,7 +165,7 @@ function setMode(mode){
   });
   window.dispatchEvent(new CustomEvent('wae:mode-changed',{detail:{mode}}));
 }
-function resetConversation(){if(window.WAENavigation?.newConversation?.())return;state.messages=[];persistMessages();renderMessages();toast('Nueva conversación creada')}
+function resetConversation(){if(state.busy)return;window.WAECamera?.clear?.();if(window.WAENavigation?.newConversation?.())return;state.messages=[];persistMessages();renderMessages();toast('Nueva conversación creada')}
 function openDrawer(){$('#drawer').classList.add('open');$('#drawer').setAttribute('aria-hidden','false');$('#scrim').classList.add('visible')}
 function closeDrawer(){$('#drawer').classList.remove('open');$('#drawer').setAttribute('aria-hidden','true');$('#scrim').classList.remove('visible')}
 function openWorkspace(){$('#workspace').classList.add('open');$('#workspace').setAttribute('aria-hidden','false');closeDrawer()}
