@@ -1,0 +1,22 @@
+/* Workspace Premium v10: export & generation fit the existing mobile shell. */
+.iu-doc-export{flex:0 0 auto;display:flex;align-items:center;gap:7px;flex-wrap:wrap;padding:9px 11px;border-bottom:1px solid #30483b;background:#111a16}
+.iu-doc-export input,.iu-doc-export select,.iu-doc-export button,#iuCanvasControls select,#iuCanvasControls textarea,#iuCanvasControls button{
+ background:#19261f;color:#d9ffeb;border:1px solid #355541;border-radius:9px;font:inherit;font-size:.72rem;padding:8px;min-height:35px;box-sizing:border-box;
+}
+.iu-doc-export input{flex:1 1 145px;min-width:110px}.iu-doc-export select{flex:1 1 100px;min-width:100px}.iu-doc-export button{background:#245b43;color:#edfff4;font-weight:700;cursor:pointer;flex:0 0 auto}
+.iu-doc-export button:disabled,#iuCanvasControls button:disabled{opacity:.5}
+#panel-document.active{grid-template-rows:auto auto minmax(0,1fr)!important}
+#panel-html .code-pane{display:flex;flex-direction:column;min-height:0;overflow:hidden}
+#panel-html #htmlEditor{flex:1 1 auto!important;min-height:110px!important;width:100%!important;resize:none!important}
+#iuCanvasControls{flex:0 0 auto;display:grid;gap:7px;max-height:min(37dvh,230px);overflow-y:auto;padding:9px;border-bottom:1px solid #2c4438;background:#111a16}
+#iuCanvasControls select{width:100%}
+#iuCanvasControls textarea{width:100%;min-height:62px;resize:vertical;line-height:1.4}
+.iu-canvas-actions{display:flex;gap:5px;flex-wrap:wrap}
+#iuCanvasControls button{cursor:pointer;min-width:0;white-space:nowrap;padding:7px 9px}
+#iuCanvasGenerate{background:#265d45!important;border-color:#41916d!important;color:#ecfff5!important}
+@media(max-width:700px){
+  .iu-doc-export{gap:5px;padding:7px}.iu-doc-export input{flex-basis:120px;max-width:100%}.iu-doc-export select{flex-basis:93px}.iu-doc-export button{padding:8px}
+  #iuCanvasControls{max-height:min(36dvh,225px);padding:7px}.iu-canvas-actions{gap:4px}
+  #iuCanvasControls button{font-size:.64rem;padding:7px 6px}
+  #panel-document.active .document-sheet{min-height:0!important}
+}

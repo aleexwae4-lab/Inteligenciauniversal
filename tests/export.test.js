@@ -7,3 +7,25 @@ test('document export validates content and prevents unlimited server work',()=>
  assert.throws(()=>sanitizeBlocks('x'),/blocks_invalid/);
  assert.throws(()=>sanitizeBlocks([{text:'a'.repeat(8000)},{text:'a'.repeat(8000)},{text:'a'.repeat(8000)},{text:'a'.repeat(8000)},{text:'a'.repeat(8000)},{text:'a'.repeat(8000)},{text:'a'.repeat(8000)}]),/document_too_long/);
 });
+
+test('PDF and Word exporters produce actual binary documents',async()=>{
+ const {default:handler}=await import('../api/export.js');
+ for(const fmt of ['pdf','docx']){
+  const req={method:'POST',body:{format:fmt,filename:'prueba',blocks:[{type:'h1',text:'Universal Core'},{type:'p',text:'Vehículos eléctricos y proyectos.'}]}};
+  let status=0,headers={},buffer;
+  const res={setHeader:(k,v)=>{headers[k]=v},status(code){status=code;return this},json(v){throw Error(JSON.stringify(v))},end(v){buffer=v}};
+  await handler(req,res);
+  assert.equal(status||res.statusCode,200);
+  assert.ok(Buffer.isBuffer(buffer)&&buffer.length>120);
+  assert.equal(buffer.toString('latin1',0,4),fmt==='pdf'?'%PDF':'PK\u0003\u0004');
+  assert.match(headers['Content-Disposition'],new RegExp('prueba\\.'+fmt));
+ }
+});
+test('UI offers document formats and working Canvas construction controls',()=>{
+ const {readFileSync}=await import('node:fs');
+ const ui=readFileSync(new URL('../workspace-premium-v1.js',import.meta.url),'utf8');
+ const html=readFileSync(new URL('../index.html',import.meta.url),'utf8');
+ for(const ext of ['pdf','docx','txt','md','html','rtf'])assert.match(ui,new RegExp('value="'+ext+'"'));
+ for(const key of ['iuCanvasType','iuCanvasGenerate','iuCanvasTemplate','iuCanvasDownload'])assert.match(ui,new RegExp(key));
+ assert.match(html,/workspace-premium-v1\.js\?v=10/);
+});
