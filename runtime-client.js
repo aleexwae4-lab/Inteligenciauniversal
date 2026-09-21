@@ -91,7 +91,6 @@
   }
   window.WAEVisualRuntime=Object.freeze({
     analyze:async payload=>{
-      await ensureVisualSession();
       try{return await visualRequest(payload)}
       catch(error){
         // An authentication rejection happens before any provider call. It is
@@ -101,7 +100,7 @@
         return visualRequest(payload);
       }
     },
-    transport:'render_same_origin_iu'
+    transport:'render_native_or_guarded_gateway'
   });
 
   function isLocalRuntime(input){
