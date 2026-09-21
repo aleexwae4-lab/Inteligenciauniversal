@@ -16,18 +16,31 @@ test('quality rubric distinguishes generated claims and actual retrieval evidenc
   assert.match(QUALITY_GUIDANCE, /No declares pruebas o despliegues no ejecutados/);
 });
 
-test('source appendix deduplicates links and rejects non-web schemes', () => {
-  const reply = appendSourceLinks('Resultado', [
-    { title:'Ejemplo',url:'https://example.org/doc' },
-    { title:'Duplicado',url:'https://example.org/doc' },
-    { title:'Peligro',url:'javascript:alert(1)' },
-    { title:'Otra fuente',url:'https://example.net' }
-  ]);
-  assert.match(reply, /Fuentes recuperadas/);
-  assert.equal((reply.match(/example.org\/doc/g)||[]).length,1);
-  assert.match(reply,/example.net/);
-  assert.doesNotMatch(reply,/javascript:/);
-  assert.equal(appendSourceLinks('Texto',[]),'Texto');
+test('ordinary Four Agreements answer never gets unrelated references appended', () => {
+  const answer='Los cuatro acuerdos son: sé impecable con tus palabras, no tomes nada personalmente...';
+  const unrelated=[
+    {title:'CDC dog import requirements',url:'https://www.cdc.gov/dogs/'},
+    {title:'OpenAI sign in and SSO configuration',url:'https://help.openai.com/en/articles/sso'},
+    {title:'Google account security',url:'https://developers.google.com/account'}
+  ];
+  assert.equal(appendSourceLinks(answer,unrelated,'¿Conoces el libro de los 4 acuerdos?'),answer);
+  assert.equal(appendSourceLinks(answer,unrelated,'¿Conoces el libro de los 4 acuerdos? Dame fuentes.'),answer);
+  assert.equal(appendSourceLinks(answer,[{title:'Los cuatro acuerdos',url:'https://example.org/cuatro-acuerdos'}],'¿Conoces el libro de los 4 acuerdos?'),answer);
+});
+
+test('explicit sources require topical agreement and safe unique URLs', () => {
+ const answer='Los cuatro acuerdos fueron escritos por Miguel Ruiz.';
+ const reply=appendSourceLinks(answer,[
+  {title:'Requisitos CDC para importar perros',url:'https://www.cdc.gov/importation'},
+  {title:'Los cuatro acuerdos — edición original',url:'https://example.org/libro/cuatro-acuerdos'},
+  {title:'Los cuatro acuerdos — duplicado',url:'https://example.org/libro/cuatro-acuerdos'},
+  {title:'Los cuatro acuerdos — inseguro',url:'javascript:alert(1)'},
+  {title:'OpenAI SSO',url:'https://help.openai.com/en/articles/sso'}
+ ],'¿Conoces el libro de los 4 acuerdos? Dame fuentes.');
+ assert.match(reply,/Fuentes relacionadas/);
+ assert.equal((reply.match(/example\.org\/libro\/cuatro-acuerdos/g)||[]).length,1);
+ assert.doesNotMatch(reply,/cdc\.gov|help\.openai\.com|javascript:/);
+ assert.equal(appendSourceLinks('Texto',[],'Fuentes sobre diabetes'),'Texto');
 });
 
 test('primary and fallback routes both keep evidence without disturbing existing UI', () => {
@@ -35,7 +48,7 @@ test('primary and fallback routes both keep evidence without disturbing existing
   const backend = readFileSync(new URL('../lib/runtime.js', import.meta.url),'utf8');
   const providers = readFileSync(new URL('../lib/providers.js', import.meta.url),'utf8');
   assert.match(client,/web_enabled:useWeb/);
-  assert.match(client,/withRetrievedSources\(data.reply,data.web_sources\)/);
-  assert.match(backend,/appendSourceLinks\(generated.text, generated.sources\)/);
+  assert.match(client,/withRetrievedSources\(data.reply,data.web_sources,incoming.message\)/);
+  assert.match(backend,/appendSourceLinks\(generated.text, generated.sources, message\)/);
   assert.match(providers,/web_enabled:webEnabled/);
 });
