@@ -19,7 +19,8 @@ try{
    'code='+String(state.error||'none').slice(0,65),
    'provider='+String(state.provider||'none').slice(0,45),
    'model='+String(state.model||'none').slice(0,80),
-   'actualInferenceTested=false');
+   'actualInferenceTested=false',
+   'other_credentials='+JSON.stringify(state.otherCredentialPresent||{}));
  }catch(error){
   console.warn('[WAE Visual Canary] provider readiness could not be checked:',
    String(error?.name||'readiness_transport').slice(0,55));
