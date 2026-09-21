@@ -55,7 +55,7 @@ test('degraded upstream answer must not advance active cloud conversation',()=>{
 test('Render mounts no-cost probes and blocks private static paths',()=>{
  const server=read('server.js');
  for(const route of ['/api/health/liveness','/api/health/readiness'])assert.ok(server.includes("['"+route+"', healthHandler]"));
- assert.match(server,/\\bnode_modules\\b/);
+ assert.match(server,/node_modules/);
  assert.match(server,/package\(\?:-lock\)\?/);
  assert.match(server,/function safeStaticPath/);
  assert.match(server,/if\(!filePath\)\{res\.statusCode=404/);
