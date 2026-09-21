@@ -37,6 +37,14 @@ async function iuVisual(req:Request,b:J,origin:string|null,url:string,service:st
  const db=createClient(url,service,{auth:{persistSession:false,autoRefreshToken:false}});
  const {data:auth,error:authError}=await db.from('iu_sessions').select('id,status,expires_at').eq('id',sid).eq('secret_hash',await iuHash(secret)).maybeSingle();
  if(authError||!auth||auth.status!=='active'||(auth.expires_at&&Date.parse(auth.expires_at)<=Date.now()))return js(401,{success:false,error:'iu_invalid_session',message:'La sesión visual expiró; actualiza Universal Core.'},origin);
+ if(s(b.action)==='iu_visual_readiness_v1'){
+  // Non-generative authenticated readiness only: NEVER forward images or consume model tokens.
+  const key=Deno.env.get('GEMINI_API_KEY')||'',model=Deno.env.get('GEMINI_MODEL')||Deno.env.get('GEMINI_NATIVE_MODEL')||'';
+  if(!key||!model)return js(503,{success:false,ready:false,error:'iu_vision_provider_not_configured',keyConfigured:!!key,modelConfigured:!!model,provider:'gemini_native'},origin);
+  const {data:eligible,error:eligibleError}=await db.from('iu_adaptive_model_registry_v2').select('model_name').eq('model_name',model).eq('enabled',true).eq('vision_capable',true).eq('access_tier','FREE').limit(1);
+  if(eligibleError||!eligible?.length)return js(503,{success:false,ready:false,error:'iu_free_vision_unverified',model,provider:'gemini_native',freeRegistry:false},origin);
+  return js(200,{success:true,ready:true,provider:'gemini_native',model,freeRegistry:true,actualInferenceTested:false},origin);
+ }
  const inputs=Array.isArray(b.frames)?b.frames:[];
  if(inputs.length<1||inputs.length>4)return js(422,{success:false,error:'iu_frames_invalid',message:'Usa de 1 a 4 imágenes.'},origin);
  let total=0;const frames:{mime:string,data:string,start:number|null,end:number|null}[]=[];
@@ -83,4 +91,4 @@ async function iuVisual(req:Request,b:J,origin:string|null,url:string,service:st
  }
 }
 
-Deno.serve(async(req:Request)=>{const origin=req.headers.get('origin');if(req.method==='OPTIONS')return new Response(null,{status:204,headers:cors(origin)});if(origin&&!allowed(origin))return js(403,{success:false,error:'origin_not_allowed'},origin);const url=Deno.env.get('SUPABASE_URL')||'',service=sk();if(!url||!service)return js(500,{success:false,error:'configuration_missing'},origin);if(req.method==='GET')return js(200,{ok:true,service:'WAE AI Stream Compatibility Bridge',version:VERSION,canonical_stream:'wae-os-pro-stream',video_evidence:'multimodal_v131'},origin);if(req.method!=='POST')return js(405,{success:false,error:'method_not_allowed'},origin);let b:J={};try{b=o(await req.json())}catch{return js(400,{success:false,error:'invalid_json'},origin)}if(s(b.action)==='iu_visual_v1')return iuVisual(req,b,origin,url,service);if(s(b.action)==='video_evidence_v131')return video(req,b,origin,url,service);return bridge(req,b,origin,url)});
+Deno.serve(async(req:Request)=>{const origin=req.headers.get('origin');if(req.method==='OPTIONS')return new Response(null,{status:204,headers:cors(origin)});if(origin&&!allowed(origin))return js(403,{success:false,error:'origin_not_allowed'},origin);const url=Deno.env.get('SUPABASE_URL')||'',service=sk();if(!url||!service)return js(500,{success:false,error:'configuration_missing'},origin);if(req.method==='GET')return js(200,{ok:true,service:'WAE AI Stream Compatibility Bridge',version:VERSION,canonical_stream:'wae-os-pro-stream',video_evidence:'multimodal_v131'},origin);if(req.method!=='POST')return js(405,{success:false,error:'method_not_allowed'},origin);let b:J={};try{b=o(await req.json())}catch{return js(400,{success:false,error:'invalid_json'},origin)}if(s(b.action)==='iu_visual_readiness_v1')return iuVisual(req,b,origin,url,service);if(s(b.action)==='iu_visual_v1')return iuVisual(req,b,origin,url,service);if(s(b.action)==='video_evidence_v131')return video(req,b,origin,url,service);return bridge(req,b,origin,url)});

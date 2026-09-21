@@ -93,3 +93,21 @@ test('real visual browser transport stays on Render origin for photo/video, reta
  assert.match(runtime,/await ensureVisualSession\(\)/);
  assert.match(runtime,/if\(error\?\.code!=='iu_invalid_session'/);
 });
+
+test('live readiness is IU-session-authenticated, zero-token and never claims image inference',()=>{
+ const edge=read('supabase/functions/wae-ai-stream-render-visual/index.ts');
+ const canary=read('scripts/visual-bootstrap-canary.mjs');
+ const begin=edge.indexOf("if(s(b.action)==='iu_visual_readiness_v1'){");
+ const end=edge.indexOf(" const inputs=Array.isArray(b.frames)",begin);
+ assert.ok(begin>0&&end>begin);
+ const code=edge.slice(begin,end);
+ assert.match(edge.slice(0,begin),/secret_hash',await iuHash\(secret\)/);
+ assert.match(code,/key=Deno.env.get\('GEMINI_API_KEY'\)/);
+ assert.match(code,/\.eq\('access_tier','FREE'\)/);
+ assert.match(code,/actualInferenceTested:false/);
+ assert.doesNotMatch(code,/generateContent|inline_data|iu_request_traces/);
+ assert.ok(canary.includes("action:'iu_visual_readiness_v1'"));
+ assert.ok(canary.includes('actualInferenceTested=false'));
+ assert.ok(!canary.includes('data.session_secret)'));
+ assert.match(edge,/if\(s\(b.action\)==='video_evidence_v131'\)return video/);
+});
