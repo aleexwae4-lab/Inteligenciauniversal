@@ -193,7 +193,25 @@ function initialize(){
     },{once:true});
     document.body.append(input);input.click();
   });
-  actions.append(captureBtn,go,stopBtn,useBtn,discardBtn,native);
+  const gallery=button('🎞 Video de galería',()=>{
+    const input=document.createElement('input');input.type='file';input.accept='video/mp4,video/webm,video/quicktime,video/*';input.hidden=true;
+    input.addEventListener('change',async()=>{
+      const file=input.files?.[0];input.remove();if(!file)return;
+      if(processing){setStatus('Finaliza el análisis anterior antes de cargar otro video.');return}
+      stopRecording();stopTimers();stopStream();clear();kind='video';processing=true;updateControls();
+      setStatus('WAE Video Scan · decodificando 12 momentos temporales del video local…');
+      try{
+        if(!window.WAEVideoScanV2?.prepareFile)throw Error('El muestreador de video no está disponible');
+        const analyzed=await window.WAEVideoScanV2.prepareFile(file);
+        samples=analyzed.frames;previewURL=URL.createObjectURL(file);
+        videoPreview.src=previewURL;videoPreview.hidden=false;video.hidden=true;
+        setStatus('Video local · '+analyzed.frameCount+' fotogramas, '+analyzed.sheetCount+' hojas visuales. Duración '+Math.round(analyzed.duration)+'s. El audio y el archivo original no se envían al modelo.');
+      }catch(error){setStatus('No se pudo preparar el video: '+String(error.message||error))}
+      finally{processing=false;updateControls()}
+    },{once:true});
+    document.body.append(input);input.click();
+  });
+  actions.append(captureBtn,go,stopBtn,useBtn,discardBtn,native,gallery);
   panel.append(title,intro,top,video,image,videoPreview,status,actions);dialog.append(panel);
   $('.app-shell')?.append(dialog);
   dialog.addEventListener('cancel',event=>{event.preventDefault();close()});
