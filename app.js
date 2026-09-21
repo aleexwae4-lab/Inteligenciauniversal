@@ -226,7 +226,13 @@ async function submitMessage(ev){
   state.busy=true;
   const send=$('.send-btn');if(send){send.disabled=true;send.setAttribute('aria-busy','true')}
   i.value='';autosizeInput();addMessage('user',m);showTyping();
-  try{const r=await getAIReply(m);hideTyping();addMessage('assistant',r)}
+  try{
+    const r=await getAIReply(m);hideTyping();addMessage('assistant',r);
+    // A failed multimodal request never discards the user's question or evidence.
+    if(window.WAECamera?.status?.().pending&&window.WAECoreTools?.status?.().last?.ok===false&&!i.value.trim()){
+      i.value=m;autosizeInput();
+    }
+  }
   finally{
     state.busy=false;hideTyping();
     if(send){send.disabled=false;send.removeAttribute('aria-busy')}
