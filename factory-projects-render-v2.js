@@ -37,6 +37,51 @@ function removeFile(){if(current.files.length===1)return notify('El proyecto deb
 function importProject(e){const f=e.target.files?.[0];e.target.value='';if(!f)return;if(f.size>2000000)return notify('El archivo excede 2 MB');f.text().then(text=>{const data=JSON.parse(text);if(data.format!=='wae-factory/v1')throw Error('Formato no admitido');const p=cleanProject(data.project);p.id=id();projects.unshift(p);projects=projects.slice(0,25);current=p;selected=p.files[0].name;persist();render();notify('Proyecto importado')}).catch(()=>notify('No se pudo importar: revisa el formato'))}
 function importCanvas(){const html=$('#htmlEditor')?.value||'';if(!/^\s*<!doctype\s+html/i.test(html))return notify('El Canvas actual debe contener HTML5 completo');if(!confirm('Se creará un nuevo proyecto con el HTML actual. ¿Continuar?'))return;saveEditor();const next=createProject('Canvas importado');next.files.find(f=>f.name==='index.html').content=html;next.files.find(f=>f.name==='styles.css').content='';next.files.find(f=>f.name==='main.js').content='';projects.unshift(next);projects=projects.slice(0,25);current=next;selected='index.html';persist();render();preview();notify('Canvas importado como proyecto independiente')}
 function sendToCanvas(){saveEditor();const html=bundle();if(typeof window.WAECanvasCommit!=='function')return notify('Canvas no disponible');if(!confirm('¿Enviar este HTML al Canvas principal? Se conservará su historial de Deshacer.'))return;window.WAECanvasCommit(html,'Producto enviado desde la Fábrica.');notify('Producto enviado al Canvas principal')}
+function snapshot(){saveEditor();return{id:current.id,name:current.name,html:bundle(),files:current.files.map(f=>({...f}))}}
+const REVISIONS='wae.render.factory.revisions.v3';
+function previousForProject(){try{return JSON.parse(localStorage.getItem(REVISIONS)||'{}')[current.id]||[]}catch{return[]}}
+function commitGenerated(html,expected){
+  saveEditor();
+  if(!expected||current.id!==expected.id||bundle()!==expected.html)return{ok:false,error:'El proyecto cambió durante la generación. No sobrescribí tus archivos.'};
+  if(typeof html!=='string'||html.length>LIMIT||!/^\s*<!doctype\s+html/i.test(html)||!/<\/html>\s*$/i.test(html))return{ok:false,error:'La generación no contiene un HTML5 válido dentro del límite.'};
+  const before=current.files.map(f=>({...f}));
+  const target=current.files.find(f=>f.name==='index.html');
+  if(!target)return{ok:false,error:'Falta index.html en el proyecto.'};
+  const css=current.files.find(f=>f.name==='styles.css');
+  const js=current.files.find(f=>f.name==='main.js');
+  const savedRevisions=localStorage.getItem(REVISIONS);
+  try{
+    const all=JSON.parse(savedRevisions||'{}');
+    const history=Array.isArray(all[current.id])?all[current.id]:[];
+    all[current.id]=history.concat([{date:new Date().toISOString(),files:before}]).slice(-4);
+    localStorage.setItem(REVISIONS,JSON.stringify(all));
+    target.content=html;
+    if(css)css.content='';
+    if(js)js.content='';
+    selected='index.html';
+    if(!persist())throw Error('No hay espacio disponible para guardar el nuevo producto.');
+    const verify=JSON.parse(localStorage.getItem(KEY)||'[]').find(p=>p.id===current.id);
+    if(verify?.files.find(f=>f.name==='index.html')?.content!==html)throw Error('No se pudo verificar el guardado del nuevo producto.');
+    render();preview();return{ok:true};
+  }catch(error){
+    current.files=before;
+    if(savedRevisions===null)localStorage.removeItem(REVISIONS);else localStorage.setItem(REVISIONS,savedRevisions);
+    persist();render();preview();return{ok:false,error:String(error.message||error)}
+  }
+}
+function restorePrevious(){
+  const history=previousForProject();if(!history.length)return{ok:false,error:'No hay una versión previa.'};
+  saveEditor();
+  const previous=history[history.length-1];
+  if(!previous||!Array.isArray(previous.files))return{ok:false,error:'Versión previa inválida.'};
+  const before=current.files.map(f=>({...f})),original=localStorage.getItem(REVISIONS);
+  try{
+    const all=JSON.parse(original||'{}');all[current.id]=history.slice(0,-1);localStorage.setItem(REVISIONS,JSON.stringify(all));
+    current.files=previous.files.map(f=>({...f}));selected=current.files[0].name;
+    if(!persist())throw Error('No se pudo restaurar por falta de almacenamiento.');
+    render();preview();return{ok:true};
+  }catch(e){current.files=before;if(original!==null)localStorage.setItem(REVISIONS,original);persist();return{ok:false,error:String(e.message||e)}}
+}
 function insertResponse(){const answers=Array.from(document.querySelectorAll('#messages .message.assistant,#messages .turn.assistant'));const last=answers.at(-1);const text=last?.querySelector('.rich-answer,.assistant-body,.rich-content')?.textContent||'';if(!text.trim())return notify('No existe una respuesta de IA para insertar');const editor=$('#wfEditor');editor.setRangeText(text,editor.selectionStart,editor.selectionEnd,'end');saveEditor();notify('Respuesta insertada; revisa el código antes de ejecutarlo')}
 function onExport(e){if(!root||!$('.workspace-tabs [data-tab="factory"].active'))return;e.stopImmediatePropagation();exportProject()}
 function onSave(e){if(!root||!$('.workspace-tabs [data-tab="factory"].active'))return;e.stopImmediatePropagation();save()}
@@ -55,6 +100,6 @@ $('#wfImportCanvas').addEventListener('click',importCanvas);$('#wfSendCanvas').a
 $('#wfExportFile').addEventListener('click',exportFile);$('#wfExportHTML').addEventListener('click',exportBundle);$('#wfExportProject').addEventListener('click',exportProject);
 $('#wfImport').addEventListener('click',()=>$('#wfImportFile').click());$('#wfImportFile').addEventListener('change',importProject);
 $('#exportBtn')?.addEventListener('click',onExport,true);$('#saveBtn')?.addEventListener('click',onSave,true);
-window.__waeFactoryV1={version:'1',save,preview,diagnostics,exportProject};if(new URLSearchParams(location.search).get('wae_factory')==='1'){setTimeout(()=>{$('#workspaceBtn')?.click();tab.click()},80)}}
+window.__waeFactoryV1={version:'3',save,preview,diagnostics,exportProject,snapshot,commitGenerated,restorePrevious};if(new URLSearchParams(location.search).get('wae_factory')==='1'){setTimeout(()=>{$('#workspaceBtn')?.click();tab.click()},80)}}
 document.readyState==='loading'?document.addEventListener('DOMContentLoaded',init,{once:true}):init();
 })();
