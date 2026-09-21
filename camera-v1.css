@@ -1,0 +1,22 @@
+/* Mobile-first real camera controls; follows Universal Core's existing dark visual system. */
+.composer #modePill.wae-mode-visible{display:inline-flex!important;align-items:center;gap:8px}
+.wae-mode-clear{border:0;border-left:1px solid rgba(81,235,207,.35);padding:0 2px 0 9px;margin-left:2px;background:transparent;color:#b9eee6;cursor:pointer;font-size:1.1rem;font-weight:800;min-width:22px;min-height:25px;line-height:1}
+.wae-mode-clear:hover,.wae-mode-clear:focus-visible{color:white;outline:1px solid #51ebcf;outline-offset:2px;border-radius:5px}
+.composer .wae-camera-trigger{color:#95e8dd!important;font-size:1.15rem!important}
+.composer .wae-camera-badge{display:block;margin:1px 0;padding:7px 9px;border:1px solid rgba(81,235,207,.3);border-radius:11px;background:rgba(25,59,55,.45);color:#cbf8ed;font-size:.68rem;max-width:100%;white-space:normal;text-align:left;cursor:pointer}
+.composer .wae-camera-badge[hidden]{display:none!important}
+.wae-camera-dialog{position:fixed;inset:0;width:min(96vw,570px);max-width:570px;max-height:93dvh;margin:auto;padding:0;border:1px solid #363d40;border-radius:18px;background:#0d0e11;color:#f0f6f3;box-shadow:0 25px 110px #000b;z-index:1600;overflow:auto}
+.wae-camera-dialog::backdrop{background:rgba(0,0,0,.82)}
+.wae-camera-panel{padding:16px;display:grid;gap:12px}
+.wae-camera-panel h2{margin:0;font-size:1rem}
+.wae-camera-panel>p{margin:0;color:#97a6a1;font-size:.75rem;line-height:1.45}
+.wae-camera-toolbar,.wae-camera-actions{display:flex;gap:7px;flex-wrap:wrap}
+.wae-camera-control{border:1px solid #3b4544;border-radius:10px;padding:9px 11px;background:#1b2022;color:#d8e8e4;cursor:pointer;font-size:.76rem;min-height:39px}
+.wae-camera-control[aria-pressed="true"]{border-color:#51ebcf;color:#aaf7e3;background:#14302b}
+.wae-camera-control:focus-visible{outline:2px solid #51ebcf;outline-offset:2px}
+.wae-camera-main{background:#22685b;border-color:#51ebcf;color:#fff;font-weight:700}
+.wae-camera-control[hidden]{display:none!important}
+.wae-camera-panel>video,.wae-camera-panel>img{width:100%;max-height:52dvh;object-fit:contain;background:#050607;border-radius:12px}
+.wae-camera-panel>video[hidden],.wae-camera-panel>img[hidden]{display:none!important}
+.wae-camera-status{color:#9dd3c6!important;min-height:1.3em}
+@media(max-width:420px){.wae-camera-panel{padding:11px;gap:9px}.wae-camera-control{padding:8px 9px;font-size:.72rem}}
