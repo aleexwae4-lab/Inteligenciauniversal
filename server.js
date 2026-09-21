@@ -21,6 +21,8 @@ const apiRoutes = new Map([
   ['/api/chat', chatHandler],
   ['/api/vision', visionHandler],
   ['/api/health', healthHandler],
+  ['/api/health/liveness', healthHandler],
+  ['/api/health/readiness', healthHandler],
   ['/api/capabilities', capabilitiesHandler],
   ['/api/tasks', tasksHandler],
   ['/api/export', exportHandler],
