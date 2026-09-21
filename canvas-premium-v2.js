@@ -113,17 +113,14 @@ function isStarter(value){
  return /<h1>\s*Hola WAE OS\s*<\/h1>/i.test(html)&&/Edita este HTML y mira la vista previa/i.test(html);
 }
 function blueprintPrompt(kind,brief,shorter=false){
- const type={landing:'landing page',slides:'presentación HTML con diapositivas',prototype:'prototipo con pantallas navegables',dashboard:'dashboard sin cifras inventadas',blank:'página HTML'}[kind]||kind;
- const sections=(kind==='slides'||kind==='prototype')
-  ? '"slides":[{"title":"título original","body":"explicación concreta"}] (al menos 3 diapositivas o pantallas)'
-  : '"features":[{"title":"beneficio o producto","description":"descripción específica"}] (al menos 3 elementos distintos)';
+ const type={landing:'landing page',slides:'presentación',prototype:'prototipo',dashboard:'dashboard',blank:'página HTML'}[kind]||kind;
+ const slides=kind==='slides'||kind==='prototype';
  return [
-  'Responde EXCLUSIVAMENTE un objeto JSON completo y válido. NO HTML, NO Markdown y NO texto fuera del JSON.',
-  'TIPO OBLIGATORIO: '+type+'. Encargo: '+brief,
-  'Usa la marca y el público solicitados. No uses WAE OS o una página genérica. No inventes dirección, precio, teléfono, métricas o resultados reales.',
-  'Campos requeridos: brand, eyebrow, headline, subheadline, cta, story, contact, palette (warm, forest, blue, violet o coral) y '+sections+'.',
-  'Escribe titulares editoriales y descripciones específicas del producto, evita relleno e ideas repetidas. Para presentaciones y prototipos, el tipo solicitado prevalece sobre la palabra landing del encargo.',
-  'Máximo '+(shorter?'1400':'1700')+' caracteres JSON. Cierra correctamente todos los corchetes. Canvas generará CSS, HTML y comportamiento mediante código probado.'
+  'Responde SOLO JSON válido y cerrado. Sin Markdown, explicación o HTML.',
+  'Proyecto: '+brief+'. Tipo requerido: '+type+'. Marca igual a la pedida, nunca WAE OS salvo solicitud expresa.',
+  'JSON con brand,headline,subheadline,palette y '+(slides?'slides:[{title,body},{title,body},{title,body}]':'features:[{title,description},{title,description},{title,description}]')+'.',
+  'Cada elemento distinto y concreto. subheadline mínimo 25 letras; descripciones mínimo 20 letras. Paleta warm/forest/blue/violet/coral.',
+  'Evita precios, teléfonos, resultados y direcciones inventados. Máximo '+(shorter?850:1150)+' caracteres de salida, termina con }.'
  ].join('\n');
 }
 async function generate(){
@@ -168,7 +165,13 @@ async function generate(){
     if(attempt===0)notice('Contenido insuficiente o fuera del encargo; reintentando sin sacrificar el diseño…');
    }finally{clearTimeout(timeout)}
   }
-  if(!complete){const hint=lastError+'. Conservé tu Canvas; prueba otra instrucción o una plantilla editable.';notice(hint);toast(hint)}
+  if(!complete){
+    if(creating&&window.WAECanvasBuilder?.draft){
+      const result=window.WAECanvasBuilder.draft(brief,kind);
+      apply(result.html,'Borrador local (sin IA). Personaliza el contenido; el proveedor no completó el diseño.');
+      notice('Borrador local SIN IA. El proveedor falló: '+lastError+'. Puedes editar, descargar o deshacer.');
+    }else{const hint=lastError+'. Conservé tu Canvas; prueba otra instrucción o una plantilla editable.';notice(hint);toast(hint)}
+  }
   generating=false;button.disabled=false;button.textContent='✦ Generar HTML';updateUndo();
  }
  if(creating&&previous.trim()&&!isStarter(previous))ask('Se guardará tu HTML anterior para poder recuperarlo. ¿Continuar?',run);
