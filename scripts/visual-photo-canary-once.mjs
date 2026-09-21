@@ -1,7 +1,34 @@
 // One-time real photo canary. Synthetic colors, no user media; selected model must pass
 // live free-price + image-capability gate in iuSelectFreeVision or the call fails closed.
 import {bootstrapVisualSession,forwardVisual} from '../lib/vision-gateway.js';
-const image='data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAFAAAAAoCAIAAADmAupWAAAARklEQVR42u3PQREAMAzDsLT8OW8w8qhMwKd56TTpnDfHAgYGBgYGBgYGBgYGBgYGBgYGBgYGBgYGBgYGBgZu9wG68wJPOGUWZgAAAABJRU5ErkJggg==';
+import {deflateSync,inflateSync} from 'node:zlib';
+// Build a valid RGB PNG instead of relying on an accidentally truncated base64 literal.
+function crc32(bytes){
+ let value=0xffffffff;
+ for(const byte of bytes){value^=byte;for(let bit=0;bit<8;bit++)value=(value>>>1)^((value&1)?0xedb88320:0)}
+ return (value^0xffffffff)>>>0;
+}
+function chunk(name,data){
+ const type=Buffer.from(name,'ascii'),length=Buffer.alloc(4),crc=Buffer.alloc(4);
+ length.writeUInt32BE(data.length);crc.writeUInt32BE(crc32(Buffer.concat([type,data])));
+ return Buffer.concat([length,type,data,crc]);
+}
+function verifiedPng(){
+ const width=128,height=64,rowSize=1+width*3,raw=Buffer.alloc(height*rowSize);
+ for(let y=0;y<height;y++)for(let x=0;x<width;x++){
+  const i=y*rowSize+1+x*3;
+  raw[i]=x<width/2?255:0;raw[i+1]=0;raw[i+2]=x>=width/2?255:0;
+ }
+ const ihdr=Buffer.alloc(13);ihdr.writeUInt32BE(width,0);ihdr.writeUInt32BE(height,4);
+ ihdr[8]=8;ihdr[9]=2; // true-colour 8-bit RGB, filter 0 on every scanline.
+ const compressed=deflateSync(raw);
+ if(!inflateSync(compressed).equals(raw)||raw[1]!==255||raw[2]!==0||raw[3]!==0||
+   raw[1+width/2*3]!==0||raw[3+width/2*3]!==255)throw Error('synthetic_png_self_check_failed');
+ const bytes=Buffer.concat([Buffer.from([137,80,78,71,13,10,26,10]),chunk('IHDR',ihdr),chunk('IDAT',compressed),chunk('IEND',Buffer.alloc(0))]);
+ console.log('[WAE Vision PHOTO CANARY] verified synthetic PNG bytes='+bytes.length+' size='+width+'x'+height+' left=red right=blue');
+ return 'data:image/png;base64,'+bytes.toString('base64');
+}
+const image=verifiedPng();
 try{
  const session=await bootstrapVisualSession({},{});
  const result=await forwardVisual({
