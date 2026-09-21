@@ -5,7 +5,7 @@ export default async function handler(req, res) {
   applyHeaders(res);
   if (req.method !== 'POST') return res.status(405).json({ error: 'method_not_allowed' });
   if (!originAllowed(req)) return res.status(403).json({ error: 'origin_not_allowed' });
-  if (!allowRequest(req, Number(process.env.WAE_CANVAS_RATE_LIMIT_PER_MINUTE || 6))) {
+  if (!allowRequest(req, Number(process.env.WAE_CANVAS_RATE_LIMIT_PER_MINUTE || 6), Number(process.env.WAE_CANVAS_IP_RATE_LIMIT_PER_MINUTE || 6))) {
     return res.status(429).json({ error: 'rate_limited', message: 'Espera un momento antes de crear otro producto.' });
   }
   const body = req.body && typeof req.body === 'object' ? req.body : {};
