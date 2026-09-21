@@ -1,0 +1,25 @@
+name: Vercel Hobby Single API Guard
+on:
+  pull_request:
+    paths:
+      - vercel.json
+      - api/index.js
+      - test/vercel-hobby-v118.test.js
+      - .github/workflows/vercel-hobby-v118.yml
+  push:
+    branches: [main]
+    paths:
+      - vercel.json
+      - api/index.js
+      - test/vercel-hobby-v118.test.js
+      - .github/workflows/vercel-hobby-v118.yml
+jobs:
+  routing-and-static-assets:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - run: node --test test/vercel-hobby-v118.test.js
