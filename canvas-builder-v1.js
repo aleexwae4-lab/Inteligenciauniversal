@@ -92,7 +92,13 @@ function prototype(p){
  const js='(function(){const screens=[...document.querySelectorAll(".screen")];let n=0;document.querySelectorAll(".next").forEach(b=>b.addEventListener("click",()=>{screens[n].hidden=true;n=(n+1)%screens.length;screens[n].hidden=false}));})();';
  return base(p,header(p,false)+'<main class="wrap"><div class="stage">'+sections+'</div></main>',extra,js);
 }
-function build(plan){if(plan.kind==='slides')return slides(plan);if(plan.kind==='prototype')return prototype(plan);return landing(plan)}
+function dashboard(p){
+ const cards=p.features.map((x,i)=>'<article class="card"><span class="num">'+String(i+1).padStart(2,'0')+'</span><h3>'+esc(x.title)+'</h3><p>'+esc(x.description)+'</p><p class="data-status">Sin datos conectados</p></article>').join('');
+ const css='.dashboard-heading{padding:62px 0 35px}.dashboard-heading h1{font-size:clamp(2.3rem,5vw,4.8rem)}.data-status{display:inline-block;border:1px solid #ffffff32;border-radius:10px;padding:7px 10px;margin-top:24px!important;color:var(--accent);font-size:.72rem!important}.dashboard-note{font-size:.85rem;color:var(--accent);padding:16px 0 40px}';
+ const body=header(p,false)+'<main class="wrap" id="inicio"><section class="dashboard-heading"><p class="eyebrow">'+esc(p.eyebrow||'Panel del proyecto')+'</p><h1>'+esc(p.headline)+'</h1><p class="lead">'+esc(p.subheadline)+'</p></section><div class="grid">'+cards+'</div><p class="dashboard-note">Estructura editable de dashboard · conecta fuentes reales antes de publicar métricas.</p></main>';
+ return base(p,body,css);
+}
+function build(plan){if(plan.kind==='slides')return slides(plan);if(plan.kind==='prototype')return prototype(plan);if(plan.kind==='dashboard')return dashboard(plan);return landing(plan)}
 function draft(brief,kind='landing'){
  const instruction=word(brief);
  const named=instruction.match(/\b(?:para|de)\s+([\p{L}\p{N}][\p{L}\p{N} '&-]{2,60})/iu)?.[1];
