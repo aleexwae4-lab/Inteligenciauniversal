@@ -6,6 +6,7 @@ const MAX_FRAMES=12, MAX_RECORD_MS=12000;
 let stream=null,recorder=null,recordTimer=null,sampleTimer=null,recordStarted=0;
 let side='environment',kind='photo',samples=[],chunks=[],pending=null,previewURL=null,opening=0,processing=false,lastSignature=null;
 let dialog,video,image,videoPreview,status,go,modePhoto,modeVideo,switchBtn,captureBtn,stopBtn,useBtn,discardBtn,badge;
+let preparation=null;
 const cleanURL=()=>{if(previewURL){URL.revokeObjectURL(previewURL);previewURL=null}};
 function stopStream(){
   if(stream){stream.getTracks().forEach(t=>t.stop());stream=null}
@@ -174,7 +175,7 @@ async function prepareFile(file){
   if(file.type.startsWith('image/')){
     const frames=await loadPhoto(file);
     pending={kind:'photo',frames,source:'attachment'};
-  }else if(file.type.startsWith('video/')||/\\.(?:mp4|webm|mov|m4v)$/i.test(file.name)){
+  }else if(file.type.startsWith('video/')||/\.(?:mp4|webm|mov|m4v)$/i.test(file.name)){
     if(!window.WAEVideoScanV2?.prepareFile)throw Error('El analizador temporal de video no está disponible.');
     const prepared=await window.WAEVideoScanV2.prepareFile(file);
     pending={kind:'video',frames:prepared.frames,source:'attachment',videoScope:'sampled_frames_only'};
@@ -186,11 +187,13 @@ async function prepareFile(file){
 function initialize(){
   const controls=$('.composer-actions>div');if(!controls||$('#waeCameraBtn'))return;
   $('#fileInput')?.addEventListener('change',async event=>{
-    const visuals=[...(event.target.files||[])].filter(f=>f.type.startsWith('image/')||f.type.startsWith('video/')||/\\.(?:mp4|webm|mov|m4v)$/i.test(f.name));
+    const visuals=[...(event.target.files||[])].filter(f=>f.type.startsWith('image/')||f.type.startsWith('video/')||/\.(?:mp4|webm|mov|m4v)$/i.test(f.name));
     if(!visuals.length)return;
     if(visuals.length>1){notify('Analizaré el primer archivo visual; adjunta los demás por separado.')}
     if(window.WAEChatState?.busy?.()){notify('Termina la respuesta actual antes de adjuntar otra imagen.');return}
-    try{await prepareFile(visuals[0])}catch(error){notify('No se preparó el archivo: '+String(error?.message||error).slice(0,150))}
+    preparation=prepareFile(visuals[0]);
+    try{await preparation}catch(error){notify('No se preparó el archivo: '+String(error?.message||error).slice(0,150))}
+    finally{preparation=null}
   });
   const camera=button('📷',open,'wae-camera-trigger');camera.id='waeCameraBtn';camera.title='Abrir cámara frontal o trasera';camera.setAttribute('aria-label','Abrir cámara');
   ($('#attachBtn')||controls.lastElementChild)?.after(camera);
@@ -272,9 +275,9 @@ window.WAECamera={
     if(!window.WAEVisualRuntime?.analyze)throw Error('No se cargó el motor visual. Actualiza la página y conserva tu captura.');
     const args=typeof context==='string'?{message:context}:context||{};
     const relevantHistory=(Array.isArray(args.history)?args.history:[]).slice(-4)
-      .map(item=>String(item?.role||'')+': '+String(item?.text||'').slice(0,220)).join('\\n');
+      .map(item=>String(item?.role||'')+': '+String(item?.text||'').slice(0,220)).join('\n');
     const question=String(args.message||'').slice(0,3000);
-    const contextual= relevantHistory?question+'\\n\\nContexto conversacional (puede ser incompleto; no lo trates como evidencia visual):\\n'+relevantHistory:question;
+    const contextual= relevantHistory?question+'\n\nContexto conversacional (puede ser incompleto; no lo trates como evidencia visual):\n'+relevantHistory:question;
     return window.WAEVisualRuntime.analyze({question:contextual.slice(0,4000),kind:pending.kind,frames:pending.frames,mode:args.mode||window.WAEChatState?.mode?.()||'general'});
   }
 };
@@ -282,8 +285,10 @@ window.WAECoreTools?.register({
   id:'visual.inspect',
   label:'WAE Visual Scan',
   kind:'multimodal',
-  canHandle:()=>!!pending,
+  canHandle:()=>!!pending||!!preparation,
   run:async context=>{
+    if(preparation)await preparation;
+    if(!pending)throw Error('La captura no pudo prepararse; intenta adjuntarla otra vez.');
     const mediaKind=pending?.kind,frameCount=pending?.frames.length||0;
     const result=await window.WAECamera.analyze(context);
     // Only clear after real inference succeeded. No fabricated success or lost evidence on provider failure.
