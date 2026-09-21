@@ -2,6 +2,16 @@
 
 PWA mobile-first con chat, Workspace y un runtime server-side para orquestar modelos, herramientas, memoria y agentes.
 
+## Universal Canvas Premium Creation Engine v1
+
+- \`POST /api/canvas\` acepta \`{ "request": "...", "kind": "landing|presentation|dashboard|app", "brand": "..." }\` y devuelve HTML5 autocontenido si supera el gate estructural.
+- Planificación: 3 briefs de agentes especialistas (estrategia y marketing; dirección de arte/UX; arquitectura frontend/QA), construcción y una reparación acotada cuando falla el gate. Un agente que falla no se informa como ejecutado.
+- UI: edición y previsualización dentro del Workspace existente, vista ampliada, guardado, exportación HTML, respaldo de una versión por conversación y protección ante cambios concurrentes.
+- Si el resultado falla validación, se conserva el Canvas previo. No se sustituyen archivos ni se simulan despliegues o tests en navegador.
+- Presentaciones en esta versión: HTML interactivo; no PPTX. Los dashboards sin datos verificables deben etiquetar todas las cifras como demostración.
+- Seguridad: iframe sin \`allow-same-origin\`, política CSP para el HTML generado, sin dependencias externas y limitación de solicitudes. El código generado se debe revisar antes de alojarlo en un dominio de confianza; la validación estructural **no** es una auditoría de seguridad, accesibilidad o funcionamiento exhaustiva.
+- Configuración opcional: \`WAE_CANVAS_RATE_LIMIT_PER_MINUTE\` y \`WAE_CANVAS_IP_RATE_LIMIT_PER_MINUTE\` (por defecto 6); \`WAE_CANVAS_MAX_OUTPUT_TOKENS\` (6400, límite operativo 9000). Las cuotas/costos efectivos siguen dependiendo de los proveedores que el operador ya haya configurado.
+
 ## Universal Runtime v1
 
 La app usa `/api/chat` por defecto. El runtime detecta únicamente integraciones realmente configuradas y nunca marca como disponible un proveedor sin credenciales.
