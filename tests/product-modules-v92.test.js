@@ -150,7 +150,9 @@ test('premium shell loads v92 JS and CSS without replacing the existing interfac
 
 test('canonical mobile renderer preserves the recorded Universal Core visual contract',async()=>{
   const [mobile,server]=await Promise.all([read('api/mobile.js'),read('server.js')]);
-  assert.match(server,/if \(url\.pathname === '\/' && isMobileRequest\(req, url\)\)[\s\S]*mobilePremiumHandler\(req, res\)/);
+  assert.match(server,/if \(url\.pathname === '\/' && UI_PROFILE !== 'premium' && isMobileRequest\(req, url\)\)[\s\S]*mobilePremiumHandler\(req, res\)/);
+  assert.match(server,/const UI_ENTRY = UI_PROFILE === 'premium' \? 'index.html' : 'ui\/enterprise\/index.html'/);
+  assert.match(server,/return serveFile\(req, res, url\.pathname\)/);
   assert.match(mobile,/<strong>Universal Core<\/strong>/);
   assert.match(mobile,/id="coreState">operativo<\/b>/);
   assert.match(mobile,/\.orb\{width:44px;height:44px/);
