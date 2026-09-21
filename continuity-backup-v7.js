@@ -22,7 +22,7 @@ async function sha(value){
 async function currentPayload(){
  // Save the active editor first; the factory is local, not a cloud filesystem.
  if(window.__waeFactoryV1?.save)window.__waeFactoryV1.save();
- const navigation=(await snapshot('navigation'))??readJSON('iu.premium.navigation.v1',null)??{active:null,projects:[],conversations:[]};
+ const navigation=window.WAENavigation?.snapshotLocal?.()??(await snapshot('navigation'))??readJSON('iu.premium.navigation.v1',null)??{active:null,projects:[],conversations:[]};
  const messages=window.WAEChatState?.snapshot?.()||[];
  if(navigation.active&&Array.isArray(navigation.conversations)){
   const active=navigation.conversations.find(c=>c.id===navigation.active);
@@ -65,10 +65,30 @@ async function verifyArchive(file){
  if(!file||file.size>12_000_000)throw Error('Archivo vacío o superior a 12 MB');
  const source=await file.text(),wrapper=JSON.parse(source);
  if(wrapper?.format!==CONTINUITY_FORMAT||wrapper?.integrity?.algorithm!=='SHA-256'||!(/^[a-f0-9]{64}$/i).test(wrapper?.integrity?.digest||''))
-  throw Error('Formato o firma de respaldo inválidos');
+  throw Error('Formato o suma de verificación inválidos');
  const content=JSON.stringify(wrapper.data);
  if((await sha(content))!==wrapper.integrity.digest.toLowerCase())throw Error('La integridad SHA-256 no coincide: archivo alterado o incompleto');
  return validatePayload(wrapper.data);
+}
+// The backup file is not trusted code. Restore editor markup through a
+// limited formatting allowlist; drop event handlers, resource tags and links.
+function safeDocumentHTML(raw){
+ const template=document.createElement('template');template.innerHTML=text(raw);
+ const allowed=new Set(['P','DIV','SPAN','BR','STRONG','B','EM','I','U','S','H1','H2','H3','H4','H5','H6','UL','OL','LI','BLOCKQUOTE','PRE','CODE','HR','TABLE','THEAD','TBODY','TR','TH','TD']);
+ function copy(node){
+  if(node.nodeType===Node.TEXT_NODE)return document.createTextNode(node.textContent||'');
+  if(node.nodeType!==Node.ELEMENT_NODE)return document.createDocumentFragment();
+  if(!allowed.has(node.tagName)){
+   // Unknown elements are not reproduced. Their text is preserved as text.
+   return document.createTextNode(node.textContent||'');
+  }
+  const clean=document.createElement(node.tagName.toLowerCase());
+  for(const child of node.childNodes)clean.append(copy(child));
+  return clean;
+ }
+ const wrapper=document.createElement('div');
+ for(const child of template.content.childNodes)wrapper.append(copy(child));
+ return wrapper.innerHTML;
 }
 async function restoreFile(file){
  if(window.WAEChatState?.busy?.())return notify('Finaliza la respuesta antes de restaurar');
@@ -78,6 +98,7 @@ async function restoreFile(file){
  const current=await currentPayload().catch(()=>null);
  if(!current)return notify('No pude leer los datos actuales. No se modificó nada.');
  const merged=(()=>{try{return mergePayload(current,data,uuid)}catch(error){notify(text(error?.message).slice(0,120));return null}})();
+ if(merged&&!current.document&&merged.document)merged.document=safeDocumentHTML(merged.document);
  if(!merged)return;
  if(!confirm('Respaldo verificado.\n\nSe agregarán '+merged.counts.conversations+' conversaciones, '+merged.counts.projects+' proyectos de conversación y '+merged.counts.factory+' productos de Fábrica.\n\nNO se eliminarán los existentes. Los documentos actuales tienen prioridad. No se importarán credenciales ni sesiones. El archivo NO está cifrado.\n\n¿Importar y reiniciar Universal Core?'))return;
  const keys=[FACTORY_KEYS.projects,FACTORY_KEYS.active,FACTORY_KEYS.revisions];
