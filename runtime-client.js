@@ -8,7 +8,7 @@
   window.__waeRuntimeAttachments=[];
 
   const edge=async(payload)=>{
-    const res=await nativeFetch(EDGE,{method:'POST',headers:{'content-type':'application/json','apikey':SUPABASE_KEY,'x-client-info':'wae-inteligencia-universal/1.2'},body:JSON.stringify(payload),cache:'no-store'});
+    const res=await nativeFetch(EDGE,{method:'POST',headers:{'content-type':'application/json','apikey':SUPABASE_KEY,'x-client-info':'wae-inteligencia-universal/1.2'},body:JSON.stringify(payload),cache:'no-store',signal:typeof AbortSignal.timeout==='function'?AbortSignal.timeout(32000):undefined});
     const data=await res.json().catch(()=>({success:false,error:`HTTP ${res.status}`}));
     if(!res.ok)throw Object.assign(new Error(data.error||`HTTP ${res.status}`),{status:res.status,data});
     return data;
