@@ -11,6 +11,7 @@ let allowAuto=false;
 const voice={token:0,active:null,paused:false,utterances:[]};
 const synth=window.speechSynthesis;
 const supported=!!(synth&&window.SpeechSynthesisUtterance);
+window.WAEVoice={stop:()=>resetVoice(),available:()=>supported};
 
 function inline(value){
   let s=esc(value);
@@ -176,7 +177,7 @@ function initialize(){
       }catch(_){micState(false);notify('Tu navegador no pudo iniciar el dictado')}
     });
   }
-  QA('.v2-tool').forEach(b=>{if(b.title==='Escuchar'){b.textContent='■';b.title='Detener voz';b.addEventListener('click',e=>{e.stopImmediatePropagation();resetVoice();notify('Voz detenida')},true)}});
+  // The stop control in polish-v2.js invokes WAEVoice.stop directly; no competing click handlers.
   const runtime=Q('.v2-runtime-copy');if(runtime&&/0 req|100%/.test(runtime.textContent||''))runtime.innerHTML='<strong>Universal Core</strong><small>Comprobando conexión…</small>';
   const efficiency=Q('.v2-efficiency');if(efficiency&&/100%/.test(efficiency.textContent||''))efficiency.innerHTML='<strong>CORE</strong><small>ONLINE</small>';
   const drawer=Q('#drawer');if(drawer)new MutationObserver(()=>QA('.v2-recent').forEach(n=>n.remove())).observe(drawer,{childList:true});
