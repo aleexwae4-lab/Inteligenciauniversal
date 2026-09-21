@@ -15,7 +15,7 @@ test('conversation and project module is wired to actual app events and remote h
  assert.match(app,/project:window\.WAENavigation/);
  assert.match(nav,/markRemoteConversation|setRemoteConversations/);
  assert.match(edge,/WAENavigation\.setRemoteConversations/);
- assert.match(html,/navigation-premium-v1\.js\?v=8/);
+ assert.match(html,/navigation-premium-v1\.js\?v=9/);
 });
 
 test('Settings remains outside the scrolling chat/project navigation and is anchored to the drawer bottom',()=>{
