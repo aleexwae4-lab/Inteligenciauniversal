@@ -71,12 +71,12 @@ function updateControls(){
   discardBtn.hidden=!samples.length;
 }
 async function chooseMode(next){
-  if(recorder?.state==='recording')stopRecording();
-  kind=next;clear();updateControls();await startCamera();
+  if(recorder?.state==='recording'){recorder.onstop=null;stopRecording()}
+  kind=next;clear();video.hidden=false;updateControls();await startCamera();
 }
 async function switchCamera(){
-  if(recorder?.state==='recording')stopRecording();
-  side=side==='environment'?'user':'environment';clear();updateControls();await startCamera();
+  if(recorder?.state==='recording'){recorder.onstop=null;stopRecording()}
+  side=side==='environment'?'user':'environment';clear();video.hidden=false;updateControls();await startCamera();
 }
 function takePhoto(){
   const frame=grabFrame(0);
@@ -133,7 +133,8 @@ function accept(){
 }
 function close(){
   opening++;
-  stopRecording();stopTimers();stopStream();
+  if(recorder?.state==='recording'){recorder.onstop=null;stopRecording()}
+  stopTimers();stopStream();
   if(dialog?.open)dialog.close();
   if(!pending)clear();
 }
@@ -167,16 +168,18 @@ function initialize(){
   useBtn=button('✓ Usar captura',accept,'wae-camera-main');
   discardBtn=button('↺ Repetir',()=>{clear();video.hidden=false;updateControls();setStatus('Preparado para nueva captura.')});
   const native=button('Cámara del dispositivo',()=>{
-    const input=document.createElement('input');input.type='file';input.accept='image/*';input.capture=side;input.hidden=true;
+    const input=document.createElement('input');input.type='file';input.accept='image/*';input.setAttribute('capture',side);input.hidden=true;
     input.addEventListener('change',async()=>{
       const file=input.files?.[0];input.remove();if(!file)return;
       if(!file.type.startsWith('image/')||file.size>8_000_000){setStatus('Selecciona una fotografía de hasta 8 MB.');return}
       try{
-        const bitmap=await createImageBitmap(file),canvas=document.createElement('canvas');
-        canvas.width=Math.min(960,bitmap.width);canvas.height=Math.round(canvas.width*bitmap.height/bitmap.width);
-        canvas.getContext('2d',{alpha:false}).drawImage(bitmap,0,0,canvas.width,canvas.height);bitmap.close();
+        const bitmap=await createImageBitmap(file),canvas=document.createElement('canvas'),ratio=bitmap.height/bitmap.width;
+        canvas.width=Math.min(960,bitmap.width);canvas.height=Math.round(canvas.width*ratio);
+        canvas.getContext('2d',{alpha:false}).drawImage(bitmap,0,0,canvas.width,canvas.height);
         let dataUrl=canvas.toDataURL('image/jpeg',.68);
-        if(dataUrl.length>350000){canvas.width=Math.min(640,canvas.width);canvas.height=Math.round(canvas.width*bitmap.height/bitmap.width);setStatus('La imagen es demasiado grande; toma otra fotografía.');return}
+        if(dataUrl.length>350000){canvas.width=Math.min(640,canvas.width);canvas.height=Math.round(canvas.width*ratio);canvas.getContext('2d',{alpha:false}).drawImage(bitmap,0,0,canvas.width,canvas.height);dataUrl=canvas.toDataURL('image/jpeg',.52)}
+        bitmap.close();
+        if(dataUrl.length>350000){setStatus('La imagen sigue siendo demasiado grande; toma otra fotografía.');return}
         kind='photo';samples=[{dataUrl,timeSec:0}];image.src=dataUrl;image.hidden=false;video.hidden=true;
         setStatus('Foto preparada mediante la cámara del dispositivo.');updateControls();
       }catch(_){setStatus('No fue posible leer la fotografía.')}
