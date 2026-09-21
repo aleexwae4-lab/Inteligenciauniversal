@@ -53,3 +53,14 @@ test('premium leap preserves recent product intent and still caps the Canvas req
  assert.match(agent,/request:mission/);
  assert.match(agent,/especialistas.*construcci.n.*QA/i);
 });
+
+
+test('native mobile factory retains briefs and synchronizes the selected product preview',()=>{
+ const agent=read('factory-agent-render-v3.js'),factory=read('factory-projects-render-v2.js'),css=read('factory-agent-render-v3.css');
+ assert.match(agent,/priorGoals\.length>0/);
+ assert.match(agent,/entry\.value=instruction/);
+ assert.match(agent,/wfAgentProject/);
+ assert.match(agent,/wfAgentPreview/);
+ assert.match(factory,/persist\(\);render\(\);preview\(\)/);
+ assert.match(css,/overflow-y:auto;overflow-x:hidden;overscroll-behavior:contain/);
+});
