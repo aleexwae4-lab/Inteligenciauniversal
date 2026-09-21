@@ -1,0 +1,9 @@
+/* Render-only capability mode feedback: no interface redesign or fabricated activity. */
+.composer #modePill.v2-mode-hidden.wae-mode-visible{display:inline-flex!important;align-items:center;gap:5px;width:fit-content;max-width:100%;padding:5px 9px!important;margin:0!important;border:1px solid rgba(81,235,207,.44)!important;background:rgba(81,235,207,.09)!important;color:#8df8e2!important;border-radius:999px!important;font-size:.66rem!important;font-weight:750!important;text-transform:none!important;letter-spacing:0!important}
+.composer .wae-mode-help{display:block;color:#a4b2ae;font-size:.7rem;line-height:1.38;margin:-5px 0 -3px;padding:0 1px}
+.v2-welcome .capability-card.active{border-color:rgba(81,235,207,.85)!important;background:rgba(26,63,57,.75)!important;box-shadow:inset 0 0 0 1px rgba(81,235,207,.13)!important}
+.v2-welcome .capability-card.active strong{color:#baffed!important}
+.v2-welcome .capability-card:focus-visible{outline:2px solid #51ebcf;outline-offset:2px}
+@media (max-width:420px){.composer #modePill.v2-mode-hidden.wae-mode-visible{font-size:.62rem!important}.composer .wae-mode-help{font-size:.65rem}}
+
+.composer .wae-mode-help[hidden]{display:none!important}
