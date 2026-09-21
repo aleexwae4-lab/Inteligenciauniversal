@@ -17,6 +17,7 @@ import evalsHandler from './api/evals.js';
 import benchmarkV93Handler from './api/benchmark-v93.js';
 import premiumGateV98Handler from './api/premium-gate-v98.js';
 import tasksHandler from './api/tasks.js';
+import canvasHandler from './api/canvas.js';
 import orchestrateHandler from './api/orchestrate.js';
 import mobileHandler from './api/mobile.js';
 import uiDiagnosticsHandler from './api/ui-diagnostics.js';
@@ -109,6 +110,7 @@ const apiRoutes = new Map([
   ['/api/benchmark/v93', benchmarkV93Handler],
   ['/api/benchmark/v98', premiumGateV98Handler],
   ['/api/tasks', tasksHandler],
+  ['/api/canvas', canvasHandler],
   ['/api/orchestrate', orchestrateHandler],
   ['/api/live-data', liveDataHandler],
   ['/api/knowledge/search', knowledgeHandler],
