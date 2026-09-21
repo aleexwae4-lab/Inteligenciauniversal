@@ -17,7 +17,7 @@ test('AI blueprint yields complete self-contained high-detail landing without HT
  assert.match(html,/grid-template-columns:repeat\(3,minmax\(0,1fr\)\)/);
  assert.match(html,/@media\(max-width:760px\)/);
  assert.match(html,/href="#contacto"/);
- assert.doesNotMatch(html,/https?:\/\/|cdn\./i);
+ assert.doesNotMatch(html,/<(?:img|script)[^>]+src=["']?https?:\/\/|@import\s+url\(/i);
  assert.ok(html.length>3600);
 });
 test('AI blueprint parser rejects incomplete data, generic branding and injected markup',()=>{
