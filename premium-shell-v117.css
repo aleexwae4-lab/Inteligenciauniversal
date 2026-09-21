@@ -1,0 +1,14 @@
+/* v117: additive controls and small product identity; preserve the current visual language. */
+.chat-heading{display:none!important}
+.wae117-core-badge{position:absolute;bottom:7px;right:12px;z-index:15;display:inline-flex;align-items:center;gap:6px;padding:4px 9px;min-height:23px;max-width:calc(100vw - 24px);border:1px solid rgba(125,211,252,.2);border-radius:999px;background:rgba(12,18,23,.93);box-shadow:0 5px 18px rgba(0,0,0,.18);color:#cbeefc;font:650 .62rem/1.1 Inter,system-ui,sans-serif;pointer-events:none;white-space:nowrap}
+.wae117-core-dot{width:5px;height:5px;border-radius:50%;background:#7dd3fc;flex:none}
+.wae117-actions{display:flex!important;flex-wrap:wrap;gap:6px!important;align-items:center;min-width:0;max-width:100%;margin-top:12px}
+.wae117-actions [data-wae117]{display:inline-flex;align-items:center;justify-content:center;min-width:32px;height:32px;padding:0 9px;border:1px solid rgba(125,211,252,.15);border-radius:10px;background:rgba(125,211,252,.045);color:#c6dce9;font:650 .68rem/1.1 Inter,system-ui,sans-serif;cursor:pointer}
+.wae117-actions [data-wae117]:hover{border-color:rgba(125,211,252,.35);background:rgba(125,211,252,.1)}
+.wae117-actions [data-wae117="auto-voice"][aria-pressed="true"]{color:#a9f0d0;border-color:rgba(52,211,153,.3)}
+.wae117-source-focus{outline:1px solid rgba(125,211,252,.5);outline-offset:4px;border-radius:8px}
+.rich-answer,.rich-content,.assistant-body{min-width:0;max-width:100%;overflow-wrap:anywhere}
+.rich-table-wrap,.iu-table-wrap,.wae-table-scroll,.iu-code pre,.wae-code-shell pre{max-width:100%;overscroll-behavior-x:contain;-webkit-overflow-scrolling:touch}
+.message.assistant .rich-answer table,.message.assistant .rich-content table{position:static}
+@media(max-width:899px){.wae117-core-badge{position:fixed;bottom:calc(82px + env(safe-area-inset-bottom));right:9px;z-index:30;padding:3px 8px;min-height:21px;font-size:.58rem}.wae117-actions{gap:5px!important}.wae117-actions [data-wae117]{height:30px;padding:0 7px;font-size:.65rem}}
+@media(prefers-reduced-motion:reduce){.wae117-actions [data-wae117],.wae117-source-focus{transition:none!important;animation:none!important}}
