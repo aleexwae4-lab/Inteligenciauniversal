@@ -31,10 +31,11 @@ function validate(raw,kind,brief){
    slides:Array.isArray(p.slides)?p.slides.slice(0,7).map(x=>({title:text(x?.title,110),body:text(x?.body,330)})).filter(x=>x.title.length>4&&x.body.length>=14):[]
  };
  if(result.brand.length<3||result.headline.length<9||result.subheadline.length<25)throw Error('El contenido de IA no tiene suficiente detalle');
- if(/^(wae os|universal core|tu próximo gran producto)$/i.test(result.brand)&&!/\bwae\b|universal core/i.test(brief))throw Error('La IA respondió con una marca distinta a la solicitada');
+ if(/^(wae(?:\s+os)?(?:\s+enterprise)?|universal\s+core|tu próximo gran producto)$/i.test(result.brand)&&!/\bwae\b|universal core/i.test(brief))throw Error('La IA respondió con una marca distinta a la solicitada');
  if(kind==='slides'||kind==='prototype'){
    if(result.slides.length<3)throw Error('Faltan secciones para una presentación o prototipo completo');
  }else if(result.features.length<3)throw Error('El resultado aún no incluye contenido suficiente para la página');
+ if(result.features.length>=3&&result.features.every(x=>/^(innovaci[oó]n|confianza|resultados|beneficios|soluciones)$/i.test(x.title)))throw Error('El contenido sigue siendo un ejemplo genérico, no un diseño específico');
  const keywords=normalize(brief).split(/[^a-z0-9]+/).filter(x=>x.length>=5&&!['landing','pagina','quiero','crear','creame','crea','para','sobre','nuevo','canvas','html','presentacion','prototipo'].includes(x));
  if(keywords.length&&!keywords.some(k=>normalize(result.brand+' '+result.headline+' '+result.subheadline+' '+result.features.map(x=>x.title).join(' ')).includes(k.slice(0,Math.min(k.length,6)))))throw Error('El resultado no corresponde suficientemente al encargo');
  return result;
