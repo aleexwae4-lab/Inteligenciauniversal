@@ -254,8 +254,8 @@ function initInteractions(){
   $('#saveBtn').addEventListener('click',saveWorkspace);
   $('#exportBtn').addEventListener('click',exportWorkspace);
   $('#attachBtn').addEventListener('click',()=>$('#fileInput').click());
-  $('#fileInput').addEventListener('change',e=>{const c=e.target.files.length;if(c)toast(`${c} archivo${c>1?'s':''} seleccionado${c>1?'s':''}`)});
-  $('#voiceBtn').addEventListener('click',()=>toast('Voz lista'));
+  // The runtime attachment reader confirms which text files actually reached the AI; never announce raw selection as success.
+  $('#voiceBtn').addEventListener('click',()=>{if(!window.WAEVoice)toast('La voz no está disponible en esta sesión')});
   $('#settingsBtn').addEventListener('click',openSettings);
   $('#saveSettingsBtn').addEventListener('click',saveSettings);
   $$('.nav-list button[data-view]').forEach(b=>b.addEventListener('click',()=>{toast(`${b.querySelector('span').textContent}: no disponible todavía en esta versión`);closeDrawer()}));
