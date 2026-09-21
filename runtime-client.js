@@ -135,11 +135,20 @@
     if(raw.length>3200&&question.length<180)return 'disproportionate_comparison';
     return '';
   };
+  // This edition uses Supabase for ordinary chat, but v115 sector missions must
+  // enter its own server, where the authoritative safety/evidence contract runs.
+  // Keep the visible UI, Workspace, Canvas and Supabase history flows unchanged.
+  const industrialQuery=value=>{
+    const q=String(value||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase();
+    return /\b(avion(?:es)?|aeronave(?:s)?|aviacion|aeronautic\w*|helicopter\w*|aircraft|cohete(?:s)?|espacial(?:es)?|satelite(?:s)?|spacecraft|rocket(?:s)?|automovil(?:es)?|carro(?:s)?|coche(?:s)?|vehiculo(?:s)?|automotriz|moto(?:s)?|motocicleta(?:s)?|scooter(?:s)?|barco(?:s)?|buque(?:s)?|embarcacion(?:es)?|naval|maritim\w*|motor(?:es)?|turbina(?:s)?|combustion|propulsion|fabrica(?:s)?|manufactur\w*|industria(?:s|l)?|produccion|planta(?:s)?|universidad(?:es)?|campus|facultad(?:es)?|computadora(?:s)?|ordenador(?:es)?|pc|servidor(?:es)?|hardware|robot(?:s|ica)?|androide(?:s)?|chip(?:s)?|semiconductor(?:es)?|microprocesador(?:es)?|fpga|asic|silicio|microelectronica|data center(?:s)?|centro(?:s)? de datos|gobierno(?:s)?|municipio(?:s)?|ayuntamiento(?:s)?|administracion publica|sociedad(?:es)?|cooperativa(?:s)?|comunidad(?:es)?|organizacion(?:es)? civil(?:es)?)\b/.test(q);
+  };
   window.fetch=async(input,init={})=>{
     if(!isLocalRuntime(input)||String(init.method||'GET').toUpperCase()!=='POST')return nativeFetch(input,init);
     const request=typeof init.body==='string'?JSON.parse(init.body):{};
     // Capability/identity answers come from the product's real server registry, not a generic upstream persona.
     if(selfQuery(request.message)||request.canvas_direct===true||request.canvas_blueprint===true)return nativeFetch(input,init);
+    // The HTML/Canvas paths and short capability registry answers stay untouched.
+    if(request.canvas!==true&&industrialQuery(request.message))return nativeFetch(input,init);
     try{
       await bootstrap();
       const incoming=request;
