@@ -63,7 +63,7 @@ test('the primary and native runtime actually inject the industrial system contr
   const main=readFileSync(new URL('../lib/runtime.js',import.meta.url),'utf8');
   const native=readFileSync(new URL('../lib/native-brain-v5.js',import.meta.url),'utf8');
   assert.match(main,/industrialSystemInstruction\(industrialMission\)/);
-  assert.match(main,/!industrialMission&&!contextualFollowup/);
+  assert.match(main,/!contextualFollowup&&!userContextState\.affectsGeneration&&!industrialMission/);
   assert.match(native,/industrialSystemInstruction\(industrial\)/);
   assert.match(native,/industrial:mission\.industrial/);
 });
