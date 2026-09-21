@@ -81,6 +81,7 @@ window.addEventListener('error',function(e){diag('error',{error:String(e.message
 recoverPwa();input.disabled=false;input.readOnly=false;input.tabIndex=0;send.disabled=true;autosize();diag('page_loaded',{route:STABLE_SHELL});diag('runtime_ready',{route:STABLE_SHELL});
 })();
 </script>
+<script src="/canvas-native-mobile-v1.js?v=1" defer></script>
 </body>
 </html>`;
 
