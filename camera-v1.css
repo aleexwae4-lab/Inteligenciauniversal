@@ -20,3 +20,10 @@
 .wae-camera-panel>video[hidden],.wae-camera-panel>img[hidden]{display:none!important}
 .wae-camera-status{color:#9dd3c6!important;min-height:1.3em}
 @media(max-width:420px){.wae-camera-panel{padding:11px;gap:9px}.wae-camera-control{padding:8px 9px;font-size:.72rem}}
+
+/* Compact evidence preview and explicit retry; never auto-store the original media. */
+.composer .wae-camera-badge{display:flex;align-items:center;gap:8px;padding:6px 9px;min-height:43px;text-align:left;overflow:hidden}
+.composer .wae-camera-thumb{width:35px;height:35px;object-fit:cover;border:1px solid rgba(81,235,207,.30);border-radius:7px;flex:none}
+.composer .wae-camera-retry{width:max-content;max-width:100%;margin:0 0 5px 0;padding:6px 10px;font-size:.73rem;border:1px solid rgba(81,235,207,.45);border-radius:9px;background:rgba(17,69,57,.7);color:#b9eee6;cursor:pointer}
+.composer .wae-camera-retry[hidden]{display:none!important}
+.composer .wae-camera-retry:focus-visible{outline:2px solid #51ebcf;outline-offset:2px}
