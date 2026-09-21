@@ -35,8 +35,8 @@
     if(tools){
       const attach=$('#attachBtn');if(attach){attach.textContent='＋';attach.title='Agregar'}
       const voice=$('#voiceBtn');if(voice){voice.textContent='♩';voice.title='Dictado por voz'}
-      const clip=document.createElement('button');clip.type='button';clip.className='mini-btn v2-tool';clip.textContent='⌕';clip.title='Adjuntar archivo';clip.addEventListener('click',()=>$('#fileInput')?.click());
-      const speak=document.createElement('button');speak.type='button';speak.className='mini-btn v2-tool';speak.textContent='◖))';speak.title='Escuchar';speak.addEventListener('click',()=>notify('Salida de voz lista para conectar a TTS'));
+      const clip=document.createElement('button');clip.type='button';clip.className='mini-btn v2-tool';clip.textContent='⌕';clip.title='Investigar en la web';clip.setAttribute('aria-label','Activar modo Investigar');clip.addEventListener('click',()=>window.WAEModes?.select('research'));
+      const speak=document.createElement('button');speak.type='button';speak.className='mini-btn v2-tool';speak.textContent='■';speak.title='Detener voz';speak.setAttribute('aria-label','Detener reproducción de voz');speak.addEventListener('click',()=>{if(window.WAEVoice?.stop){window.WAEVoice.stop();notify('Voz detenida')}else if(window.speechSynthesis){window.speechSynthesis.cancel();notify('Voz detenida')}else notify('Voz no disponible en este navegador')});
       const doc=document.createElement('button');doc.type='button';doc.className='mini-btn v2-tool';doc.textContent='▤';doc.title='Documento';doc.addEventListener('click',()=>$('#workspaceBtn')?.click());
       if(attach)attach.after(clip);if(voice)voice.after(speak,doc);
     }
