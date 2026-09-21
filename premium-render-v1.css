@@ -1,0 +1,39 @@
+
+/* Universal Core Premium · Render edition only; original Vercel shell preserved. */
+#messages .message.assistant{min-width:0}
+#messages .iu-rich{color:var(--text,#eef7f2);font-size:.91rem;line-height:1.64;overflow-wrap:anywhere;word-break:normal;max-width:100%}
+#messages .iu-rich>*:first-child{margin-top:0}
+#messages .iu-rich>*:last-child{margin-bottom:0}
+#messages .iu-rich p{white-space:normal;margin:.55em 0}
+#messages .iu-rich h2,#messages .iu-rich h3,#messages .iu-rich h4,#messages .iu-rich h5{color:#ebfff5;font-weight:760;letter-spacing:-.016em;line-height:1.32;margin:1.2em 0 .55em}
+#messages .iu-rich h2{font-size:1.14rem}#messages .iu-rich h3{font-size:1.04rem}
+#messages .iu-rich strong{color:#effff6;font-weight:760}
+#messages .iu-rich a{color:#7aecc7;text-decoration:underline;text-decoration-color:rgba(122,236,199,.55);text-underline-offset:3px}
+#messages .iu-rich a:hover{color:#b6ffe4}
+#messages .iu-rich ul,#messages .iu-rich ol{padding-left:1.4em;margin:.6em 0}
+#messages .iu-rich li{padding:.12em 0}
+#messages .iu-rich blockquote{margin:.7em 0;padding:.3em .8em;border-left:3px solid #34dba1;background:rgba(32,225,156,.07);border-radius:0 8px 8px 0}
+#messages .iu-rich code{font-size:.86em;padding:.08em .3em;border-radius:4px;color:#9dffd5;background:rgba(11,31,25,.9);font-family:ui-monospace,SFMono-Regular,Consolas,monospace}
+#messages .iu-rich pre{overflow-x:auto;max-width:100%;padding:12px;margin:10px 0;border:1px solid rgba(94,214,155,.17);border-radius:12px;background:#07130e;-webkit-overflow-scrolling:touch}
+#messages .iu-rich pre code{padding:0;background:none;white-space:pre;font-size:.81rem;line-height:1.5}
+#messages .iu-rich hr{height:1px;border:0;background:rgba(122,236,199,.17);margin:1em 0}
+#messages .iu-table-scroll{overflow-x:auto;max-width:100%;margin:10px 0;border:1px solid rgba(97,218,156,.18);border-radius:10px;-webkit-overflow-scrolling:touch}
+#messages .iu-table-scroll table{border-collapse:collapse;width:100%;font-size:.82rem;min-width:max-content;max-width:none}
+#messages .iu-table-scroll th,#messages .iu-table-scroll td{padding:9px 11px;text-align:left;vertical-align:top;border-bottom:1px solid rgba(97,218,156,.1);min-width:90px}
+#messages .iu-table-scroll th{color:#a8ffda;font-weight:780;background:rgba(30,127,88,.15)}
+#messages .iu-table-scroll tr:last-child td{border-bottom:0}
+#messages .iu-answer-tools{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin-top:12px;padding-top:9px;border-top:1px solid rgba(135,255,202,.13)}
+#messages .iu-answer-tools button{border:1px solid rgba(135,255,202,.2);background:rgba(17,43,31,.72);border-radius:9px;color:#d6f9e7;padding:8px 10px;font-size:.72rem;line-height:1.2;font-weight:650;white-space:nowrap;cursor:pointer;min-height:35px;touch-action:manipulation}
+#messages .iu-answer-tools button:hover{background:rgba(26,88,61,.74);border-color:rgba(135,255,202,.56)}
+#messages .iu-answer-tools button:focus-visible{outline:2px solid #6efcc0;outline-offset:2px}
+#messages .iu-answer-tools button:disabled{opacity:.48;cursor:not-allowed}
+#messages .iu-answer-tools button[aria-pressed="true"]{border-color:#35e2a2;color:#72ffc5}
+#messages .iu-answer-tools .iu-workspace{color:#88ffce}
+#voiceBtn{min-width:45px;white-space:nowrap;font-size:.71rem}
+.top-actions #newChatBtn.v2-hide-new{display:inline-flex!important;align-items:center}
+@media(max-width:600px){
+#messages .iu-rich{font-size:.84rem;line-height:1.6}
+#messages .iu-answer-tools{gap:5px}
+#messages .iu-answer-tools button{font-size:.67rem;padding:7px 9px;min-height:34px}
+.top-actions #newChatBtn.v2-hide-new{font-size:.67rem;padding:7px}
+}
