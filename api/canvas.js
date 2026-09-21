@@ -21,11 +21,15 @@ export default async function handler(req, res) {
   if (typeof body.request !== 'string' || body.request.trim().length < 8 || body.request.length > 3500) {
     return res.status(400).json({ error: 'invalid_brief', message: 'Describe tu producto en al menos ocho caracteres.' });
   }
+  if (body.baseHtml != null && (typeof body.baseHtml !== 'string' || body.baseHtml.length > 100_000)) {
+    return res.status(413).json({ error: 'canvas_revision_too_large', message: 'La revisión del Canvas supera el límite de 100 KB.' });
+  }
   try {
     const result = await createPremiumCanvas({
       request: body.request,
       kind: typeof body.kind === 'string' ? body.kind : undefined,
       brand: typeof body.brand === 'string' ? body.brand : '',
+      baseHtml: typeof body.baseHtml === 'string' ? body.baseHtml : '',
       provider: 'auto'
     });
     return res.status(200).json({ status: 'completed', ...result });
