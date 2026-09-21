@@ -1,7 +1,8 @@
 /* Scoped enhancement: preserve Universal Core's existing layout and runtime. */
 (() => {
   'use strict';
-  if (window.__waeResponseFinishV1) return;
+  if (typeof document === 'undefined' || typeof document.getElementById !== 'function') return;
+  if (typeof window === 'undefined' || window.__waeResponseFinishV1) return;
   let active = null, serial = 0, queued = false;
   const root = () => document.getElementById('messages');
   const body = a => a.querySelector('.rich-content, .rich-answer, .assistant-body');
