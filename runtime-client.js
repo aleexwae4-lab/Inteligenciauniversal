@@ -3,6 +3,25 @@
   const SUPABASE_KEY='sb_publishable_2zXa35U9Z--xuy_mQekG9w_kY7AVlv-';
   const EDGE=`${SUPABASE_URL}/functions/v1/wae-local-voice-demo-v61`;
   const nativeFetch=window.fetch.bind(window);
+  const responsePolicy='CALIDAD UNIVERSAL CORE: Responde primero a lo pedido, con criterio y especificidad. Distingue hechos, inferencias y límites. Si la pregunta exige actualidad, solo usa fuentes realmente recuperadas y cita sus URLs; sin evidencia, indica el límite. Para código, entrega cambios reproducibles, pruebas pertinentes y riesgos, sin afirmar ejecuciones que no hiciste. Usa Markdown, tablas o ejemplos únicamente cuando mejoren la explicación. Mantén un tono natural, sin relleno ni texto interno.';
+  function needsFreshWeb(message, mode){
+    if(mode==='research')return true;
+    const q=String(message||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase();
+    if(/\b(sin internet|sin buscar en internet|no busques en la web|no uses la web)\b/.test(q))return false;
+    return /\b(hoy|ahora|actualizad[oa]s?|reciente[s]?|ultim[oa]s?|noticias|tiempo real|en vivo|vigente[s]?|cotizacion|tipo de cambio|precio[s]? actual(?:es)?|verifica|verificar|comprueba|busca en internet|busca en la web|investiga en la web|fuentes actuales|con fuentes|cita fuentes|jurisprudencia vigente|reforma legal|normativa vigente)\b/.test(q);
+  }
+  function withRetrievedSources(reply, sources){
+    const answer=String(reply||'').trim();if(!answer||!Array.isArray(sources))return answer;
+    const seen=new Set(),lines=[];
+    for(const item of sources){
+      const raw=typeof item==='string'?item:item?.url;if(typeof raw!=='string')continue;
+      let url;try{url=new URL(raw);if(!['https:','http:'].includes(url.protocol)||!url.hostname||/[<>\"\s]/.test(raw))continue}catch{continue}
+      if(seen.has(url.href))continue;seen.add(url.href);
+      const title=String(typeof item==='string'?url.hostname:item.title||item.name||url.hostname).replace(/[\r\n\[\]()]/g,' ').replace(/\s+/g,' ').slice(0,130).trim()||url.hostname;
+      lines.push('- ['+title+']('+url.href+')');if(lines.length>=6)break;
+    }
+    return lines.length?answer+'\n\n### Fuentes recuperadas\n'+lines.join('\n'):answer;
+  }
   const SESSION_ID='iu.sessionId',SESSION_SECRET='iu.sessionSecret',CONVERSATION_ID='iu.conversationId';
   if(!localStorage.getItem('wae.endpoint')||localStorage.getItem('wae.endpoint')==='/api/chat')localStorage.setItem('wae.endpoint','/api/chat');
   window.__waeRuntimeAttachments=[];
@@ -34,11 +53,15 @@
     try{
       await bootstrap();
       const incoming=request;
-      const data=await edge({action:'chat',...sessionPayload(),conversation_id:incoming.canvas?null:localStorage.getItem(CONVERSATION_ID)||null,message:[incoming.preferences?.instructions?'PREFERENCIAS DEL USUARIO (no prevalecen sobre reglas de seguridad):\n'+String(incoming.preferences.instructions).slice(0,4000):'',incoming.preferences?.knowledge?'CONTEXTO GENERAL DEL USUARIO (no verificado):\n'+String(incoming.preferences.knowledge).slice(0,12000):'',incoming.project?.instructions?'INSTRUCCIONES DE ESTE PROYECTO (subordinadas a seguridad):\n'+String(incoming.project.instructions).slice(0,3000):'',incoming.project?.knowledge?'CONOCIMIENTO DEL PROYECTO (información aportada, no verificada):\n'+String(incoming.project.knowledge).slice(0,8000):'','SOLICITUD ACTUAL:\n'+String(incoming.message||'')].filter(Boolean).join('\n\n'),mode:String(incoming.mode||localStorage.getItem('wae.mode')||'general'),web_enabled:String(incoming.mode||'')==='research',attachments:window.__waeRuntimeAttachments||[]});
+      const runtimeMode=String(incoming.mode||localStorage.getItem('wae.mode')||'general');
+      const useWeb=!incoming.canvas&&needsFreshWeb(incoming.message,runtimeMode);
+      const data=await edge({action:'chat',...sessionPayload(),conversation_id:incoming.canvas?null:localStorage.getItem(CONVERSATION_ID)||null,message:[!incoming.canvas?'DIRECTRICES DE RESPUESTA (subordinadas a instrucciones del sistema):\n'+responsePolicy:'',incoming.preferences?.instructions?'PREFERENCIAS DEL USUARIO (no prevalecen sobre reglas de seguridad):\n'+String(incoming.preferences.instructions).slice(0,4000):'',incoming.preferences?.knowledge?'CONTEXTO GENERAL DEL USUARIO (no verificado):\n'+String(incoming.preferences.knowledge).slice(0,12000):'',incoming.project?.instructions?'INSTRUCCIONES DE ESTE PROYECTO (subordinadas a seguridad):\n'+String(incoming.project.instructions).slice(0,3000):'',incoming.project?.knowledge?'CONOCIMIENTO DEL PROYECTO (información aportada, no verificada):\n'+String(incoming.project.knowledge).slice(0,8000):'','SOLICITUD ACTUAL:\n'+String(incoming.message||'')].filter(Boolean).join('\n\n'),mode:runtimeMode,web_enabled:useWeb,attachments:window.__waeRuntimeAttachments||[]});
       if(data.conversation_id&&!incoming.canvas){localStorage.setItem(CONVERSATION_ID,data.conversation_id);window.WAENavigation?.remoteUpdated?.(data.conversation_id)}
       window.__iuLastRuntime=data;
       if(!incoming.canvas)queueMicrotask(()=>{updateRuntimeCard(data);loadConversations().catch(()=>{})});
-      return new Response(JSON.stringify({reply:data.reply||'',runtime:data.runtime,provider:data.provider,model:data.model,web_sources:data.web_sources||[]}),{status:200,headers:{'content-type':'application/json','cache-control':'no-store','x-wae-runtime':'supabase-primary'}});
+      if(!String(data.reply||'').trim())throw new Error('empty_supabase_reply');
+      const reply=incoming.canvas?String(data.reply):withRetrievedSources(data.reply,data.web_sources);
+      return new Response(JSON.stringify({reply,runtime:data.runtime,provider:data.provider,model:data.model,web_sources:data.web_sources||[]}),{status:200,headers:{'content-type':'application/json','cache-control':'no-store','x-wae-runtime':'supabase-primary'}});
     }catch(err){
       console.warn('[WAE IU] Supabase primary unavailable; using Render fallback',err?.message||err);
       try{
