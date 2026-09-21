@@ -10,17 +10,19 @@ test('v99 recognizes the exact self-awareness questions observed in the mobile c
   assert.equal(classifySelfAwarenessV99({message:'¿Qué tan inteligente eres?'}).kind,'capability');
   assert.equal(classifySelfAwarenessV99({message:'¿Puedes competir contra GPT Astra?'}).kind,'comparison');
   assert.equal(classifySelfAwarenessV99({message:'Quiero saber si eres competente contra GPT Astra'}).kind,'comparison');
+  assert.equal(classifySelfAwarenessV99({message:'¿Puedes competir contra Google, Microsoft, GitHub y Vercel?'}).kind,'comparison');
 });
 
-test('v99 answers competitive intent confidently without fabricating superiority',()=>{
+test('v99 answers broad platform competition with benchmark-scoped evidence',()=>{
   const reply=buildSelfAwarenessReplyV99({kind:'comparison',stats:{executiveOrchestration:{executiveRoles:22,activeAgentInstances:6}}});
-  assert.match(reply,/construido para competir contra GPT-6 Astra/i);
+  assert.match(reply,/Google \/ Microsoft/i);
+  assert.match(reply,/GitHub/i);
+  assert.match(reply,/Vercel/i);
+  assert.match(reply,/GPT \/ Gemini/i);
   assert.match(reply,/64 casos emparejados/i);
-  assert.match(reply,/CERTIFIED/);
-  assert.match(reply,/tengo arquitectura y mecanismos para competir/i);
-  assert.match(reply,/No debo afirmar que ya superé a Astra/i);
+  assert.match(reply,/No debo afirmar|CERTIFIED|pruebas medibles/i);
   assert.doesNotMatch(reply,/No puedo competir directamente/i);
-  assert.doesNotMatch(reply,/No dispongo de datos comparativos públicos/i);
+  assert.doesNotMatch(reply,/busca un nicho/i);
 });
 
 test('v99 capability answer describes measurable system capabilities rather than invented IQ',()=>{
