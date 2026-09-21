@@ -128,8 +128,10 @@ function init(){
  const settings=$('#settingsBtn');nav.replaceChildren();links=node('div','iu-nav-links');
  const chats=button('☷  Conversaciones',()=>{view='conversations';render()},'iu-nav-link');chats.dataset.view='conversations';
  const projects=button('◇  Proyectos',()=>{view='projects';render()},'iu-nav-link');projects.dataset.view='projects';
- links.append(chats,projects);if(settings){settings.className='iu-nav-link';settings.textContent='⚙  Configuración';links.append(settings)}
+ links.append(chats,projects);
  panel=node('section','iu-nav-panel');nav.append(links,panel);
+ // Keep the existing settings button and its working handler outside the scrolling list.
+ if(settings){const footer=node('div','iu-nav-footer');settings.className='iu-nav-settings';settings.textContent='⚙  Configuración';footer.append(settings);nav.after(footer)}
  modal=node('dialog','iu-nav-modal');$('#app').append(modal);modal.addEventListener('click',e=>{if(e.target===modal)modal.close()});
  const c=active();if(c&&JSON.stringify(c.messages)!==JSON.stringify(messages()))restore(c);
  window.addEventListener('wae:messages-changed',sync);render();
