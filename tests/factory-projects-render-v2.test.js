@@ -30,7 +30,7 @@ test('existing Canvas generated HTML and undo remain the single owner',()=>{
 });
 test('PWA includes code workspace assets and never caches API responses',()=>{
   const sw=read('sw.js');
-  assert.match(sw,/factory-projects-render-v2\.js\?v=3/);
+  assert.match(sw,/factory-projects-render-v2\.js\?v=4/);
   assert.match(sw,/factory-projects-render-v2\.css\?v=2/);
   assert.match(sw,/url\.pathname\.startsWith\('\/api\/'\)/);
 });
