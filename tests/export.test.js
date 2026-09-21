@@ -28,7 +28,7 @@ test('UI offers document formats and working Canvas construction controls',async
  const html=readFileSync(new URL('../index.html',import.meta.url),'utf8');
  for(const ext of ['pdf','docx','txt','md','html','rtf'])assert.match(ui,new RegExp('value="'+ext+'"'));
  for(const key of ['iuCanvasType','iuCanvasGenerate','iuCanvasTemplate','iuCanvasDownload'])assert.match(ui,new RegExp(key));
- assert.match(html,/workspace-premium-v1\.js\?v=12/);
+ assert.match(html,/workspace-premium-v1\.js\?v=11/);
 });
 
 test('Canvas v2 is loaded after legacy Canvas without replacing the original shell',()=>{
