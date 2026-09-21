@@ -30,6 +30,9 @@ const ROOT = fileURLToPath(new URL('.', import.meta.url));
 const PORT = Number(process.env.PORT || 10000);
 const HOST = '0.0.0.0';
 const MAX_BODY_BYTES = Number(process.env.WAE_MAX_BODY_BYTES || 2_000_000);
+// Per-service presentation choice: both editions share the same API and intelligence runtime.
+const UI_VARIANT = process.env.WAE_UI_VARIANT === 'premium' ? 'premium' : 'enterprise';
+const UI_ENTRY = UI_VARIANT === 'premium' ? 'index.html' : 'ui/enterprise/index.html';
 
 // Compatibility markers retained for historical regression contracts only.
 // They are NOT injected by the v115 mobile shell:
@@ -178,7 +181,7 @@ async function runApi(req, res, handler) {
 
 function safeStaticPath(pathname) {
   const decoded = decodeURIComponent(pathname);
-  const requested = decoded === '/' ? 'index.html' : decoded.replace(/^\/+/, '');
+  const requested = decoded === '/' || decoded === '/index.html' ? UI_ENTRY : decoded.replace(/^\/+/, '');
   const normalized = normalize(requested).replace(/^(\.\.[/\\])+/, '');
   return join(ROOT, normalized);
 }
@@ -193,7 +196,7 @@ async function serveFile(req, res, pathname) {
     }
     if (!info.isFile()) throw new Error('not_file');
   } catch {
-    filePath = join(ROOT, 'index.html');
+    filePath = join(ROOT, UI_ENTRY);
   }
 
   const ext = extname(filePath).toLowerCase();
@@ -241,7 +244,10 @@ const server = createServer(async (req, res) => {
     return res.end(JSON.stringify({ error: 'method_not_allowed' }));
   }
 
-  if (url.pathname === '/' && isMobileRequest(req, url)) {
+  // Enterprise retains its native mobile shell; Premium uses its responsive desktop shell.
+  // Only presentation differs: both editions call the identical same-origin API handlers.
+  res.setHeader('X-WAE-UI-Variant', UI_VARIANT);
+  if (url.pathname === '/' && UI_VARIANT === 'enterprise' && isMobileRequest(req, url)) {
     return mobilePremiumHandler(req, res);
   }
 
