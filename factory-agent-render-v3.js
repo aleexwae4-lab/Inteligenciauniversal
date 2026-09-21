@@ -58,17 +58,19 @@ async function build(){
   if(!snapshot){state('No encuentro el proyecto. Vuelve a abrir la Fábrica.',true);return}
   const t=thread(snapshot.id);
   const refining=!isStarter(snapshot);
+  const priorGoals=t.messages.filter(m=>m.role==='user').slice(-5).map(m=>m.text).filter(Boolean);
+  const mission=(priorGoals.length>1?('Contexto acumulado del proyecto (conserva requisitos compatibles):\n- '+priorGoals.join('\n- ')+'\n\nCambio solicitado ahora:\n'+instruction):instruction).slice(0,3400);
   if(refining&&snapshot.html.length>100000){state('El proyecto supera 100 KB. Exporta una copia o reduce su tamaño antes de pedir una revisión.',true);return}
   busy=true;send.disabled=true;entry.disabled=true;['#wfProjects','#wfNewProject','#wfImportCanvas'].forEach(q=>{const el=$(q);if(el)el.disabled=true});
   entry.value='';remember('user',instruction);
-  state(refining?'Consultando al agente para mejorar el producto existente…':'Consultando al agente para construir tu primer producto…');
+  state(refining?'Analizando contexto → especialistas → construcción → QA…':'Definiendo producto → especialistas → construcción → QA…');
   const controller=new AbortController();
   const timeout=setTimeout(()=>controller.abort(),115000);
   try{
     const res=await fetch('/api/canvas',{
       method:'POST',credentials:'same-origin',
       headers:{'content-type':'application/json'},
-      body:JSON.stringify({request:instruction,kind:t.kind||undefined,baseHtml:refining?snapshot.html:''}),
+      body:JSON.stringify({request:mission,kind:t.kind||undefined,baseHtml:refining?snapshot.html:''}),
       signal:controller.signal
     });
     const data=await res.json().catch(()=>({}));
