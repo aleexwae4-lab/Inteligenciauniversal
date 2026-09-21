@@ -71,12 +71,14 @@ test('same-origin session bootstrap works even when browser cannot contact Supab
 test('real visual browser transport stays on Render origin for photo/video, retains image on errors',()=>{
  const runtime=read('runtime-client.js'),camera=read('camera-v1.js'),api=read('api/vision.js');
  const block=runtime.slice(runtime.indexOf('window.WAEVisualRuntime='),runtime.indexOf('function isLocalRuntime'));
- assert.match(block,/nativeFetch\('\/api\/vision'/);
- assert.match(block,/action:'bootstrap'/);
- assert.doesNotMatch(block,/nativeFetch\(VISUAL_EDGE/);
+ assert.match(runtime,/nativeFetch\('\/api\/vision'/);
+ assert.match(runtime,/action:'bootstrap'/);
+ assert.doesNotMatch(runtime,/nativeFetch\(VISUAL_EDGE/);
  assert.doesNotMatch(block,/x-goog-api-key/);
  assert.match(api,/forwardVisual\(body\)/);
  assert.match(api,/bootstrapVisualSession\(body\)/);
  assert.match(camera,/window.WAEVisualRuntime.analyze/);
  assert.match(camera,/if\(preparation\)await preparation/);
+ assert.match(runtime,/await ensureVisualSession\(\)/);
+ assert.match(runtime,/if\(error\?\.code!=='iu_invalid_session'/);
 });
