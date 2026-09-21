@@ -8,12 +8,11 @@ export default async function handler(req,res){
   if(!allowRequest(req))return res.status(429).json({error:'rate_limited',message:'Demasiadas solicitudes. Conserva la captura y vuelve a intentar en un minuto.'});
   try{
     const body=req.body||{};
-    // Guarded, authenticated WAE route first. Legacy local Gemini route stays opt-in
-    // for callers without an IU session: never switch to a paid provider silently.
     if(body.action==='bootstrap')return res.status(200).json(await bootstrapVisualSession(body));
-    const result=body.session_id||body.session_secret
-      ?await forwardVisual(body)
-      :await analyzeVisual(body);
+    let result;
+    if(process.env.WAE_VISION_ENABLED==='true'&&process.env.GEMINI_API_KEY){result=await analyzeVisual(body);result.transport='render_native_provider'}
+    else if(body.session_id||body.session_secret)result=await forwardVisual(body);
+    else result=await analyzeVisual(body);
     return res.status(200).json(result);
   }catch(error){
     return res.status(error.statusCode||502).json({error:error.code||'vision_error',message:String(error.message||'vision_error')});
