@@ -1,0 +1,33 @@
+name: Universal Core Dual UI Guard
+on:
+  pull_request:
+    paths:
+      - 'server.js'
+      - 'index.html'
+      - 'ui/**'
+      - 'test/dual-ui-variant-v119.test.js'
+      - '.github/workflows/dual-ui-guard.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'server.js'
+      - 'index.html'
+      - 'ui/**'
+      - 'test/dual-ui-variant-v119.test.js'
+      - '.github/workflows/dual-ui-guard.yml'
+  workflow_dispatch:
+jobs:
+  dual-ui:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - name: Validate runtime and UI contracts
+        run: |
+          node --check server.js
+          node --check app.js
+          node --check premium-v117.js
+          node --test test/dual-ui-variant-v119.test.js test/premium-v117-hardening.test.js tests/premium-response-actions-v117.test.js
