@@ -108,6 +108,7 @@ test('live readiness is IU-session-authenticated, zero-token and never claims im
  assert.doesNotMatch(code,/generateContent|inline_data|iu_request_traces/);
  assert.ok(canary.includes("action:'iu_visual_readiness_v1'"));
  assert.ok(canary.includes('actualInferenceTested=false'));
- assert.ok(!canary.includes('data.session_secret)'));
+ assert.match(canary,/session_secret:data\.session_secret/,'the authenticated health probe must supply the IU secret without logging it');
+ assert.doesNotMatch(canary,/console\.log\([^\n]*session_secret/,'never print the IU secret');
  assert.match(edge,/if\(s\(b.action\)==='video_evidence_v131'\)return video/);
 });
