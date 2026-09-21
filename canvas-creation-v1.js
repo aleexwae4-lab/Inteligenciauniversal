@@ -66,6 +66,7 @@
     if(action){action.disabled=true;action.textContent='Construyendo producto…';}
     setStatus('Consejo de especialistas → diseño → construcción → validación. Conservamos tu versión anterior.');
     if (automatic) workspaceHtml();
+    let applied=false;
     try {
       const response=await fetch('/api/canvas',{
         method:'POST',
@@ -82,14 +83,16 @@
       const preview=$('#htmlPreview');
       if (!editor || !preview) throw new Error('El editor Canvas no está disponible.');
       editor.value=data.html;
+      applied=true;
       editor.dispatchEvent(new Event('input',{bubbles:true}));
       // Reuse the existing Save action, rather than fork the persistence model.
       $('#saveBtn')?.click();
+      if (localStorage.getItem('wae.html') !== data.html) throw new Error('El producto está en el editor, pero el dispositivo no confirmó su guardado. Descarga el HTML desde Exportar.');
       const repaired=data.quality.repaired ? ' · QA corrigió estructura' : '';
       setStatus(KIND[data.kind]+' generado y guardado · estructura validada'+repaired+'. Revisa el diseño en móvil y escritorio.');
       if (automatic) workspaceHtml();
     } catch(error) {
-      setStatus('No se reemplazó tu trabajo: '+String(error.message||'Error de conexión.'),true);
+      setStatus((applied?'El producto sigue en el editor. ':'No se reemplazó tu trabajo. ')+String(error.message||'Error de conexión.'),true);
     } finally {
       busy=false;
       if(action){action.disabled=false;action.textContent='✦ Crear producto premium';}
