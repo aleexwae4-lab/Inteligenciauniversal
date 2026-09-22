@@ -149,12 +149,19 @@
     const q=String(value||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase();
     return /\b(proyecto(?:s)?|arquitectur\w*|edificio(?:s)?|urbanismo|obra(?:s)? civil(?:es)?|construccion(?:es)?|cimentacion|inmueble(?:s)?|vivienda(?:s)?|negocio(?:s)?|empresa(?:s)?|emprend\w*|startup(?:s)?|franquicia(?:s)?|inversion(?:es)?|invertir|inversionista(?:s)?|portafolio|etf|acciones bursatiles|bono(?:s)? gubernamentales|banco(?:s)?|bancari\w*|banca|fintech|credito(?:s)?|prestamo(?:s)?|hipoteca(?:s)?|laboratori\w*|investigacion aplicada|ensayo(?:s)? clinico(?:s)?|finanzas?|financier\w*|flujo de caja|cash flow|ebitda|tesoreria|contabilidad|capital de trabajo|presupuesto familiar|mis deudas|ahorro(?:s)?|fondo de emergencia|jubilacion|retiro|economia|macroeconomia|pib|inflacion|tipo de cambio|tasas? de interes|comercio internacional|ganar dinero|hacer dinero|generar ingresos|monetiz\w*|rentabilidad|utilidades|ventas|plan de vida|plan de carrera|meta(?:s)? personal(?:es)?)\b/.test(q);
   };
+  // World-problem missions must enter the local v117 evidence-to-impact contract.
+  // Previous v115/v116 routes, Canvas, Supabase-first ordinary chat and UI stay intact.
+  const worldQuery=value=>{
+    const q=String(value||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase();
+    return /\b(problema(?:s)? (?:de )?(?:nivel )?mundial(?:es)?|problema(?:s)? (?:del mundo|de la humanidad|de alcance global|de escala global)|reto(?:s)? global(?:es)?|desafio(?:s)? mundial(?:es)?|crisis global|global challenge(?:s)?|world problem(?:s)?|salud publica|pandemia(?:s)?|epidemia(?:s)?|sistema(?:s)? de salud|cambio climatico|crisis climatica|calentamiento global|descarbonizacion|agua potable|escasez de agua|crisis hidrica|saneamiento|hambre(?: mundial)?|hambruna(?:s)?|seguridad alimentaria|desnutricion|crisis energetica|energia limpia|transicion energetica|red(?:es)? electrica(?:s)?|crisis educativa|brecha educativa|analfabetismo|pobreza|desigualdad|desempleo|crisis de vivienda|infraestructura mundial|ciberseguridad mundial|ciberataque(?:s)?|ransomware|cibercrimen|desastre(?:s)? natural(?:es)?|terremoto(?:s)?|inundacion(?:es)?|crisis humanitaria|emergencia(?:s)? humanitaria(?:s)?|investigacion mundial|reto(?:s)? cientifico(?:s)?|ciencia abierta|cadena(?:s)? de suministro|logistica global|abastecimiento mundial|biodiversidad|deforestacion|extincion de especies|desplazamiento forzado|refugiado(?:s)?|migracion mundial|crisis migratoria)\b/.test(q) || (/\b(?:mundial(?:es)?|global(?:es)?|humanidad)\b/.test(q) && /\b(?:problema(?:s)?|reto(?:s)?|desafio(?:s)?|crisis|resolver|solucion(?:es)?)\b/.test(q));
+  };
   window.fetch=async(input,init={})=>{
     if(!isLocalRuntime(input)||String(init.method||'GET').toUpperCase()!=='POST')return nativeFetch(input,init);
     const request=typeof init.body==='string'?JSON.parse(init.body):{};
     // Capability/identity answers come from the product's real server registry, not a generic upstream persona.
     if(selfQuery(request.message)||request.canvas_direct===true||request.canvas_blueprint===true)return nativeFetch(input,init);
     // The HTML/Canvas paths and short capability registry answers stay untouched.
+    if(request.canvas!==true&&worldQuery(request.message))return nativeFetch(input,init);
     if(request.canvas!==true&&(industrialQuery(request.message)||professionalQuery(request.message)))return nativeFetch(input,init);
     try{
       await bootstrap();
