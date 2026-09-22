@@ -63,8 +63,8 @@ test('research and collaboration endpoints exist without changing chat, history 
  assert.match(client,/revision:state.revision/);assert.match(client,/Conflicto/);
  assert.match(client,/if\(e.value===state.last\)/);assert.match(client,/stream\(\)/);
  assert.match(client,/navigator.clipboard.writeText/);
- assert.match(html,/research-collab-v119\.js\?v=1/);
- assert.match(sw,/research-collab-v119\.js\?v=1/);
+ assert.match(html,/live-workspace-v119\.js\?v=1/);
+ assert.match(sw,/live-workspace-v119\.js\?v=1/);
  assert.match(sw,/wae-universal-render-intelligence-v38/);
  assert.match(html,/runtime-client\.js\?v=24&industrial=v115&professional=v116&world=v117&chatfix=v118/);
 });
