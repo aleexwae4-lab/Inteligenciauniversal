@@ -46,7 +46,7 @@ test('response widgets do not replace chat, voice, workspace or conversation sou
  assert.match(html,/wae-answer-widgets-v1\.js\?v=1/);
  assert.match(html,/wae-answer-widgets-v1\.css\?v=1/);
  assert.ok(html.indexOf('premium-render-v1.js')<html.indexOf('wae-answer-widgets-v1.js'));
- assert.match(sw,/wae-universal-render-evidence-v40/);
+ assert.match(sw,/wae-universal-render-continuity-v41/);
  assert.match(sw,/url\.pathname\.startsWith\('\/api\/'\)/);
  assert.match(sw,/wae-answer-widgets-v1\.js\?v=1/);
  assert.match(runtime,/degraded_supabase_reply/);
