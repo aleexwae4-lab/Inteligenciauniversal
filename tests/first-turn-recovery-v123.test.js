@@ -133,7 +133,7 @@ test('regression contracts keep existing UI, abort timing and Android cache cohe
  const client=read('runtime-client.js'),nav=read('navigation-premium-v1.js'),runtime=read('lib/runtime.js');
  const html=read('index.html'),sw=read('sw.js'),pkg=JSON.parse(read('package.json'));
  assert.match(client,/chatWithSessionRepair\(chatPayload,init\.signal\)/);
- assert.match(client,/retryColdStart/); // only backend runtime owns the retry option, not public UI
+ assert.doesNotMatch(client,/retryColdStart/); // only backend runtime owns this decision
  assert.match(nav,/remoteInvalidated:id/);
  assert.match(runtime,/retryColdStart:attachments\.length===0&&requestedTools\.length===0/);
  assert.match(sw,/wae-universal-render-firstturn-v42/);
