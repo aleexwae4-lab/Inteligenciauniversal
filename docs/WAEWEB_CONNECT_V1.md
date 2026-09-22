@@ -45,3 +45,18 @@ Prueba local aislada: `npm run test:waeweb-connect`. Un resultado
 de CI PASS verifica contrato de cliente, no URL Render ni proveedor
 externo en vivo. No fusionar ni habilitar hasta verificar cada runtime
 y los controles de lanzamiento de WAEWEB.
+
+## RC6 — streaming fiable y prueba entre repositorios
+
+Universal Core mantiene el timeout durante todo el SSE, limita la respuesta
+recibida a 128 KiB, propaga la cancelación al upstream y convierte las
+interrupciones/EOF sin evento `done` en error explícito, sin simular éxito.
+Los tests focalizados del conector verifican espera agotada después de cabeceras,
+transferencia excesiva y cancelación: [QA PASS](https://github.com/aleexwae4-lab/Inteligenciauniversal/actions/runs/35714792211).
+
+Una prueba del repositorio público WAEWEB obtiene el cliente real de esta rama
+y lo ejecuta contra el manejador HTTP real de WAEWEB con fuentes **simuladas**:
+[contrato cross-repo PASS](https://github.com/aleexwae4-lab/Waeweb/actions/runs/35714662862).
+No demuestra que ningún Render esté conectado ni que la suite general de
+Inteligenciauniversal esté verde: las regresiones generales continúan bloqueando
+el merge de este PR.
