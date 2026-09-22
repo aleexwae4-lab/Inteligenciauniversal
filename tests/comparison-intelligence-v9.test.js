@@ -39,7 +39,7 @@ test('short nuanced product-grounded answer is accepted without template or fake
 });
 test('both model paths check contextual answer quality before marking response as success',()=>{
  const runtime=read('lib/runtime.js'),providers=read('lib/providers.js'),client=read('runtime-client.js');
- assert.match(runtime,/qualityGate:comparison\?answer=>coreComparisonIssue\(answer,message\):null/);
+ assert.match(runtime,/coreComparisonIssue\(answer,message\)\|\|purposeResponseIssue\(answer,message/);
  assert.match(runtime,/system:comparison\?system/);
  assert.match(providers,/qualityGate=null/);
  assert.match(providers,/degradedAnswer\(result\?\.text\) \|\| \(typeof qualityGate/);
@@ -64,6 +64,6 @@ test('tables contain safe data labels for a readable 320px viewport without JS e
  assert.match(css,/overflow-wrap:anywhere/);
  assert.match(html,/wae-mobile-tables-v9\.css\?v=1/);
  assert.match(html,/premium-render-v1\.js\?v=12/);
- assert.match(sw,/wae-universal-render-intelligence-v38/);
+ assert.match(sw,/wae-universal-render-purpose-v39/);
  assert.match(sw,/runtime-client\.js\?v=24/);
 });
