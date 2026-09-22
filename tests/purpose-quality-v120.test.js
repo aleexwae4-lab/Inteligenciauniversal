@@ -12,7 +12,7 @@ function browser(){
 }
 test('20:51 clip: detects natural mission question without catching unrelated tasks',()=>{
  const client=browser();
- for(const text of [question,'¿Cuál es tu propósito como Universal Core ante Google?','¿Qué podrías hacer por mí que una búsqueda tradicional no resuelve?']){
+ for(const text of [question,'¿Cuál es tu propósito como Universal Core ante Google?','Universal Core, ¿qué podrías hacer por mí que una búsqueda tradicional no resuelve?']){
   assert.equal(isPurposeQuestion(text),true,text);
   assert.equal(client.purposeQuestion(text),true,text);
  }
