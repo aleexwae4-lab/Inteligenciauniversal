@@ -13,7 +13,7 @@
       overlay.innerHTML='<div class="wae-collab-box"><button type="button" data-action="close" style="float:right">Cerrar ×</button><h2>WAE · Sala colaborativa</h2><small>Documento temporal con actualización en vivo. No es Google Docs: se borra cuando Render reinicia o después de 2 horas sin actividad. No escribas secretos ni datos sensibles.</small><div><button type="button" data-action="create">Crear sala</button><button type="button" data-action="join">Unirme</button></div><label>ID de sala<input data-field="room" autocomplete="off" spellcheck="false" placeholder="ID recibido del creador"></label><label>Clave compartida<input data-field="key" autocomplete="off" spellcheck="false" type="password" placeholder="Clave recibida del creador"></label><button type="button" data-action="copy" hidden>Copiar invitación</button><p class="wae-collab-status" aria-live="polite">Conecta una sala para editar conjuntamente.</p><label>Documento compartido<textarea data-field="text" disabled placeholder="Contenido compartido"></textarea></label><small>Edición concurrente con control de versiones. Si otra persona edita tu misma versión, se conserva tu borrador y se muestra un conflicto.</small><div><button type="button" data-action="save" disabled>Guardar cambios</button><button type="button" data-action="reload" disabled>Recargar versión compartida</button></div></div>';
       document.body.append(overlay);
       const pick=name=>overlay.querySelector('[data-field="'+name+'"]'),button=name=>overlay.querySelector('[data-action="'+name+'"]'),msg=overlay.querySelector('.wae-collab-status'),editor=pick('text');
-      let room='',key='',version=0,dirty=false,serverText='',abort,saveTimer,closed=false;
+      let room='',key='',version=0,dirty=false,conflicted=false,serverText='',abort,saveTimer,closed=false;
       const status=text=>{msg.textContent=text};
       const auth=()=>({'authorization':'Bearer '+key});
       const dispose=()=>{closed=true;clearTimeout(saveTimer);abort?.abort();overlay.remove()};
@@ -26,9 +26,8 @@
       };
       const update=state=>{
         if(!state||state.room!==room)return;
-        version=state.version;serverText=state.text;
-        if(dirty&&editor.value!==serverText){status('Otra persona actualizó la sala; conserva tu borrador y resuelve el conflicto antes de guardar.');button('reload').disabled=false;return}
-        editor.value=serverText;dirty=false;status('En vivo · versión '+version+' · '+state.viewers+' lectores conectados');button('reload').disabled=false;
+        if(dirty&&editor.value!==state.text){conflicted=true;status('Otra persona actualizó la sala; conserva tu borrador y resuelve el conflicto antes de guardar.');button('reload').disabled=false;return}
+        version=state.version;serverText=state.text;editor.value=serverText;dirty=false;conflicted=false;status('En vivo · versión '+version+' · '+state.viewers+' lectores conectados');button('reload').disabled=false;
       };
       const stream=async()=>{
         abort?.abort();abort=new AbortController();
@@ -54,7 +53,7 @@
           const response=await fetch('/api/collab?room='+encodeURIComponent(room),{headers:auth(),cache:'no-store'});
           const data=await response.json();if(!response.ok)throw Error(data.error||'room_unavailable');
           editor.disabled=false;button('save').disabled=false;button('reload').disabled=false;
-          dirty=false;update(data);void stream();
+          dirty=false;conflicted=false;update(data);void stream();
         }catch(error){status('No se pudo unir: '+error.message)}
       };
       button('create').onclick=async()=>{
@@ -66,15 +65,16 @@
       button('copy').onclick=()=>{if(!room||!key)return;navigator.clipboard?.writeText('Sala WAE\nID: '+room+'\nClave: '+key+'\n'+location.origin).then(()=>status('Invitación copiada. Comparte solo con tu equipo.')).catch(()=>status('Copia el ID y la clave manualmente.'))};
       const save=async()=>{
         if(!dirty)return;
+        if(conflicted){status('Conflicto de versión: conserva tu borrador. Recarga antes de editar la nueva versión.');return}
         const contents=editor.value;if(contents.length>40000){status('Máximo 40 000 caracteres.');return}
-        try{const data=await api('save',{version,text:contents});dirty=false;update(data)}
+        try{const data=await api('save',{version,text:contents});if(editor.value===contents){dirty=false;update(data)}else{version=data.version;serverText=data.text;status('Se guardó la versión anterior; hay cambios locales pendientes.');clearTimeout(saveTimer);saveTimer=setTimeout(save,850)}}
         catch(e){status(e.status===409?'Conflicto de edición: tu borrador sigue intacto. Usa Recargar solo si deseas descartarlo.':'No se guardó: '+e.message)}
       };
       editor.addEventListener('input',()=>{dirty=true;status('Borrador local sin guardar');clearTimeout(saveTimer);saveTimer=setTimeout(save,850)});
       button('save').onclick=()=>{clearTimeout(saveTimer);void save()};
       button('reload').onclick=async()=>{
         if(dirty&&!confirm('¿Descartar tus cambios locales y leer la versión de la sala?'))return;
-        try{const response=await fetch('/api/collab?room='+encodeURIComponent(room),{headers:auth(),cache:'no-store'});const data=await response.json();if(!response.ok)throw Error(data.error||'room_unavailable');dirty=false;update(data)}catch(e){status('No se pudo recargar: '+e.message)}
+        try{const response=await fetch('/api/collab?room='+encodeURIComponent(room),{headers:auth(),cache:'no-store'});const data=await response.json();if(!response.ok)throw Error(data.error||'room_unavailable');dirty=false;conflicted=false;update(data)}catch(e){status('No se pudo recargar: '+e.message)}
       };
     };
   };
