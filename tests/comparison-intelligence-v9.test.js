@@ -64,6 +64,6 @@ test('tables contain safe data labels for a readable 320px viewport without JS e
  assert.match(css,/overflow-wrap:anywhere/);
  assert.match(html,/wae-mobile-tables-v9\.css\?v=1/);
  assert.match(html,/premium-render-v1\.js\?v=12/);
- assert.match(sw,/wae-universal-render-continuity-v41/);
+ assert.match(sw,/wae-universal-render-firstturn-v42/);
  assert.match(sw,/runtime-client\.js\?v=24/);
 });
