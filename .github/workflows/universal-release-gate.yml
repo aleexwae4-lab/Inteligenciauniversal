@@ -1,0 +1,29 @@
+name: Universal Core release gate
+on:
+  pull_request:
+    branches:
+      - deploy/render-vercel-production-a3c2a88
+  push:
+    branches:
+      - fix/release-gates-health-20260922
+permissions:
+  contents: read
+concurrency:
+  group: universal-release-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: yarn
+      - name: Install without paid inference
+        run: yarn install --frozen-lockfile
+      - name: Syntax gate
+        run: npm run check:syntax
+      - name: Full release regression gate
+        run: npm run check:release
