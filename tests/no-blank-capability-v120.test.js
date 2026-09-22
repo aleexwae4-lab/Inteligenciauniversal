@@ -42,7 +42,7 @@ test('accepted turns preserve a visible terminal outcome and a one-tap retry',()
   const app=readFileSync(new URL('../app.js',import.meta.url),'utf8');
   const mobile=readFileSync(new URL('../mobile-safe-composer.js',import.meta.url),'utf8');
   assert.match(app,/No recib[ií] una respuesta completa/);
-  assert.match(app,/data\.waeRetry/);
+  assert.match(app,/dataset\.waeRetry/);
   assert.match(app,/finally\{releaseTurnUI\(\)\}/);
   assert.match(mobile,/Clear the mobile draft only after/);
   assert.match(mobile,/data\.aiBusy==='true'/);
