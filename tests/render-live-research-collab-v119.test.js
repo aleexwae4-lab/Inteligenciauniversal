@@ -57,11 +57,11 @@ test('shared documents require an unguessable invitation and block stale overwri
  assert.throws(()=>updateRoom({id:created.id,secret:created.secret,text:'x'.repeat(90001),revision:1}),e=>e.code==='invalid_room_text');
 });
 test('research and collaboration endpoints exist without changing chat, history or the Premium interface',()=>{
- const server=read('server.js'),client=read('research-collab-v119.js'),html=read('index.html'),sw=read('sw.js');
+ const server=read('server.js'),client=read('live-workspace-v119.js'),html=read('index.html'),sw=read('sw.js');
  assert.match(server,/\['\/api\/research', researchHandler\]/);
  assert.match(server,/\['\/api\/collaboration', collaborationHandler\]/);
- assert.match(client,/revision:rev/);assert.match(client,/revision_conflict|Conflicto/);
- assert.match(client,/pendingRev/);assert.match(client,/if\(!localDirty\)/);
+ assert.match(client,/revision:state.revision/);assert.match(client,/Conflicto/);
+ assert.match(client,/if\(e.value===state.last\)/);assert.match(client,/stream\(\)/);
  assert.match(client,/navigator.clipboard.writeText/);
  assert.match(html,/research-collab-v119\.js\?v=1/);
  assert.match(sw,/research-collab-v119\.js\?v=1/);
