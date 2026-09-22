@@ -40,7 +40,7 @@ test('short nuanced product-grounded answer is accepted without template or fake
 test('both model paths check contextual answer quality before marking response as success',()=>{
  const runtime=read('lib/runtime.js'),providers=read('lib/providers.js'),client=read('runtime-client.js');
  assert.match(runtime,/coreComparisonIssue\(answer,message\)\|\|purposeResponseIssue\(answer,message/);
- assert.match(runtime,/system:comparison\?system/);
+ assert.match(runtime,/const groundedSystem=system\+/);
  assert.match(providers,/qualityGate=null/);
  assert.match(providers,/degradedAnswer\(result\?\.text\) \|\| \(typeof qualityGate/);
  const check=client.indexOf("throw new Error('comparison_quality_'+comparisonFailure)");
