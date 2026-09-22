@@ -260,7 +260,7 @@
     catch(error){
       if(signal?.aborted)throw error;
       const kind=recoverableChatFailure(error);
-      if(!kind)throw error;
+      if(!kind||(kind==='conversation'&&!payload.conversation_id))throw error;
       // Cloud session/conversation rejection is pre-inference, so this single
       // replay cannot duplicate a response or an external action.
       window.WAENavigation?.remoteInvalidated?.(payload.conversation_id);
