@@ -1,6 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import {waewebSettings,requestWaeweb,validateWaewebRequest,WaewebConnectError} from "../lib/waeweb-connect.js";
+import {inboundWaewebConfigured,authenticateInboundWaeweb} from "../lib/waeweb-inbound.js";
 const env={WAEWEB_CONNECT_ENABLED:"true",WAEWEB_CONNECT_BASE_URL:"https://waeweb.example.org/",
   WAEWEB_CONNECT_CLIENT_ID:"inteligenciauniversal",WAEWEB_CONNECT_TOKEN:"X".repeat(45)};
 test("WAEWEB settings remain disabled unless explicitly configured",()=>{
@@ -51,4 +52,17 @@ test("WAEWEB refuses streams without SSE and accepts authenticated SSE response"
     })
   });
   assert.match(resp.headers.get("content-type"),/text\/event-stream/);
+});
+
+test("Universal Core optional proxy cannot be abused by anonymous browser clients",()=>{
+  const safeEnv={...env,WAEWEB_CONNECT_INBOUND_TOKEN:"separate-inbound-"+"Z".repeat(40)};
+  assert.equal(inboundWaewebConfigured(env),false);
+  assert.equal(inboundWaewebConfigured({...safeEnv,WAEWEB_CONNECT_INBOUND_TOKEN:env.WAEWEB_CONNECT_TOKEN}),false);
+  assert.equal(inboundWaewebConfigured(safeEnv),true);
+  assert.equal(authenticateInboundWaeweb({},safeEnv),false);
+  assert.equal(authenticateInboundWaeweb({"x-waeweb-internal-token":env.WAEWEB_CONNECT_TOKEN},safeEnv),false);
+  assert.equal(authenticateInboundWaeweb({"x-waeweb-internal-token":safeEnv.WAEWEB_CONNECT_INBOUND_TOKEN},safeEnv),true);
+  assert.equal(authenticateInboundWaeweb({origin:"https://inteligenciauniversal.onrender.com",
+    "x-waeweb-internal-token":safeEnv.WAEWEB_CONNECT_INBOUND_TOKEN},safeEnv),false);
+  assert.equal(authenticateInboundWaeweb({"x-waeweb-internal-token":"wrong"},safeEnv),false);
 });
