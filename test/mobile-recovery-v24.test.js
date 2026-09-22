@@ -4,9 +4,12 @@ import { readFile } from 'node:fs/promises';
 
 const read = name => readFile(new URL(`../${name}`, import.meta.url), 'utf8');
 
-test('server exposes premium mobile route with v47 backpressure, v46 voice and v97 response lifecycle', async () => {
+test('server preserves native mobile routing while exposing independent Canvas without legacy CSS tokens', async () => {
   const server = await read('server.js');
+  const mobile = await read('api/mobile.js');
+  const canvas = await read('canvas-native-mobile-v1.js');
   assert.match(server, /\/api\/mobile/);
+  assert.match(server, /\/api\/canvas/);
   assert.match(server, /\/api\/ui-diagnostics/);
   assert.match(server, /\/api\/tools/);
   assert.match(server, /isMobileRequest/);
@@ -14,20 +17,12 @@ test('server exposes premium mobile route with v47 backpressure, v46 voice and v
   assert.match(server, /url\.pathname === '\/'/);
   assert.match(server, /mobilePremiumHandler\(req, res\)/);
   assert.match(server, /return mobileHandler\(req,res\)/);
-  assert.match(server, /mobile-v26\.css\?v=34/);
-  assert.match(server, /fast-lane-v23\.js\?v=34/);
-  assert.match(server, /mobile-v26\.js\?v=97/);
-  assert.match(server, /telemetry-throttle-v47\.js\?v=47/);
-  assert.match(server, /mobile-runtime-v47\.js\?v=47/);
-  assert.match(server, /mobile-bootstrap-v45\.js\?v=45/);
-  assert.match(server, /semantic-ux-v32\.js\?v=46/);
-  assert.match(server, /speech-lifecycle-v46\.js\?v=46/);
-  assert.match(server, /mobile-voice-v46\.js\?v=46/);
-  assert.match(server, /learning-client-v29\.js\?v=34/);
-  assert.match(server, /X-WAE-Mobile-Release','universal-core-mobile-v80-visible-chat'/);
-  assert.match(server, /X-WAE-Mobile-Response-Lifecycle','mobile-response-lifecycle\/v97'/);
-  assert.match(server, /universal-core-mobile-v47-long-session/);
-  assert.match(server, /long-session-backpressure-v47/);
+  assert.match(server, /X-WAE-Mobile-Chat-Route','same-origin-native-first-v115'/);
+  assert.match(server, /X-WAE-Mobile-Response-Lifecycle','visible-answer-commit\/v114'/);
+  assert.match(mobile, /canvas-native-mobile-v1\.js\?v=1/);
+  assert.match(canvas, /\/api\/canvas/);
+  assert.match(canvas, /sandbox="allow-scripts"/);
+  assert.match(canvas, /wncRefine/);
   assert.match(server, /desktop.*=== '1'/s);
 });
 

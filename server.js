@@ -17,6 +17,7 @@ import evalsHandler from './api/evals.js';
 import benchmarkV93Handler from './api/benchmark-v93.js';
 import premiumGateV98Handler from './api/premium-gate-v98.js';
 import tasksHandler from './api/tasks.js';
+import canvasHandler from './api/canvas.js';
 import orchestrateHandler from './api/orchestrate.js';
 import mobileHandler from './api/mobile.js';
 import uiDiagnosticsHandler from './api/ui-diagnostics.js';
@@ -48,21 +49,6 @@ function applyUiProfile(html) {
   });
   return output;
 }
-
-// Compatibility markers retained for historical regression contracts only.
-// They are NOT injected by the v115 mobile shell:
-// fast-lane-v23.js?v=34
-// mobile-v26.js?v=97
-// telemetry-throttle-v47.js?v=47
-// mobile-runtime-v47.js?v=47
-// mobile-bootstrap-v45.js?v=45
-// semantic-ux-v32.js?v=46
-// speech-lifecycle-v46.js?v=46
-// mobile-voice-v46.js?v=46
-// premium-v5.css?v=43
-// premium-v5.js?v=43
-// mobile-response-lifecycle/v97
-// wae-native-brain/v4-resilient
 
 function mobilePremiumHandler(req,res) {
   const nativeEnd = res.end.bind(res);
@@ -109,6 +95,7 @@ const apiRoutes = new Map([
   ['/api/benchmark/v93', benchmarkV93Handler],
   ['/api/benchmark/v98', premiumGateV98Handler],
   ['/api/tasks', tasksHandler],
+  ['/api/canvas', canvasHandler],
   ['/api/orchestrate', orchestrateHandler],
   ['/api/live-data', liveDataHandler],
   ['/api/knowledge/search', knowledgeHandler],

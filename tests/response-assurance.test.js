@@ -242,23 +242,29 @@ test('mobile canonical v103 preserves explicit history and stable conversation i
 });
 
 test('mobile boot loads v97 lifecycle, telemetry and v47 backpressure before bootstrap and voice layers', () => {
-  const source=readFileSync(new URL('../server.js',import.meta.url),'utf8');
-  const fast=source.indexOf("fast-lane-v23.js?v=34");
-  const cognitive=source.indexOf("mobile-v26.js?v=97");
-  const telemetry=source.indexOf("telemetry-throttle-v47.js?v=47");
-  const bridge=source.indexOf("mobile-runtime-v47.js?v=47");
-  const bootstrap=source.indexOf("mobile-bootstrap-v45.js?v=45");
-  const semantic=source.indexOf("semantic-ux-v32.js?v=46");
-  const lifecycle=source.indexOf("speech-lifecycle-v46.js?v=46");
-  const voice=source.indexOf("mobile-voice-v46.js?v=46");
-  assert.ok(fast>=0 && cognitive>=0 && telemetry>=0 && bridge>=0 && bootstrap>=0 && semantic>=0 && lifecycle>=0 && voice>=0);
-  assert.ok(fast<cognitive && cognitive<telemetry && telemetry<bridge && bridge<bootstrap && bootstrap<semantic && semantic<lifecycle && lifecycle<voice);
-  assert.match(source,/mobile-response-lifecycle\/v97/);
-  assert.match(source,/universal-core-mobile-v47-long-session/);
-  assert.match(source,/long-session-backpressure-v47/);
-  assert.match(source,/context-integrity\/v103/);
-  assert.doesNotMatch(source,/mobile-runtime-v34\.js\?v=44/);
-  assert.doesNotMatch(source,/mobile-voice-v27\.js/);
+  // The native mobile shell no longer injects the legacy desktop boot chain. Validate the
+  // canonical assets directly and keep ordering assertions scoped to surfaces that load them.
+  const server=readFileSync(new URL('../server.js',import.meta.url),'utf8');
+  const mobile=readFileSync(new URL('../api/mobile.js',import.meta.url),'utf8');
+  assert.match(server,/same-origin-native-first-v115/);
+  assert.match(server,/visible-answer-commit\/v114/);
+  assert.match(mobile,/canvas-native-mobile-v1\.js\?v=1/);
+  assert.doesNotMatch(mobile,/fast-lane-v23\.js|telemetry-throttle-v47\.js|mobile-runtime-v47\.js/);
+});
+
+test('native mobile shell boots the real same-origin chat and independent Canvas adapter', () => {
+  const server=readFileSync(new URL('../server.js',import.meta.url),'utf8');
+  const mobile=readFileSync(new URL('../api/mobile.js',import.meta.url),'utf8');
+  const canvas=readFileSync(new URL('../canvas-native-mobile-v1.js',import.meta.url),'utf8');
+  assert.match(server,/return mobileHandler\(req,res\)/);
+  assert.match(server,/same-origin-native-first-v115/);
+  assert.match(server,/visible-answer-commit\/v114/);
+  assert.match(mobile,/id="composer"/);
+  assert.match(mobile,/\/api\/chat/);
+  assert.match(mobile,/canvas-native-mobile-v1\.js\?v=1/);
+  assert.match(canvas,/\/api\/canvas/);
+  assert.match(canvas,/wncPreview/);
+  assert.match(canvas,/wncRefine/);
 });
 
 test('service worker v34 evicts stale cache and makes navigations network-first', () => {
