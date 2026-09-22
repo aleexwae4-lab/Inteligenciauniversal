@@ -68,9 +68,9 @@ test('chat timeout contracts cannot launch a second invisible request after pare
   const client=read('runtime-client.js');
   const app=read('app.js');
   assert.match(client,/await bootstrap\(init\.signal\)/);
-  assert.match(client,/bootstrap=signal=>bootPromise/);
+  assert.match(client,/bootstrap=signal=>\{/);
   assert.match(client,/\},signal,7000\)/);
-  assert.match(client,/attachments:window\.__waeRuntimeAttachments\|\|\[\]\},init\.signal,16000\)/);
+  assert.match(client,/chatWithSessionRepair\(chatPayload,init\.signal\)/);
   assert.match(client,/if\(init\.signal\?\.aborted\)throw err;/);
   assert.match(client,/if\(init\.signal\?\.aborted\)throw Object\.assign/);
   assert.match(app,/setTimeout\(\(\)=>c\.abort\(\),65000\)/);
@@ -85,6 +85,6 @@ test('preserves visual capabilities, all domain routers, cache contract and sepa
   assert.match(client,/request\.canvas_direct===true\|\|request\.canvas_blueprint===true/);
   assert.match(html,/runtime-client\.js\?v=24&industrial=v115&professional=v116&world=v117&chatfix=v118/);
   assert.match(sw,/runtime-client\.js\?v=24&industrial=v115&professional=v116&world=v117&chatfix=v118/);
-  assert.match(sw,/wae-universal-render-continuity-v41/);
+  assert.match(sw,/wae-universal-render-firstturn-v42/);
   assert.match(client,/VISUAL_EDGE/);
 });
