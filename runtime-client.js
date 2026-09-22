@@ -207,11 +207,11 @@
   // A dated, sourced finding is answered by the local knowledge registry.
   // Avoid speculative and conflicting counts from ordinary upstream chat.
   const datedAnthropicQuestion=value=>{
-    const q=String(value||'').normalize('NFD').replace(/[\\u0300-\\u036f]/g,'').toLowerCase();
-    return q.length<=800&&/\\b(?:anthropic|antropic)\\b/.test(q)&&
-      /\\b(?:ingenier\\w*|engineer\\w*)\\b/.test(q)&&
-      /\\b(?:cuant[oa]s?|numero|cantidad|total|plantilla|empleados|personal|how many|headcount)\\b/.test(q)&&
-      !/\\b(?:sin fuentes|sin citas|no uses fuentes|openai|google|microsoft|meta|xai|nvidia|202[0-5])\\b/.test(q);
+    const q=String(value||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase();
+    return q.length<=800&&/\b(?:anthropic|antropic)\b/.test(q)&&
+      /\b(?:ingenier\w*|engineer\w*)\b/.test(q)&&
+      /\b(?:cuant[oa]s?|numero|cantidad|total|plantilla|empleados|personal|how many|headcount)\b/.test(q)&&
+      !/\b(?:sin fuentes|sin citas|no uses fuentes|openai|google|microsoft|meta|xai|nvidia|202[0-5])\b/.test(q);
   };
   // This edition uses Supabase for ordinary chat, but v115 sector missions must
   // enter its own server, where the authoritative safety/evidence contract runs.
