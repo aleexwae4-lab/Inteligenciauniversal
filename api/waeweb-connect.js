@@ -2,9 +2,14 @@
 // The existing /api/web/* endpoints remain authoritative and unchanged.
 import { applyHeaders, originAllowed, allowRequest } from "../lib/security.js";
 import { requestWaeweb, waewebSettings, WaewebConnectError } from "../lib/waeweb-connect.js";
+import { authenticateInboundWaeweb, inboundWaewebConfigured } from "../lib/waeweb-inbound.js";
 
 export default async function waewebConnectHandler(req,res){
   applyHeaders(res);
+  if(!waewebSettings() || !inboundWaewebConfigured())
+    return res.status(503).json({error:"waeweb_connect_disabled"});
+  if(!authenticateInboundWaeweb(req.headers))
+    return res.status(401).json({error:"waeweb_inbound_unauthorized"});
   if(!originAllowed(req))return res.status(403).json({error:"origin_not_allowed"});
   if(!allowRequest(req,8,20))return res.status(429).json({error:"rate_limited"});
   const pathname=new URL(req.url||"/api/waeweb/status","http://localhost").pathname;
@@ -13,8 +18,6 @@ export default async function waewebConnectHandler(req,res){
     return res.status(404).json({error:"waeweb_route_not_found"});
   if(req.method!==(kind==="status"?"GET":"POST"))
     return res.status(405).json({error:"method_not_allowed"});
-  if(!waewebSettings())
-    return res.status(503).json({error:"waeweb_connect_disabled"});
   try{
     const result=await requestWaeweb(kind,req.body||null);
     res.setHeader("X-WAE-Web-Provider","waeweb-connect/v1");
