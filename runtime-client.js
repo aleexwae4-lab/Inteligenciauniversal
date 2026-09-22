@@ -142,13 +142,20 @@
     const q=String(value||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase();
     return /\b(avion(?:es)?|aeronave(?:s)?|aviacion|aeronautic\w*|helicopter\w*|aircraft|cohete(?:s)?|espacial(?:es)?|satelite(?:s)?|spacecraft|rocket(?:s)?|automovil(?:es)?|carro(?:s)?|coche(?:s)?|vehiculo(?:s)?|automotriz|moto(?:s)?|motocicleta(?:s)?|scooter(?:s)?|barco(?:s)?|buque(?:s)?|embarcacion(?:es)?|naval|maritim\w*|motor(?:es)?|turbina(?:s)?|combustion|propulsion|fabrica(?:s)?|manufactur\w*|industria(?:s|l)?|produccion|planta(?:s)?|universidad(?:es)?|campus|facultad(?:es)?|computadora(?:s)?|ordenador(?:es)?|pc|servidor(?:es)?|hardware|robot(?:s|ica)?|androide(?:s)?|chip(?:s)?|semiconductor(?:es)?|microprocesador(?:es)?|fpga|asic|silicio|microelectronica|data center(?:s)?|centro(?:s)? de datos|gobierno(?:s)?|municipio(?:s)?|ayuntamiento(?:s)?|administracion publica|sociedad(?:es)?|cooperativa(?:s)?|comunidad(?:es)?|organizacion(?:es)? civil(?:es)?)\b/.test(q);
   };
+  // Professional v116 missions execute on the local backend that owns the
+  // senior deliverable, safety and deterministic economics contract.
+  // All ordinary chat continues with the existing Supabase-first transport.
+  const professionalQuery=value=>{
+    const q=String(value||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase();
+    return /\b(proyecto(?:s)?|arquitectur\w*|edificio(?:s)?|urbanismo|obra(?:s)? civil(?:es)?|construccion(?:es)?|cimentacion|inmueble(?:s)?|vivienda(?:s)?|negocio(?:s)?|empresa(?:s)?|emprend\w*|startup(?:s)?|franquicia(?:s)?|inversion(?:es)?|invertir|inversionista(?:s)?|portafolio|etf|acciones bursatiles|bono(?:s)? gubernamentales|banco(?:s)?|bancari\w*|banca|fintech|credito(?:s)?|prestamo(?:s)?|hipoteca(?:s)?|laboratori\w*|investigacion aplicada|ensayo(?:s)? clinico(?:s)?|finanzas?|financier\w*|flujo de caja|cash flow|ebitda|tesoreria|contabilidad|capital de trabajo|presupuesto familiar|mis deudas|ahorro(?:s)?|fondo de emergencia|jubilacion|retiro|economia|macroeconomia|pib|inflacion|tipo de cambio|tasas? de interes|comercio internacional|ganar dinero|hacer dinero|generar ingresos|monetiz\w*|rentabilidad|utilidades|ventas|plan de vida|plan de carrera|meta(?:s)? personal(?:es)?)\b/.test(q);
+  };
   window.fetch=async(input,init={})=>{
     if(!isLocalRuntime(input)||String(init.method||'GET').toUpperCase()!=='POST')return nativeFetch(input,init);
     const request=typeof init.body==='string'?JSON.parse(init.body):{};
     // Capability/identity answers come from the product's real server registry, not a generic upstream persona.
     if(selfQuery(request.message)||request.canvas_direct===true||request.canvas_blueprint===true)return nativeFetch(input,init);
     // The HTML/Canvas paths and short capability registry answers stay untouched.
-    if(request.canvas!==true&&industrialQuery(request.message))return nativeFetch(input,init);
+    if(request.canvas!==true&&(industrialQuery(request.message)||professionalQuery(request.message)))return nativeFetch(input,init);
     try{
       await bootstrap();
       const incoming=request;
