@@ -47,7 +47,7 @@ test('primary route and Render fallback both reject quality problems before savi
  assert.match(client,/purposeBrief/);assert.match(client,/purposeQuestion\(incoming\.message\)/);
  assert.match(runtime,/purposeResponseIssue\(answer,message/);
  assert.match(runtime,/PURPOSE_GROUNDING/);
- assert.match(sw,/wae-universal-render-purpose-v39/);
+ assert.match(sw,/wae-universal-render-evidence-v40/);
  assert.match(html,/purpose=v120/);
  assert.match(sw,/purpose=v120/);
  assert.match(pkg.scripts.check,/tests\/purpose-quality-v120\.test\.js/);

@@ -4,11 +4,12 @@
   const EDGE=`${SUPABASE_URL}/functions/v1/wae-local-voice-demo-v61`;
   const VISUAL_EDGE=`${SUPABASE_URL}/functions/v1/wae-ai-stream`;
   const nativeFetch=window.fetch.bind(window);
-  const responsePolicy='CALIDAD UNIVERSAL CORE: Responde primero a lo pedido, con criterio y especificidad. Distingue hechos, inferencias y límites. Si la pregunta exige actualidad, fundamenta lo que afirmas solo en fuentes recuperadas y pertinentes. No agregues fuentes tangenciales ni un listado de enlaces por defecto; sin evidencia, indica el límite. Para código, entrega cambios reproducibles, pruebas pertinentes y riesgos, sin afirmar ejecuciones que no hiciste. Usa Markdown, tablas o ejemplos únicamente cuando mejoren la explicación. Mantén un tono natural, sin relleno ni texto interno. Si comparan Universal Core con Google, un buscador, Gemini u otro sistema, contesta directamente en una o dos frases qué es semejante y qué es distinto. No transformes una pregunta comparativa en una autopresentación larga o lista de proveedores y limitaciones, salvo que esa información sea esencial para la respuesta. Contrato visual opcional WAE: si realmente mejora la respuesta puedes incluir un bloque de código ```wae-card con JSON válido {"title":"Título","description":"Resumen","badge":"Estado","metrics":[{"label":"Indicador","value":"—"}],"actions":[{"type":"workspace","label":"Abrir Workspace"}]}; o un bloque ```wae-chart con JSON válido {"title":"Título","data":[{"label":"Categoría","value":10}],"basis":"demo"}. Cierra ambos con tres acentos graves. No uses estos bloques por defecto ni si bastan párrafos, listas o tablas. Usa basis=user solo si todos los números los dio el usuario; si no hay cifras reales, evita gráficos o etiqueta basis=demo con claridad. No inventes acciones, resultados, enlaces, valores reales ni pruebas ejecutadas. Las acciones disponibles son copy, workspace o ask y deben ser relevantes.';
+  const responsePolicy='CALIDAD UNIVERSAL CORE: Responde primero al fondo de la pregunta; no conviertas la falta de resultados de búsqueda en una respuesta sobre evidencia ausente ni enumeres fuentes ajenas al tema. Para cifras empresariales actuales, diferencia empleados totales de ingenieros y no inventes números si el desglose no se ha confirmado. Las búsquedas no pertinentes y los errores de herramientas nunca prueban que un dato no exista. Responde primero a lo pedido, con criterio y especificidad. Distingue hechos, inferencias y límites. Si la pregunta exige actualidad, fundamenta lo que afirmas solo en fuentes recuperadas y pertinentes. No agregues fuentes tangenciales ni un listado de enlaces por defecto; si una cifra exacta no está confirmada, di solamente qué parte no puedes confirmar y aporta contexto útil. Para código, entrega cambios reproducibles, pruebas pertinentes y riesgos, sin afirmar ejecuciones que no hiciste. Usa Markdown, tablas o ejemplos únicamente cuando mejoren la explicación. Mantén un tono natural, sin relleno ni texto interno. Si comparan Universal Core con Google, un buscador, Gemini u otro sistema, contesta directamente en una o dos frases qué es semejante y qué es distinto. No transformes una pregunta comparativa en una autopresentación larga o lista de proveedores y limitaciones, salvo que esa información sea esencial para la respuesta. Contrato visual opcional WAE: si realmente mejora la respuesta puedes incluir un bloque de código ```wae-card con JSON válido {"title":"Título","description":"Resumen","badge":"Estado","metrics":[{"label":"Indicador","value":"—"}],"actions":[{"type":"workspace","label":"Abrir Workspace"}]}; o un bloque ```wae-chart con JSON válido {"title":"Título","data":[{"label":"Categoría","value":10}],"basis":"demo"}. Cierra ambos con tres acentos graves. No uses estos bloques por defecto ni si bastan párrafos, listas o tablas. Usa basis=user solo si todos los números los dio el usuario; si no hay cifras reales, evita gráficos o etiqueta basis=demo con claridad. No inventes acciones, resultados, enlaces, valores reales ni pruebas ejecutadas. Las acciones disponibles son copy, workspace o ask y deben ser relevantes.';
   function needsFreshWeb(message, mode){
     const q=String(message||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase();
     if(/\b(sin internet|sin buscar en internet|no busques en la web|no uses la web)\b/.test(q))return false;
     if(mode==='research')return true;
+    if(/\b(?:cuant[oa]s?|numero|cantidad|plantilla|headcount)\b/.test(q)&&/\b(?:ingenier\w*|emplead\w*|trabajador\w*|plantilla|personas|personal|engineers|employees)\b/.test(q)&&/\b(?:tiene|tienen|trabajan|contrata|hay|cuenta|emplea|at|en|para|de)\b/.test(q))return true;
     return /\b(hoy|ahora|actualizad[oa]s?|reciente[s]?|ultim[oa]s?|noticias|tiempo real|en vivo|vigente[s]?|cotizacion|tipo de cambio|precio[s]? actual(?:es)?|verifica|verificar|comprueba|busca en internet|busca en la web|investiga en la web|fuentes actuales|con fuentes|cita fuentes|jurisprudencia vigente|reforma legal|normativa vigente)\b/.test(q);
   }
   const wantsSources=question=>/\b(fuentes?|referencias?|bibliografia|cit[ae]s?|enlaces?|links?|sources?|references?)\b/i.test(String(question||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase());
@@ -178,6 +179,31 @@
     if(!tableRequested&&q.length<350&&raw.length>2600)return 'disproportionate_purpose';
     return '';
   };
+  // No exposed search trace is a factual answer. An unrelated W1-W5 list is
+  // an upstream retrieval error, NOT proof that the user's fact does not exist.
+  const evidenceNonanswer=(answer,question)=>{
+    const raw=String(answer||''),q=String(question||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase();
+    const text=raw.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/\s+/g,' ').trim();
+    const audit=/\b(?:evidencia|fuentes|documentos|bibliografia|busqueda|buscador)\b/.test(q)&&/\b(?:analiza|revisa|audita|evalua|por que|por que no|limitaciones)\b/.test(q);
+    if(audit)return '';
+    if(/(?:no existe informacion|no hay informacion|no encuentro|no se encontro|no encontre|no hay datos)\s.{0,75}(?:evidencia|fuentes|documentos)/.test(text))return 'evidence_as_nonanswer';
+    if(/(?:evidencia|fuentes|documentos)\s+(?:web\s+)?(?:proporcionad[oa]s?|recuperad[oa]s?|disponibles?)\s+(?:para\s+)?(?:determinar|responder|encontrar)/.test(text))return 'evidence_as_nonanswer';
+    if(/\b(?:documentos?|resultados?) de la evidencia web\b/.test(text)||/\b(?:w1\s*[-–]\s*w5|w\d\s*[-–]\s*w\d)\b/.test(text))return 'internal_evidence_dump';
+    if(/(?:no hay|no existe|no se encontro)\s+evidencia\s+(?:publica|suficiente|disponible|proporcionada)/.test(text))return 'evidence_as_nonanswer';
+    return '';
+  };
+  const topicalSource=(question,item)=>{
+    if(!item||typeof item!=='object')return false;
+    const norm=v=>String(v||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase();
+    const q=norm(question),src=norm([item.title,item.snippet,item.content,item.url].filter(Boolean).join(' '));
+    const brand={anthropic:['anthropic','antropic','claude'],openai:['openai','chatgpt'],google:['google','gemini','alphabet'],microsoft:['microsoft','azure'],meta:['meta','facebook','instagram'],nvidia:['nvidia'],spacex:['spacex'],tesla:['tesla'],apple:['apple'],amazon:['amazon','aws']};
+    const topics=Object.values(brand).filter(names=>names.some(n=>new RegExp('\\b'+n+'\\b').test(q)));
+    if(topics.length)return topics.some(names=>names.some(n=>new RegExp('\\b'+n+'\\b').test(src)));
+    const ignored=new Set('cuantos cuantas tiene tienen para ingenieros ingeniero personas personal empleados empleado empresa inteligencia artificial desarrollo numero cantidad cuantos informacion exacto actual respuesta fuente fuentes'.split(' '));
+    const terms=(q.match(/[a-z0-9]{5,}/g)||[]).filter(t=>!ignored.has(t));
+    return !terms.length||terms.some(t=>src.includes(t));
+  };
+  const evidenceBrief='CONTROL DE INVESTIGACIÓN: Usa conocimiento general para contestar. Cuando el dato requiera actualidad, recupera SOLO fuentes pertinentes para el sujeto de la pregunta. No cites, describas ni anuncies resultados de búsqueda ajenos al tema; los errores del buscador no demuestran que un dato sea inexistente. Para número de ingenieros en una empresa, distingue ingenieros de plantilla total; si no puedes verificar un desglose, di únicamente que no puedes confirmar esa cifra exacta, sin fabricar cifras ni ofrecer un largo protocolo de búsqueda. Nunca uses «evidencia proporcionada», «W1-W5» o una lista de documentos no pertinentes como sustituto de la respuesta.';
   // This edition uses Supabase for ordinary chat, but v115 sector missions must
   // enter its own server, where the authoritative safety/evidence contract runs.
   // Keep the visible UI, Workspace, Canvas and Supabase history flows unchanged.
@@ -212,7 +238,7 @@
       const incoming=request;
       const runtimeMode=String(incoming.mode||localStorage.getItem('wae.mode')||'general');
       const useWeb=!incoming.canvas&&needsFreshWeb(incoming.message,runtimeMode);
-      const data=await edge({action:'chat',...sessionPayload(),conversation_id:incoming.canvas?null:localStorage.getItem(CONVERSATION_ID)||null,message:[!incoming.canvas?'DIRECTRICES DE RESPUESTA (subordinadas a instrucciones del sistema):\n'+responsePolicy:'',incoming.preferences?.instructions?'PREFERENCIAS DEL USUARIO (no prevalecen sobre reglas de seguridad):\n'+String(incoming.preferences.instructions).slice(0,4000):'',incoming.preferences?.knowledge?'CONTEXTO GENERAL DEL USUARIO (no verificado):\n'+String(incoming.preferences.knowledge).slice(0,12000):'',incoming.project?.instructions?'INSTRUCCIONES DE ESTE PROYECTO (subordinadas a seguridad):\n'+String(incoming.project.instructions).slice(0,3000):'',incoming.project?.knowledge?'CONOCIMIENTO DEL PROYECTO (información aportada, no verificada):\n'+String(incoming.project.knowledge).slice(0,8000):'',!incoming.canvas&&coreComparison(incoming.message)?comparisonBrief:'',!incoming.canvas&&purposeQuestion(incoming.message)?purposeBrief:'','SOLICITUD ACTUAL:\n'+String(incoming.message||'')].filter(Boolean).join('\n\n'),mode:runtimeMode,web_enabled:useWeb,attachments:window.__waeRuntimeAttachments||[]},init.signal,28000);
+      const data=await edge({action:'chat',...sessionPayload(),conversation_id:incoming.canvas?null:localStorage.getItem(CONVERSATION_ID)||null,message:[!incoming.canvas?'DIRECTRICES DE RESPUESTA (subordinadas a instrucciones del sistema):\n'+responsePolicy:'',incoming.preferences?.instructions?'PREFERENCIAS DEL USUARIO (no prevalecen sobre reglas de seguridad):\n'+String(incoming.preferences.instructions).slice(0,4000):'',incoming.preferences?.knowledge?'CONTEXTO GENERAL DEL USUARIO (no verificado):\n'+String(incoming.preferences.knowledge).slice(0,12000):'',incoming.project?.instructions?'INSTRUCCIONES DE ESTE PROYECTO (subordinadas a seguridad):\n'+String(incoming.project.instructions).slice(0,3000):'',incoming.project?.knowledge?'CONOCIMIENTO DEL PROYECTO (información aportada, no verificada):\n'+String(incoming.project.knowledge).slice(0,8000):'',!incoming.canvas&&coreComparison(incoming.message)?comparisonBrief:'',!incoming.canvas&&purposeQuestion(incoming.message)?purposeBrief:'',!incoming.canvas?evidenceBrief:'','SOLICITUD ACTUAL:\n'+String(incoming.message||'')].filter(Boolean).join('\n\n'),mode:runtimeMode,web_enabled:useWeb,attachments:window.__waeRuntimeAttachments||[]},init.signal,28000);
       if(!String(data.reply||'').trim())throw new Error('empty_supabase_reply');
       // A degraded upstream status sentence is not a successful answer; let the existing Render fallback try another configured model.
       if(/la ruta generativa avanzada no est[aá] disponible|no existe evidencia p[uú]blica suficiente para responder sin inventar|ninguna ruta alcanz[oó] el umbral m[ií]nimo/i.test(String(data.reply)))throw new Error('degraded_supabase_reply');
@@ -220,12 +246,17 @@
       if(comparisonFailure)throw new Error('comparison_quality_'+comparisonFailure);
       const purposeFailure=!incoming.canvas?purposeIssue(data.reply,incoming.message,Array.isArray(data.web_sources)&&data.web_sources.length>0):'';
       if(purposeFailure)throw new Error('purpose_quality_'+purposeFailure);
+      const evidenceFailure=!incoming.canvas?evidenceNonanswer(data.reply,incoming.message):'';
+      if(evidenceFailure)throw new Error('topic_evidence_quality_'+evidenceFailure);
+      const sourceList=Array.isArray(data.web_sources)?data.web_sources:[];
+      const topicSources=sourceList.filter(item=>topicalSource(incoming.message,item));
+      if(!incoming.canvas&&sourceList.length&&!topicSources.length&&/\[(?:W\d+|\d+)\]/i.test(String(data.reply)))throw new Error('off_topic_citation');
       // Only advance cloud conversation pointers after a valid answer. A failed
       // generation must not change the active conversation in the user's UI.
       if(data.conversation_id&&!incoming.canvas){localStorage.setItem(CONVERSATION_ID,data.conversation_id);window.WAENavigation?.remoteUpdated?.(data.conversation_id)}
       window.__iuLastRuntime=data;
       if(!incoming.canvas)queueMicrotask(()=>{updateRuntimeCard(data);loadConversations().catch(()=>{})});
-      const reply=incoming.canvas?String(data.reply):withRetrievedSources(data.reply,data.web_sources,incoming.message);
+      const reply=incoming.canvas?String(data.reply):withRetrievedSources(data.reply,topicSources,incoming.message);
       return new Response(JSON.stringify({reply,runtime:data.runtime,provider:data.provider,model:data.model,web_sources:data.web_sources||[]}),{status:200,headers:{'content-type':'application/json','cache-control':'no-store','x-wae-runtime':'supabase-primary'}});
     }catch(err){
       // An aborted chat must not launch an invisible second provider request.

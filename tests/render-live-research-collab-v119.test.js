@@ -68,7 +68,7 @@ test('research and collaboration endpoints exist without changing chat, history 
  assert.match(client,/navigator.clipboard.writeText/);
  assert.match(html,/live-workspace-v119\.js\?v=1/);
  assert.match(sw,/live-workspace-v119\.js\?v=1/);
- assert.match(sw,/wae-universal-render-purpose-v39/);
+ assert.match(sw,/wae-universal-render-evidence-v40/);
  assert.match(html,/runtime-client\.js\?v=24&industrial=v115&professional=v116&world=v117&chatfix=v118/);
 });
 test('research sources become real tool context, but explicit no-web remains respected',()=>{
