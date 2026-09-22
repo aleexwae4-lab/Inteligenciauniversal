@@ -13,6 +13,8 @@ import tasksHandler from './api/tasks.js';
 import exportHandler from './api/export.js';
 import canvasHandler from './api/canvas.js';
 import factoryProjectHandler from './api/factory-project.js';
+import researchHandler from './api/research.js';
+import collaborationHandler from './api/collaboration.js';
 
 const ROOT = fileURLToPath(new URL('.', import.meta.url));
 const PORT = Number(process.env.PORT || 10000);
@@ -32,6 +34,8 @@ const apiRoutes = new Map([
   ['/api/export', exportHandler],
   ['/api/canvas', canvasHandler],
   ['/api/factory-project', factoryProjectHandler],
+  ['/api/research', researchHandler],
+  ['/api/collaboration', collaborationHandler],
 ]);
 
 const contentTypes = {
