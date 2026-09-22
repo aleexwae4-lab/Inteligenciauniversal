@@ -117,3 +117,15 @@ test("SSE downstream cancellation aborts the upstream machine request",async()=>
   await reader.cancel("client disconnect");
   assert.equal(transportSignal.aborted,true);
 });
+
+test("SSE fails closed when connection ends without done",async()=>{
+  const frames=["event: ready","data: {}","",""].join(String.fromCharCode(10));
+  const result=await requestWaeweb("stream",{query:"incomplete"},{
+    env,transport:async()=>new Response(frames,{
+      headers:{"content-type":"text/event-stream"}
+    })
+  });
+  const output=await result.text();
+  assert.match(output,/waeweb_stream_incomplete/);
+  assert.match(output,/"ok":false/);
+});
