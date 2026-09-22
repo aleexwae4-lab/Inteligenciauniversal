@@ -14,7 +14,7 @@ style.textContent='.wae-v119-tool{border:1px solid #384451;background:#17202a;co
 function start(){
   const actions=$('.workspace-actions')||$('.workspace-topbar');if(!actions)return;
   document.head.append(style);
-  let overlay=null,room=null,rev=0,serverText='',localDirty=false,remoteNew=false,poll=null;
+  let overlay=null,room=null,rev=0,pendingRev=0,serverText='',localDirty=false,remoteNew=false,poll=null;
   const note=(message,error=false)=>{const e=$('#waeV119Notice');if(e){e.textContent=message;e.className=error?'wae-v119-alert':'wae-v119-muted'}};
   const clearPoll=()=>{if(poll)clearInterval(poll);poll=null};
   const exit=()=>{clearPoll();overlay?.remove();overlay=null;room=null};
@@ -58,13 +58,13 @@ function start(){
     const create=node('button','Crear sala'),save=node('button','Publicar cambios'),copy=node('button','Copiar invitación'),apply=node('button','Llevar a Workspace'),reload=node('button','Cargar versión remota');
     line.append(create,save,copy,apply,reload);save.disabled=true;copy.disabled=true;reload.disabled=true;
     const secretUrl=()=>location.origin+location.pathname+location.search+'#wae-room='+encodeURIComponent(room.id)+'.'+encodeURIComponent(room.secret);
-    const present=data=>{serverText=data.text;rev=data.revision;remoteNew=false;reload.disabled=false;note('Sala conectada · revisión '+rev+' · caduca '+new Date(data.expiresAt).toLocaleString('es-MX'))};
+    const present=data=>{serverText=data.text;rev=data.revision;pendingRev=rev;remoteNew=false;reload.disabled=false;note('Sala conectada · revisión '+rev+' · caduca '+new Date(data.expiresAt).toLocaleString('es-MX'))};
     const load=async()=>{
       if(!room||document.hidden)return;
       try{const data=await backend('/api/collaboration',{action:'read',...room});
         if(data.revision!==rev){
-          remoteNew=true;rev=data.revision;serverText=data.text;
-          if(!localDirty){editor.value=data.text;remoteNew=false}
+          remoteNew=true;pendingRev=data.revision;serverText=data.text;
+          if(!localDirty){editor.value=data.text;rev=data.revision;remoteNew=false}
           note(remoteNew?'Hay cambios remotos: copia tu borrador o carga la nueva versión. No sobrescribimos tu texto.':'Nueva revisión '+rev+' recibida.');
         }
       }catch(e){note('No se puede sincronizar: '+e.message,true);clearPoll()}
@@ -78,12 +78,12 @@ function start(){
       if(!room)return;try{
         const data=await backend('/api/collaboration',{action:'update',...room,text:editor.value,revision:rev});
         localDirty=false;present(data);
-      }catch(e){if(e.status===409){remoteNew=true;note('Conflicto: alguien publicó una revisión nueva. Copia tu borrador antes de cargar la versión remota.',true)}
+      }catch(e){if(e.status===409){remoteNew=true;pendingRev=e.data.revision;serverText=e.data.text;note('Conflicto: alguien publicó una revisión nueva. Copia tu borrador antes de cargar la versión remota.',true)}
         else note('No se guardó: '+e.message,true)}
     });
     reload.addEventListener('click',()=>{
       if(localDirty&&!window.confirm('¿Reemplazar tu borrador local por la última revisión compartida?'))return;
-      editor.value=serverText;localDirty=false;remoteNew=false;note('Versión remota cargada · revisión '+rev)
+      editor.value=serverText;rev=pendingRev;localDirty=false;remoteNew=false;note('Versión remota cargada · revisión '+rev)
     });
     copy.addEventListener('click',async()=>{
       if(!room)return;try{await navigator.clipboard.writeText(secretUrl());note('Invitación copiada. Cualquiera con ese enlace puede editar durante la vida de la sala.')}catch{note('No pude copiar automáticamente. Usa el enlace compartido desde un navegador seguro.',true)}
