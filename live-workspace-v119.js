@@ -52,7 +52,7 @@ async function search(){
    article.append(a,text('small',item.publishedAt||'Sin fecha verificada'),text('p',item.snippet||'Resultado indexado: consulta el documento original.'));
    root.append(article);
   }
- }catch(e){root.replaceChildren(text('p',e.message==='general_web_not_configured'?'Web general no configurada en Render; OpenAlex y Wikimedia no sustituyen noticias en vivo.':'Búsqueda no disponible: '+e.message))}
+ }catch(e){root.replaceChildren(text('p',e.message==='general_web_not_configured'?'Web general no configurada en Render; prueba Noticias recientes, Bibliografía o Contexto.':'Búsqueda no disponible: '+e.message))}
  finally{button.disabled=false}
 }
 function init(){
@@ -63,7 +63,7 @@ function init(){
  '<header><strong>WAE · Investigación y colaboración</strong><button type="button" id="waeLiveClose">×</button></header>',
  '<p>Herramientas nativas. Google Workspace requiere autorización OAuth independiente en Wae.</p>',
  '<nav><button type="button" id="waeLiveResearchTab">Investigar</button><button type="button" id="waeLiveCollabTab">Colaborar</button></nav>',
- '<section id="waeLiveResearch"><input id="waeLiveQuery" maxlength="280" placeholder="Consulta o tema de investigación"><select id="waeLiveMode"><option value="auto">Automático</option><option value="web">Web general configurada</option><option value="academic">OpenAlex académico</option><option value="encyclopedia">Wikimedia contexto</option></select><button type="button" id="waeLiveFind">Buscar fuentes</button><div id="waeLiveResults" aria-live="polite"></div></section>',
+ '<section id="waeLiveResearch"><input id="waeLiveQuery" maxlength="280" placeholder="Consulta o tema de investigación"><select id="waeLiveMode"><option value="auto">Automático</option><option value="web">Web general configurada</option><option value="news">Noticias recientes · GDELT</option><option value="academic">Bibliografía científica</option><option value="encyclopedia">Wikimedia contexto</option></select><button type="button" id="waeLiveFind">Buscar fuentes</button><div id="waeLiveResults" aria-live="polite"></div></section>',
  '<section id="waeLiveCollab" hidden><p>Sala temporal: se pierde tras 6 horas o reinicio del servidor. No pegues contraseñas ni información sensible. Comparte el código únicamente de forma privada.</p><button type="button" id="waeLiveCreate">Crear desde documento</button><input id="waeLiveInvite" placeholder="ID:clave privada" autocomplete="off"><button type="button" id="waeLiveJoin">Unirse</button><button type="button" id="waeLiveCopy">Copiar código</button><textarea id="waeLiveText" rows="9" maxlength="90000" aria-label="Documento compartido"></textarea><p id="waeLiveStatus" aria-live="polite">Sin sala activa</p><button type="button" id="waeLivePublish">Publicar</button><button type="button" id="waeLivePull">Traer remoto</button><button type="button" id="waeLiveToWorkspace">Copiar al Workspace</button></section>'
  ].join('');
  document.body.append(dialog);open.onclick=()=>{dialog.showModal();if(state.id)stream()};$('#waeLiveClose').onclick=()=>dialog.close();dialog.addEventListener('close',stop);
