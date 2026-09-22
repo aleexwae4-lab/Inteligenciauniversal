@@ -70,10 +70,12 @@ test('explicit continuity provider is routed directly before v89 recovery layers
   assert.match(source,/capacity-chat\/v90\.2-latency-autonomous-knowledge/);
 });
 
-test('public v60 alias advances to v91 and preserves v90 downstream',async()=>{
+test('public v60 alias advances through v106 to v91 and preserves v90 downstream',async()=>{
   const alias=await readFile(new URL('../api/capacity-chat-v60.js',import.meta.url),'utf8');
+  const v106=await readFile(new URL('../api/capacity-chat-v106.js',import.meta.url),'utf8');
   const v91=await readFile(new URL('../api/capacity-chat-v91.js',import.meta.url),'utf8');
-  assert.match(alias,/capacity-chat-v91\.js/);
+  assert.match(alias,/capacity-chat-v106\.js/);
+  assert.match(v106,/capacity-chat-v91\.js/);
   assert.match(v91,/capacity-chat-v90\.js/);
   assert.match(v91,/runSpecialistCouncilV91/);
   assert.match(v91,/runSpecialistSinglePassV91/);
