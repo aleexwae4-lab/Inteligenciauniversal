@@ -178,6 +178,7 @@ window.WAENavigation={
  setRemoteConversations:(items,open)=>{remote=Array.isArray(items)?items:[];remoteLoad=open;render()},
  markRemoteConversation:(id,title)=>{if(id)localStorage.setItem(PENDING,JSON.stringify({remoteId:id,title:short(title,80)}))},
  remoteUpdated:id=>{const c=active();if(c&&id){c.remoteId=id;persist()}},
+ remoteInvalidated:id=>{const c=active();if(c&&id&&c.remoteId===id){c.remoteId=null;persist()}},
  openConversations:()=>{view='conversations';render()},
  openProjects:()=>{view='projects';render()}
 };
