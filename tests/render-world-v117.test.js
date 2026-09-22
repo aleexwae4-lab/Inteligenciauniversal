@@ -29,6 +29,7 @@ test('browser and real server both route world problems to the new local brain',
   const browser=browserWorld();
   const cases=[
     ['Ayúdame a resolver problemas de nivel mundial','cross_sector'],
+    ['Busco soluciones para problemas complejos que afectan a la humanidad a nivel mundial','cross_sector'],
     ['Solucionar hambre mundial y escasez de agua','food'],
     ['Analiza el cambio climático','climate'],
     ['Respuesta a una pandemia de salud pública','public_health'],
