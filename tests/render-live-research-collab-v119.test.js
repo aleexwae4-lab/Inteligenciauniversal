@@ -12,15 +12,18 @@ test('v119 reports honest multi-source research and collaboration capabilities',
  assert.equal(c.persistent,false);assert.equal(c.ttlHours,6);assert.equal(c.googleWorkspaceConnected,false);
  assert.equal(h.research.version,r.version);assert.equal(h.collaboration.version,c.version);
 });
-test('unconfigured general live web refuses to misrepresent encyclopedia as current news',async()=>{
- const existing=process.env.TAVILY_API_KEY;delete process.env.TAVILY_API_KEY;
+test('unconfigured general web is distinct from the keyless recent-news index',async()=>{
+ const oldFetch=globalThis.fetch,existing=process.env.TAVILY_API_KEY;delete process.env.TAVILY_API_KEY;
+ let url='';globalThis.fetch=async(input)=>{url=String(input);return{ok:true,json:async()=>({articles:[{title:'News index entry',url:'https://example.org/news',seendate:'20260921T210000Z'},{title:'Unsafe URL',url:'javascript:alert(1)'}]})}};
  try{
-  const result=await retrieveResearch('Noticias de hoy sobre energía',{mode:'auto'});
-  assert.equal(result.ok,false);assert.equal(result.code,'general_web_not_configured');
+  const news=await retrieveResearch('Noticias de hoy sobre energía',{mode:'auto'});
+  assert.equal(news.ok,true);assert.equal(news.provider,'gdelt');assert.equal(news.results.length,1);
+  assert.equal(news.results[0].publishedAt,'2026-09-21T21:00:00Z');assert.match(url,/api.gdeltproject.org/);
+  assert.match(news.limitation,/no certifica hechos/);
   const forced=await retrieveResearch('Noticias de hoy sobre energía',{mode:'web'});
-  assert.equal(forced.ok,false);assert.deepEqual(forced.results,[]);
+  assert.equal(forced.ok,false);assert.equal(forced.code,'general_web_not_configured');assert.deepEqual(forced.results,[]);
   await assert.rejects(retrieveResearch('a',{mode:'academic'}),e=>e.code==='research_bad_query');
- }finally{if(existing!==undefined)process.env.TAVILY_API_KEY=existing}
+ }finally{globalThis.fetch=oldFetch;if(existing!==undefined)process.env.TAVILY_API_KEY=existing}
 });
 test('public academic retrieval uses keyless Crossref, actual returned bibliographic metadata and safe URLs',async()=>{
  const old=globalThis.fetch,oldKey=process.env.OPENALEX_API_KEY;delete process.env.OPENALEX_API_KEY;
