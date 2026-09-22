@@ -4,6 +4,7 @@ on:
     branches: ["feat/waeweb-connect-v1"]
     paths:
       - "lib/waeweb-connect.js"
+      - "lib/waeweb-inbound.js"
       - "api/waeweb-connect.js"
       - "tests/waeweb-connect.test.js"
       - ".github/workflows/waeweb-connect.yml"
@@ -20,6 +21,6 @@ jobs:
         with:
           node-version: "22"
       - name: Validate connector and route syntax
-        run: node --check lib/waeweb-connect.js && node --check api/waeweb-connect.js && node --check server.js
+        run: node --check lib/waeweb-connect.js && node --check lib/waeweb-inbound.js && node --check api/waeweb-connect.js && node --check server.js
       - name: Validate opt-in server-only contract
         run: node --test tests/waeweb-connect.test.js
