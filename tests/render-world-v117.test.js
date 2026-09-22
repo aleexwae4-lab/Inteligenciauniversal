@@ -68,11 +68,11 @@ test('cross-sector missions provide reproducible fieldwork and honest evidence s
 });
 test('global instruction requires measurable, locally authorized and neutral solutions',()=>{
   const instruction=worldSystemInstruction(planWorldMission('Resolver problemas de nivel mundial'));
-  assert.match(instruction,/problema específico/);
+  assert.match(instruction,/pregunta específica/);
   assert.match(instruction,/pilotos medibles/);
   assert.match(instruction,/neutralidad/);
-  assert.match(instruction,/fuente y fecha/);
-  assert.match(instruction,/no afirmes que resolviste materialmente/);
+  assert.match(instruction,/atribución y fecha/);
+  assert.match(instruction,/No afirmes que resolviste materialmente/);
   assert.match(instruction,/decisión y ejecución corresponden a humanos/);
 });
 test('public-health and disaster interventions preserve professional safeguards',()=>{
