@@ -33,7 +33,16 @@ export default async function waewebConnectHandler(req,res){
     }
     return res.status(200).json({success:true,provider:"waeweb",...result});
   }catch(error){
-    if(res.headersSent){res.end();return;}
+    if(res.headersSent){
+      // A streaming HTTP 200 may still fail after the initial SSE frame.
+      // Surface the failure in the event protocol, never as silent success.
+      if(!res.destroyed&&!res.writableEnded){
+        res.write('event: error\\ndata: {"error":"waeweb_stream_interrupted"}\\n\\n');
+        res.write('event: done\\ndata: {"ok":false}\\n\\n');
+        res.end();
+      }
+      return;
+    }
     const status=error instanceof WaewebConnectError?error.status:502;
     const code=error instanceof WaewebConnectError?error.code:"waeweb_connect_failed";
     return res.status(status).json({error:code,provider:"waeweb"});
