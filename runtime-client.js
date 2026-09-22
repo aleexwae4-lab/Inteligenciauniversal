@@ -60,7 +60,7 @@
   };
 
   let bootPromise;
-  const bootstrap=signal=>bootPromise||(bootPromise=edge({action:'bootstrap',session_id:localStorage.getItem(SESSION_ID)||'',session_secret:localStorage.getItem(SESSION_SECRET)||''},signal,10000).then(data=>{
+  const bootstrap=signal=>bootPromise||(bootPromise=edge({action:'bootstrap',session_id:localStorage.getItem(SESSION_ID)||'',session_secret:localStorage.getItem(SESSION_SECRET)||''},signal,7000).then(data=>{
     if(!data?.session_id||!data?.session_secret)throw new Error('invalid_bootstrap');
     localStorage.setItem(SESSION_ID,data.session_id);localStorage.setItem(SESSION_SECRET,data.session_secret);return data;
   }).catch(err=>{bootPromise=null;throw err}));
@@ -204,6 +204,15 @@
     return !terms.length||terms.some(t=>src.includes(t));
   };
   const evidenceBrief='CONTROL DE INVESTIGACIÓN: Usa conocimiento general para contestar. Cuando el dato requiera actualidad, recupera SOLO fuentes pertinentes para el sujeto de la pregunta. No cites, describas ni anuncies resultados de búsqueda ajenos al tema; los errores del buscador no demuestran que un dato sea inexistente. Para número de ingenieros en una empresa, distingue ingenieros de plantilla total; si no puedes verificar un desglose, di únicamente que no puedes confirmar esa cifra exacta, sin fabricar cifras ni ofrecer un largo protocolo de búsqueda. Nunca uses «evidencia proporcionada», «W1-W5» o una lista de documentos no pertinentes como sustituto de la respuesta.';
+  // A dated, sourced finding is answered by the local knowledge registry.
+  // Avoid speculative and conflicting counts from ordinary upstream chat.
+  const datedAnthropicQuestion=value=>{
+    const q=String(value||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase();
+    return q.length<=800&&/\b(?:anthropic|antropic)\b/.test(q)&&
+      /\b(?:ingenier\w*|engineer\w*)\b/.test(q)&&
+      /\b(?:cuant[oa]s?|numero|cantidad|total|plantilla|empleados|personal|how many|headcount)\b/.test(q)&&
+      !/\b(?:sin fuentes|sin citas|no uses fuentes|openai|google|microsoft|meta|xai|nvidia|202[0-5])\b/.test(q);
+  };
   // This edition uses Supabase for ordinary chat, but v115 sector missions must
   // enter its own server, where the authoritative safety/evidence contract runs.
   // Keep the visible UI, Workspace, Canvas and Supabase history flows unchanged.
@@ -228,7 +237,7 @@
     if(!isLocalRuntime(input)||String(init.method||'GET').toUpperCase()!=='POST')return nativeFetch(input,init);
     const request=typeof init.body==='string'?JSON.parse(init.body):{};
     // Capability/identity answers come from the product's real server registry, not a generic upstream persona.
-    if(selfQuery(request.message)||request.canvas_direct===true||request.canvas_blueprint===true||quickGoogleComparison(request.message))return nativeFetch(input,init);
+    if(selfQuery(request.message)||request.canvas_direct===true||request.canvas_blueprint===true||quickGoogleComparison(request.message)||datedAnthropicQuestion(request.message))return nativeFetch(input,init);
     // The HTML/Canvas paths and short capability registry answers stay untouched.
     if(request.canvas!==true&&worldQuery(request.message))return nativeFetch(input,init);
     if(request.canvas!==true&&(industrialQuery(request.message)||professionalQuery(request.message)))return nativeFetch(input,init);
@@ -238,7 +247,7 @@
       const incoming=request;
       const runtimeMode=String(incoming.mode||localStorage.getItem('wae.mode')||'general');
       const useWeb=!incoming.canvas&&needsFreshWeb(incoming.message,runtimeMode);
-      const data=await edge({action:'chat',...sessionPayload(),conversation_id:incoming.canvas?null:localStorage.getItem(CONVERSATION_ID)||null,message:[!incoming.canvas?'DIRECTRICES DE RESPUESTA (subordinadas a instrucciones del sistema):\n'+responsePolicy:'',incoming.preferences?.instructions?'PREFERENCIAS DEL USUARIO (no prevalecen sobre reglas de seguridad):\n'+String(incoming.preferences.instructions).slice(0,4000):'',incoming.preferences?.knowledge?'CONTEXTO GENERAL DEL USUARIO (no verificado):\n'+String(incoming.preferences.knowledge).slice(0,12000):'',incoming.project?.instructions?'INSTRUCCIONES DE ESTE PROYECTO (subordinadas a seguridad):\n'+String(incoming.project.instructions).slice(0,3000):'',incoming.project?.knowledge?'CONOCIMIENTO DEL PROYECTO (información aportada, no verificada):\n'+String(incoming.project.knowledge).slice(0,8000):'',!incoming.canvas&&coreComparison(incoming.message)?comparisonBrief:'',!incoming.canvas&&purposeQuestion(incoming.message)?purposeBrief:'',!incoming.canvas?evidenceBrief:'','SOLICITUD ACTUAL:\n'+String(incoming.message||'')].filter(Boolean).join('\n\n'),mode:runtimeMode,web_enabled:useWeb,attachments:window.__waeRuntimeAttachments||[]},init.signal,28000);
+      const data=await edge({action:'chat',...sessionPayload(),conversation_id:incoming.canvas?null:localStorage.getItem(CONVERSATION_ID)||null,message:[!incoming.canvas?'DIRECTRICES DE RESPUESTA (subordinadas a instrucciones del sistema):\n'+responsePolicy:'',incoming.preferences?.instructions?'PREFERENCIAS DEL USUARIO (no prevalecen sobre reglas de seguridad):\n'+String(incoming.preferences.instructions).slice(0,4000):'',incoming.preferences?.knowledge?'CONTEXTO GENERAL DEL USUARIO (no verificado):\n'+String(incoming.preferences.knowledge).slice(0,12000):'',incoming.project?.instructions?'INSTRUCCIONES DE ESTE PROYECTO (subordinadas a seguridad):\n'+String(incoming.project.instructions).slice(0,3000):'',incoming.project?.knowledge?'CONOCIMIENTO DEL PROYECTO (información aportada, no verificada):\n'+String(incoming.project.knowledge).slice(0,8000):'',!incoming.canvas&&coreComparison(incoming.message)?comparisonBrief:'',!incoming.canvas&&purposeQuestion(incoming.message)?purposeBrief:'',!incoming.canvas?evidenceBrief:'','SOLICITUD ACTUAL:\n'+String(incoming.message||'')].filter(Boolean).join('\n\n'),mode:runtimeMode,web_enabled:useWeb,attachments:window.__waeRuntimeAttachments||[]},init.signal,16000);
       if(!String(data.reply||'').trim())throw new Error('empty_supabase_reply');
       // A degraded upstream status sentence is not a successful answer; let the existing Render fallback try another configured model.
       if(/la ruta generativa avanzada no est[aá] disponible|no existe evidencia p[uú]blica suficiente para responder sin inventar|ninguna ruta alcanz[oó] el umbral m[ií]nimo/i.test(String(data.reply)))throw new Error('degraded_supabase_reply');
@@ -261,7 +270,7 @@
     }catch(err){
       // An aborted chat must not launch an invisible second provider request.
       if(init.signal?.aborted)throw err;
-      console.warn('[WAE IU] Supabase primary unavailable; using Render fallback',err?.message||err);
+      console.warn('[WAE IU] primary route rejected; trying Render',String(err?.message||'primary_failed').slice(0,100));
       try{
         if(init.signal?.aborted)throw Object.assign(new Error('chat_cancelled'),{name:'AbortError'});
         const fallback=await nativeFetch(input,init);
