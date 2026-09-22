@@ -65,9 +65,19 @@
     target.value=text;
     target.dispatchEvent(new Event('input',{bubbles:true}));
     document.documentElement.dataset.mobileSafeSubmit='sent';
-    form.requestSubmit();
-    input.value='';
-    resize();
+    // Clear the mobile draft only after the canonical form accepts the turn.
+    // A blocked/re-entrant submission must not make the last question disappear.
+    if(document.documentElement.dataset.aiBusy==='true')return;
+    try{form.requestSubmit()}catch(error){
+      document.documentElement.dataset.mobileSafeSubmit='rejected';
+      return;
+    }
+    if(document.documentElement.dataset.aiBusy==='true'){
+      input.value='';
+      resize();
+    }else{
+      document.documentElement.dataset.mobileSafeSubmit='not-accepted';
+    }
   };
 
   root.addEventListener('submit',submit);
