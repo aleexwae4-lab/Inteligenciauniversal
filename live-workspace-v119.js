@@ -14,7 +14,7 @@ function accept(d){
  const e=$('#waeLiveText');
  if(e.value===state.last){e.value=d.text;state.last=d.text;state.revision=d.revision;status('Sincronizado · revisión '+d.revision)}
  else if(e.value===d.text){state.last=d.text;state.revision=d.revision;status('Cambios sincronizados')}
- else{state.revision=d.revision;status('Cambio remoto disponible: conserva tu borrador y resuelve el conflicto antes de publicar')}
+ else{status('Cambio remoto disponible: conserva tu borrador y resuelve el conflicto antes de publicar')}
 }
 async function stream(){
  stop();const controller=new AbortController();state.controller=controller;
@@ -66,7 +66,7 @@ function init(){
  '<section id="waeLiveResearch"><input id="waeLiveQuery" maxlength="280" placeholder="Consulta o tema de investigación"><select id="waeLiveMode"><option value="auto">Automático</option><option value="web">Web general configurada</option><option value="academic">OpenAlex académico</option><option value="encyclopedia">Wikimedia contexto</option></select><button type="button" id="waeLiveFind">Buscar fuentes</button><div id="waeLiveResults" aria-live="polite"></div></section>',
  '<section id="waeLiveCollab" hidden><p>Sala temporal: se pierde tras 6 horas o reinicio del servidor. No pegues contraseñas ni información sensible. Comparte el código únicamente de forma privada.</p><button type="button" id="waeLiveCreate">Crear desde documento</button><input id="waeLiveInvite" placeholder="ID:clave privada" autocomplete="off"><button type="button" id="waeLiveJoin">Unirse</button><button type="button" id="waeLiveCopy">Copiar código</button><textarea id="waeLiveText" rows="9" maxlength="90000" aria-label="Documento compartido"></textarea><p id="waeLiveStatus" aria-live="polite">Sin sala activa</p><button type="button" id="waeLivePublish">Publicar</button><button type="button" id="waeLivePull">Traer remoto</button><button type="button" id="waeLiveToWorkspace">Copiar al Workspace</button></section>'
  ].join('');
- document.body.append(dialog);open.onclick=()=>dialog.showModal();$('#waeLiveClose').onclick=()=>dialog.close();dialog.addEventListener('close',stop);
+ document.body.append(dialog);open.onclick=()=>{dialog.showModal();if(state.id)stream()};$('#waeLiveClose').onclick=()=>dialog.close();dialog.addEventListener('close',stop);
  $('#waeLiveResearchTab').onclick=()=>{$('#waeLiveResearch').hidden=false;$('#waeLiveCollab').hidden=true};
  $('#waeLiveCollabTab').onclick=()=>{$('#waeLiveResearch').hidden=true;$('#waeLiveCollab').hidden=false};
  $('#waeLiveFind').onclick=search;
