@@ -246,6 +246,29 @@
     const q=String(value||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase();
     return /\b(problema(?:s)? (?:de )?(?:nivel )?mundial(?:es)?|problema(?:s)? (?:del mundo|de la humanidad|de alcance global|de escala global)|reto(?:s)? global(?:es)?|desafio(?:s)? mundial(?:es)?|crisis global|global challenge(?:s)?|world problem(?:s)?|salud publica|pandemia(?:s)?|epidemia(?:s)?|sistema(?:s)? de salud|cambio climatico|crisis climatica|calentamiento global|descarbonizacion|agua potable|escasez de agua|crisis hidrica|saneamiento|hambre(?: mundial)?|hambruna(?:s)?|seguridad alimentaria|desnutricion|crisis energetica|energia limpia|transicion energetica|red(?:es)? electrica(?:s)?|crisis educativa|brecha educativa|analfabetismo|pobreza|desigualdad|desempleo|crisis de vivienda|infraestructura mundial|ciberseguridad mundial|ciberataque(?:s)?|ransomware|cibercrimen|desastre(?:s)? natural(?:es)?|terremoto(?:s)?|inundacion(?:es)?|crisis humanitaria|emergencia(?:s)? humanitaria(?:s)?|investigacion mundial|reto(?:s)? cientifico(?:s)?|ciencia abierta|cadena(?:s)? de suministro|logistica global|abastecimiento mundial|biodiversidad|deforestacion|extincion de especies|desplazamiento forzado|refugiado(?:s)?|migracion mundial|crisis migratoria)\b/.test(q) || (/\b(?:mundial(?:es)?|global(?:es)?|humanidad)\b/.test(q) && /\b(?:problema(?:s)?|reto(?:s)?|desafio(?:s)?|crisis|resolver|solucion(?:es)?)\b/.test(q));
   };
+  // Safe single-turn repair: these errors arise before generation. Never replay
+  // a timed-out chat, a completed response or a mutating tool request.
+  const recoverableChatFailure=error=>{
+    const code=String(error?.data?.code||error?.data?.error_code||error?.data?.error?.code||error?.data?.error||error?.message||'')
+      .normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase();
+    if(/\b(?:iu_invalid_session|iu_session_required|invalid_session|session_expired|session_invalid|session_required|invalid_credentials)\b/.test(code))return 'session';
+    if(/\b(?:iu_invalid_conversation|conversation_not_found|conversation_invalid|conversation_expired|invalid_conversation_id|conversation_access_denied|conversation_id_invalid)\b/.test(code))return 'conversation';
+    return '';
+  };
+  const chatWithSessionRepair=async(payload,signal)=>{
+    try{return await edge(payload,signal,16000)}
+    catch(error){
+      if(signal?.aborted)throw error;
+      const kind=recoverableChatFailure(error);
+      if(!kind)throw error;
+      // Cloud session/conversation rejection is pre-inference, so this single
+      // replay cannot duplicate a response or an external action.
+      window.WAENavigation?.remoteInvalidated?.(payload.conversation_id);
+      if(kind==='session')await refreshBootstrap(signal);
+      else localStorage.removeItem(CONVERSATION_ID);
+      return edge({...payload,...sessionPayload(),conversation_id:null},signal,16000);
+    }
+  };
   window.fetch=async(input,init={})=>{
     if(!isLocalRuntime(input)||String(init.method||'GET').toUpperCase()!=='POST')return nativeFetch(input,init);
     const request=typeof init.body==='string'?JSON.parse(init.body):{};
@@ -260,7 +283,8 @@
       const incoming=request;
       const runtimeMode=String(incoming.mode||localStorage.getItem('wae.mode')||'general');
       const useWeb=!incoming.canvas&&needsFreshWeb(incoming.message,runtimeMode);
-      const data=await edge({action:'chat',...sessionPayload(),conversation_id:incoming.canvas?null:localStorage.getItem(CONVERSATION_ID)||null,message:[!incoming.canvas?'DIRECTRICES DE RESPUESTA (subordinadas a instrucciones del sistema):\n'+responsePolicy:'',incoming.preferences?.instructions?'PREFERENCIAS DEL USUARIO (no prevalecen sobre reglas de seguridad):\n'+String(incoming.preferences.instructions).slice(0,4000):'',incoming.preferences?.knowledge?'CONTEXTO GENERAL DEL USUARIO (no verificado):\n'+String(incoming.preferences.knowledge).slice(0,12000):'',incoming.project?.instructions?'INSTRUCCIONES DE ESTE PROYECTO (subordinadas a seguridad):\n'+String(incoming.project.instructions).slice(0,3000):'',incoming.project?.knowledge?'CONOCIMIENTO DEL PROYECTO (información aportada, no verificada):\n'+String(incoming.project.knowledge).slice(0,8000):'',!incoming.canvas&&coreComparison(incoming.message)?comparisonBrief:'',!incoming.canvas&&purposeQuestion(incoming.message)?purposeBrief:'',!incoming.canvas?evidenceBrief:'','SOLICITUD ACTUAL:\n'+String(incoming.message||'')].filter(Boolean).join('\n\n'),mode:runtimeMode,web_enabled:useWeb,attachments:window.__waeRuntimeAttachments||[]},init.signal,16000);
+      const chatPayload={action:'chat',...sessionPayload(),conversation_id:incoming.canvas?null:localStorage.getItem(CONVERSATION_ID)||null,message:[!incoming.canvas?'DIRECTRICES DE RESPUESTA (subordinadas a instrucciones del sistema):\n'+responsePolicy:'',incoming.preferences?.instructions?'PREFERENCIAS DEL USUARIO (no prevalecen sobre reglas de seguridad):\n'+String(incoming.preferences.instructions).slice(0,4000):'',incoming.preferences?.knowledge?'CONTEXTO GENERAL DEL USUARIO (no verificado):\n'+String(incoming.preferences.knowledge).slice(0,12000):'',incoming.project?.instructions?'INSTRUCCIONES DE ESTE PROYECTO (subordinadas a seguridad):\n'+String(incoming.project.instructions).slice(0,3000):'',incoming.project?.knowledge?'CONOCIMIENTO DEL PROYECTO (información aportada, no verificada):\n'+String(incoming.project.knowledge).slice(0,8000):'',!incoming.canvas&&coreComparison(incoming.message)?comparisonBrief:'',!incoming.canvas&&purposeQuestion(incoming.message)?purposeBrief:'',!incoming.canvas?evidenceBrief:'','SOLICITUD ACTUAL:\n'+String(incoming.message||'')].filter(Boolean).join('\n\n'),mode:runtimeMode,web_enabled:useWeb,attachments:window.__waeRuntimeAttachments||[]};
+      const data=await chatWithSessionRepair(chatPayload,init.signal);
       if(!String(data.reply||'').trim())throw new Error('empty_supabase_reply');
       // A degraded upstream status sentence is not a successful answer; let the existing Render fallback try another configured model.
       if(/la ruta generativa avanzada no est[aá] disponible|no existe evidencia p[uú]blica suficiente para responder sin inventar|ninguna ruta alcanz[oó] el umbral m[ií]nimo/i.test(String(data.reply)))throw new Error('degraded_supabase_reply');
