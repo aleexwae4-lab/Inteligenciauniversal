@@ -37,13 +37,13 @@ function readStoredMessages(){let list=[];try{list=JSON.parse(localStorage.getIt
 localStorage.setItem('wae.endpoint','/api/chat');
 const state={mode:localStorage.getItem('wae.mode')||'general',endpoint:'/api/chat',coreName:localStorage.getItem('wae.coreName')||'Universal Core',document:localStorage.getItem('wae.document')||'',html:localStorage.getItem('wae.html')||'',messages:readStoredMessages(),busy:false,autoVoice:localStorage.getItem('wae.autoVoice')!=='false'};
 const modeLabels={general:'General',research:'Investigar',code:'Programar',analysis:'Analizar',design:'Diseñar',executive:'Ejecutivo'};
-function persistMessages(){localStorage.setItem('wae.messages',JSON.stringify(state.messages.slice(-60)))}
+function persistMessages(){try{localStorage.setItem('wae.messages',JSON.stringify(state.messages.slice(-60)))}catch(error){console.warn('[WAE IU] storage unavailable; keeping active turn in memory',error?.message||error)}}
 function renderMessages(){const t=$('#messages');t.innerHTML='';state.messages.forEach(renderMessage);scrollChat()}
 function renderMessage(m){const e=document.createElement('article');e.className=`message ${m.role==='user'?'user':'assistant'}`;const n=m.role==='user'?'Tú':state.coreName;const body=m.role==='assistant'?`<div class="rich-answer">${renderPremiumText(m.text)}</div>`:`<p>${safeText(m.text)}</p>`;e.innerHTML=`<div class="message-meta"><strong>${safeText(n)}</strong><span>${safeText(m.at||nowLabel())}</span></div>${body}${m.role==='assistant'?'<div class="answer-actions"><button class="speak-answer" type="button">▶ Escuchar</button><button class="copy-answer" type="button">Copiar</button></div>':''}`;if(m.role==='assistant'){e.querySelector('.speak-answer')?.addEventListener('click',()=>speakAnswer(m.text));e.querySelector('.copy-answer')?.addEventListener('click',()=>navigator.clipboard?.writeText(m.text).then(()=>toast('Respuesta copiada')).catch(()=>{}))}$('#messages').appendChild(e)}
 function showTyping(){if($('#typingMessage'))return;const e=document.createElement('article');e.className='message assistant';e.id='typingMessage';e.innerHTML=`<div class="message-meta"><strong>${safeText(state.coreName)}</strong><span>procesando</span></div><span class="typing"><i></i><i></i><i></i></span>`;$('#messages').appendChild(e);scrollChat()}
 function hideTyping(){$('#typingMessage')?.remove()}function scrollChat(){requestAnimationFrame(()=>{const s=$('.chat-layout');if(s)s.scrollTop=s.scrollHeight})}
 function addMessage(role,text){text=role==='assistant'?sanitizeAssistantText(text):String(text??'').trim();if(!text)return;const i={role,text,at:nowLabel()};state.messages.push(i);persistMessages();renderMessage(i);scrollChat();if(role==='assistant'&&state.autoVoice&&!window.__waeVoice)speakAnswer(text)}
-async function getAIReply(message){const c=new AbortController(),timer=setTimeout(()=>c.abort(),65000);try{const r=await fetch('/api/chat',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({message,mode:state.mode,preferences:{responseStyle:'premium-rich',voiceNatural:true}}),signal:c.signal});const d=await r.json().catch(()=>({}));if(!r.ok||!d||typeof d.reply!=='string')throw new Error(d?.error||`runtime_${r.status}`);const clean=sanitizeAssistantText(d.reply);if(!clean)throw new Error('unsafe_or_empty_output');return clean}catch(e){console.warn('[WAE IU] runtime unavailable',e?.message||e);return '**Reconectando el núcleo de inteligencia.** Tu conversación sigue segura. Vuelve a enviar el mensaje en unos segundos.'}finally{clearTimeout(timer)}}
+async function getAIReply(message){const c=new AbortController(),timer=setTimeout(()=>c.abort(),65000);try{const r=await fetch('/api/chat',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({message,mode:state.mode,preferences:{responseStyle:'premium-rich',voiceNatural:true}}),signal:c.signal});const d=await r.json().catch(()=>({}));if(!r.ok||!d||typeof d.reply!=='string')throw new Error(d?.error||`runtime_${r.status}`);const clean=sanitizeAssistantText(d.reply);if(!clean)throw new Error('unsafe_or_empty_output');return clean}catch(e){console.warn('[WAE IU] runtime unavailable',e?.message||e);throw e}finally{clearTimeout(timer)}}
 function setMode(mode){state.mode=mode;localStorage.setItem('wae.mode',mode);$('#modePill').textContent=modeLabels[mode]||'General';$$('.capability-card').forEach(b=>b.classList.toggle('active',b.dataset.mode===mode));$('#messageInput')?.focus()}
 function resetConversation(){state.messages=[];persistMessages();renderMessages();toast('Nueva conversación creada')}function openDrawer(){$('#drawer').classList.add('open');$('#drawer').setAttribute('aria-hidden','false');$('#scrim').classList.add('visible')}function closeDrawer(){$('#drawer').classList.remove('open');$('#drawer').setAttribute('aria-hidden','true');$('#scrim').classList.remove('visible')}function openWorkspace(){$('#workspace').classList.add('open');$('#workspace').setAttribute('aria-hidden','false');closeDrawer()}function closeWorkspace(){$('#workspace').classList.remove('open');$('#workspace').setAttribute('aria-hidden','true')}
 function switchWorkspaceTab(tab){$$('.workspace-tabs button').forEach(b=>b.classList.toggle('active',b.dataset.tab===tab));$$('.tab-panel').forEach(p=>p.classList.toggle('active',p.id===`panel-${tab}`));if(tab==='html')updatePreview()}function markDirty(){$('#saveState').textContent='Cambios sin guardar'}function saveWorkspace(){state.document=$('#documentEditor').innerHTML;state.html=$('#htmlEditor').value;localStorage.setItem('wae.document',state.document);localStorage.setItem('wae.html',state.html);$('#saveState').textContent='Guardado';toast('Workspace guardado')}function updatePreview(){$('#htmlPreview').srcdoc=$('#htmlEditor').value}
@@ -53,7 +53,34 @@ const TURN_LIFECYCLE_VERSION='turn-lifecycle/v113';
 function visibleComposerInput(){return matchMedia('(max-width:899px)').matches&&$('#mobileSafeInput')?$('#mobileSafeInput'):$('#messageInput')}
 function setTurnBusy(active){state.busy=!!active;document.documentElement.dataset.aiBusy=String(!!active);for(const send of [$('.send-btn'),$('#mobileSafeSend')]){if(!send)continue;send.disabled=!!active;if(active)send.setAttribute('aria-busy','true');else send.removeAttribute('aria-busy')}document.documentElement.dataset.turnLifecycle=TURN_LIFECYCLE_VERSION}
 function releaseTurnUI({focus=true}={}){hideTyping();setTurnBusy(false);const native=$('#messageInput');if(native){native.disabled=false;native.readOnly=false;native.removeAttribute('disabled');native.removeAttribute('readonly');native.removeAttribute('inert')}window.__waeMobileSafeComposer?.repair?.();if(focus){const target=visibleComposerInput();try{target?.focus({preventScroll:true})}catch{target?.focus()}}}
-async function submitMessage(ev){ev.preventDefault();const i=$('#messageInput'),m=i.value.trim();if(!m||state.busy)return;setTurnBusy(true);i.value='';autosizeInput();addMessage('user',m);showTyping();try{const r=await getAIReply(m);hideTyping();addMessage('assistant',r)}finally{releaseTurnUI()}}
+async function submitMessage(ev){ev.preventDefault();const i=$('#messageInput'),m=i?.value.trim();if(!m||state.busy)return;setTurnBusy(true);i.value='';autosizeInput();try{
+  addMessage('user',m);showTyping();
+  const r=await getAIReply(m);
+  if(!r.trim())throw new Error('empty_reply');
+  hideTyping();addMessage('assistant',r);
+}catch(error){
+  hideTyping();
+  const notice='**No recibí una respuesta completa.** Conservé tu pregunta para reintentar; no voy a fingir que se procesó correctamente.';
+  try{addMessage('assistant',notice)}catch(renderError){
+    console.error('[WAE IU] response render failed',renderError);
+    const host=$('#messages');
+    if(host){const node=document.createElement('article');node.className='message assistant';node.textContent=notice;host.appendChild(node)}
+  }
+  const retry=$('#messages .message.assistant:last-child');
+  if(retry&&!retry.querySelector('[data-wae-retry]')){
+    const button=document.createElement('button');button.type='button';button.dataset.waeRetry='true';button.textContent='↻ Reintentar';
+    button.addEventListener('click',()=>{
+      if(state.busy)return;
+      i.value=m;autosizeInput();
+      const mobile=$('#mobileSafeInput');if(mobile&&matchMedia('(max-width:899px)').matches){mobile.value=m;mobile.dispatchEvent(new Event('input',{bubbles:true}));$('#mobileSafeComposer')?.requestSubmit()}
+      else $('#composer')?.requestSubmit();
+    });retry.appendChild(button);
+  }
+  const mobile=$('#mobileSafeInput');
+  if(mobile&&matchMedia('(max-width:899px)').matches&&!mobile.value.trim()){mobile.value=m;mobile.dispatchEvent(new Event('input',{bubbles:true}))}
+  else if(!i.value.trim())i.value=m;
+  autosizeInput();
+}finally{releaseTurnUI()}}
 window.__waeTurnLifecycle={version:TURN_LIFECYCLE_VERSION,release:releaseTurnUI,get busy(){return state.busy}};
 window.addEventListener('pageshow',()=>{if(!$('#typingMessage'))releaseTurnUI({focus:false})});
 document.addEventListener('visibilitychange',()=>{if(!document.hidden&&!$('#typingMessage'))releaseTurnUI({focus:false})});
