@@ -51,7 +51,7 @@ test('provider attempts have an abortable total budget and preserve safe non-ans
 test('primary timeout leaves space for the Render fallback, trace has no user prompt or secret',()=>{
  const client=read('runtime-client.js'),app=read('app.js'),api=read('api/chat.js'),pkg=JSON.parse(read('package.json'));
  assert.match(client,/signal,7000\)\.then\(data/);
- assert.match(client,/attachments:window\.__waeRuntimeAttachments\|\|\[\]\},init\.signal,16000\)/);
+ assert.match(client,/chatWithSessionRepair\(chatPayload,init\.signal\)/);
  assert.match(client,/if\(init\.signal\?\.aborted\)throw err/);
  assert.match(app,/setTimeout\(\(\)=>c\.abort\(\),65000\)/);
  assert.match(api,/X-WAE-Request-ID/);
