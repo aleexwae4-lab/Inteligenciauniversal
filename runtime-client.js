@@ -54,17 +54,30 @@
     try{
       const res=await nativeFetch(EDGE,{method:'POST',headers:{'content-type':'application/json','apikey':SUPABASE_KEY,'x-client-info':'wae-inteligencia-universal/1.2'},body:JSON.stringify(payload),cache:'no-store',signal:linked.signal});
       const data=await res.json().catch(()=>({success:false,error:`HTTP ${res.status}`}));
-      if(!res.ok)throw Object.assign(new Error(data.error||`HTTP ${res.status}`),{status:res.status,data});
+      if(!res.ok||(data?.error&&!data?.reply))throw Object.assign(new Error(String(data.error||`HTTP ${res.status}`).slice(0,180)),{status:res.status,data});
       return data;
     }finally{linked.cleanup()}
   };
 
   let bootPromise;
-  const bootstrap=signal=>bootPromise||(bootPromise=edge({action:'bootstrap',session_id:localStorage.getItem(SESSION_ID)||'',session_secret:localStorage.getItem(SESSION_SECRET)||''},signal,7000).then(data=>{
-    if(!data?.session_id||!data?.session_secret)throw new Error('invalid_bootstrap');
-    localStorage.setItem(SESSION_ID,data.session_id);localStorage.setItem(SESSION_SECRET,data.session_secret);return data;
-  }).catch(err=>{bootPromise=null;throw err}));
   const sessionPayload=()=>({session_id:localStorage.getItem(SESSION_ID)||'',session_secret:localStorage.getItem(SESSION_SECRET)||''});
+  // Don't repeat a cold cross-origin bootstrap for a session already saved by
+  // this browser. A real authentication rejection triggers one safe renewal.
+  const bootstrap=signal=>{
+    const saved=sessionPayload();
+    if(saved.session_id&&saved.session_secret)return Promise.resolve(saved);
+    return bootPromise||(bootPromise=edge({action:'bootstrap',...saved},signal,7000).then(data=>{
+      if(!data?.session_id||!data?.session_secret)throw new Error('invalid_bootstrap');
+      localStorage.setItem(SESSION_ID,data.session_id);localStorage.setItem(SESSION_SECRET,data.session_secret);return data;
+    }).catch(err=>{bootPromise=null;throw err}));
+  };
+  const refreshBootstrap=signal=>{
+    bootPromise=null;
+    localStorage.removeItem(SESSION_ID);
+    localStorage.removeItem(SESSION_SECRET);
+    localStorage.removeItem(CONVERSATION_ID);
+    return bootstrap(signal);
+  };
   // Reuse the IU custom session; never copy the other WAE OS product's org token or Gemini key.
   // Multimodal photo / video requests stay first-party. Render proxies to the
   // same IU-authenticated WAE function, so Android avoids a large cross-origin POST.
