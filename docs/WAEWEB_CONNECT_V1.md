@@ -12,7 +12,15 @@ siguen usando Universal Web Intelligence v2. WAEWEB es un proveedor alternativo 
 - `POST /api/waeweb/retrieve` — lectura pública HTTPS opcional en WAEWEB.
 
 El token de WAEWEB se adjunta **solo en el backend** y nunca pasa del
-servidor al navegador del usuario. Las rutas tienen protección de origen y
+servidor al navegador del usuario. **Las nuevas rutas NO son públicas**:
+se requiere el encabezado `X-WAEWEB-Internal-Token` con una segunda
+clave aleatoria en `WAEWEB_CONNECT_INBOUND_TOKEN`, independiente de
+`WAEWEB_CONNECT_TOKEN`. Sin ambas claves válidas responden 503/401;
+las llamadas originadas desde un navegador quedan rechazadas.
+Los orquestadores de confianza que utilicen estas rutas deben llamar desde
+servidor e inyectar ese secreto; no colocar esta cabecera en JavaScript
+público, tampoco en `NEXT_PUBLIC_*`. Una sesión de usuario por sí sola
+no autoriza esta ruta máquina-a-máquina. Las rutas tienen protección de origen y
 límites de consumo locales; las cargas malformadas y cambios de protocolo
 fallan cerrado. Resultados SSE no son video de Chrome ni navegación remota.
 
@@ -30,7 +38,7 @@ modifica ni despliega los dos sistemas por sí sola.
 Variables: `WAEWEB_CONNECT_ENABLED=false` hasta validar backend WAEWEB;
 `WAEWEB_CONNECT_BASE_URL` origen HTTPS del futuro backend WAEWEB;
 `WAEWEB_CONNECT_CLIENT_ID` según entorno; `WAEWEB_CONNECT_TOKEN`
-clave correspondiente (server-only). **No usar NEXT_PUBLIC_**.
+clave correspondiente (server-only). Configurar además `WAEWEB_CONNECT_INBOUND_TOKEN` (clave distinta y exclusiva del servicio consumidor). **No usar NEXT_PUBLIC_**.
 
 ## Operación
 Prueba local aislada: `npm run test:waeweb-connect`. Un resultado
