@@ -39,7 +39,7 @@ test('browser and server agree on narrow dated research routing, preserve unrela
 test('provider attempts have an abortable total budget and preserve safe non-answer rejection',()=>{
  const provider=read('lib/providers.js');
  assert.match(provider,/const deadline=Date\.now\(\)\+Math\.min\(50000/);
- assert.match(provider,/Math\.min\(16500,remaining\)/);
+ assert.match(provider,/Math\.min\(maxAttempt,remaining\)/);
  assert.match(provider,/signal:controller\.signal/);
  assert.match(provider,/AbortSignal\.any\(\[parentSignal,timeout\(ms\)\]\)/);
  assert.match(provider,/finally \{clearTimeout\(timer\)\}/);
