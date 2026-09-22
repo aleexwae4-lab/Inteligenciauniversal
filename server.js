@@ -4,6 +4,8 @@ import { stat } from 'node:fs/promises';
 import { extname, join, normalize } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import chatHandler from './api/chat.js';
+import researchHandler from './api/research.js';
+import collaborationHandler from './api/collaboration.js';
 import visionHandler from './api/vision.js';
 import healthHandler from './api/health.js';
 import capabilitiesHandler from './api/capabilities.js';
@@ -19,6 +21,8 @@ const MAX_BODY_BYTES = Number(process.env.WAE_MAX_BODY_BYTES || 2_000_000);
 
 const apiRoutes = new Map([
   ['/api/chat', chatHandler],
+  ['/api/research', researchHandler],
+  ['/api/collaboration', collaborationHandler],
   ['/api/vision', visionHandler],
   ['/api/health', healthHandler],
   ['/api/health/liveness', healthHandler],
