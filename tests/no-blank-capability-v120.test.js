@@ -45,5 +45,5 @@ test('accepted turns preserve a visible terminal outcome and a one-tap retry',()
   assert.match(app,/dataset\.waeRetry/);
   assert.match(app,/finally\{releaseTurnUI\(\)\}/);
   assert.match(mobile,/Clear the mobile draft only after/);
-  assert.match(mobile,/data\.aiBusy==='true'/);
+  assert.match(mobile,/dataset\.aiBusy==='true'/);
 });
