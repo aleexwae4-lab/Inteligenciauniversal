@@ -143,8 +143,7 @@
   // particular video repro through two remote model attempts.
   const quickGoogleComparison=value=>{
     const q=String(value||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[¿?¡!.,:]/g,' ').replace(/\s+/g,' ').trim();
-    return q.length<=105 && /\bgoogle\b/.test(q) && /\bcompet(?:ir|encia)\b/.test(q) &&
-      /^(?:hola |oye |dime |me dices |una pregunta |por favor )*(?:tu |universal core |wae os )*(?:puedes |podrias |puede |podria |podemos )?(?:competir|compites|compite|competencia)\b/.test(q);
+    return q.length<=105 && /^(?:(?:hola|oye|dime|me dices|una pregunta|por favor) )*(?:(?:tu|universal core|wae os) )?(?:(?:puedes|podrias|puede|podria|podemos) )?(?:competir|compites|compite|competencia) (?:contra|con|vs|versus) google(?: (?:search|gemini))?$/.test(q);
   };
   const comparisonBrief='CONTEXTO DE IDENTIDAD, NO RESPUESTA PREFABRICADA: La persona conversa con Universal Core, producto WAE OS Enterprise; NO está conversando con ChatGPT como producto. Universal Core combina chat, rutas de IA, Workspace, Canvas y Fábrica. Google puede significar Search, Gemini o la empresa/ecosistema: distingue solo los sentidos pertinentes. No atribuyas a Universal Core el índice web, la infraestructura, el entrenamiento ni los servicios de Google. No declares herramientas, búsquedas actuales ni pruebas que no estén verificadas. Responde con naturalidad en 2–4 frases si es una comparación informal; no hagas una tabla salvo que te la pidan. Habla sobre Universal Core, no sobre ChatGPT.';
   const comparisonIssue=(answer,question)=>{
