@@ -204,6 +204,15 @@
     return !terms.length||terms.some(t=>src.includes(t));
   };
   const evidenceBrief='CONTROL DE INVESTIGACIÓN: Usa conocimiento general para contestar. Cuando el dato requiera actualidad, recupera SOLO fuentes pertinentes para el sujeto de la pregunta. No cites, describas ni anuncies resultados de búsqueda ajenos al tema; los errores del buscador no demuestran que un dato sea inexistente. Para número de ingenieros en una empresa, distingue ingenieros de plantilla total; si no puedes verificar un desglose, di únicamente que no puedes confirmar esa cifra exacta, sin fabricar cifras ni ofrecer un largo protocolo de búsqueda. Nunca uses «evidencia proporcionada», «W1-W5» o una lista de documentos no pertinentes como sustituto de la respuesta.';
+  // A dated, sourced finding is answered by the local knowledge registry.
+  // Avoid speculative and conflicting counts from ordinary upstream chat.
+  const datedAnthropicQuestion=value=>{
+    const q=String(value||'').normalize('NFD').replace(/[\\u0300-\\u036f]/g,'').toLowerCase();
+    return q.length<=800&&/\\b(?:anthropic|antropic)\\b/.test(q)&&
+      /\\b(?:ingenier\\w*|engineer\\w*)\\b/.test(q)&&
+      /\\b(?:cuant[oa]s?|numero|cantidad|total|plantilla|empleados|personal|how many|headcount)\\b/.test(q)&&
+      !/\\b(?:sin fuentes|sin citas|no uses fuentes|openai|google|microsoft|meta|xai|nvidia|202[0-5])\\b/.test(q);
+  };
   // This edition uses Supabase for ordinary chat, but v115 sector missions must
   // enter its own server, where the authoritative safety/evidence contract runs.
   // Keep the visible UI, Workspace, Canvas and Supabase history flows unchanged.
@@ -228,7 +237,7 @@
     if(!isLocalRuntime(input)||String(init.method||'GET').toUpperCase()!=='POST')return nativeFetch(input,init);
     const request=typeof init.body==='string'?JSON.parse(init.body):{};
     // Capability/identity answers come from the product's real server registry, not a generic upstream persona.
-    if(selfQuery(request.message)||request.canvas_direct===true||request.canvas_blueprint===true||quickGoogleComparison(request.message))return nativeFetch(input,init);
+    if(selfQuery(request.message)||request.canvas_direct===true||request.canvas_blueprint===true||quickGoogleComparison(request.message)||datedAnthropicQuestion(request.message))return nativeFetch(input,init);
     // The HTML/Canvas paths and short capability registry answers stay untouched.
     if(request.canvas!==true&&worldQuery(request.message))return nativeFetch(input,init);
     if(request.canvas!==true&&(industrialQuery(request.message)||professionalQuery(request.message)))return nativeFetch(input,init);
