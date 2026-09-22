@@ -1,4 +1,4 @@
-import {createRoom,readRoom,updateRoom,collaborationCapabilities} from '../lib/live-collaboration-v119.js';
+import {createRoom,readRoom,updateRoom,subscribeRoom,collaborationCapabilities} from '../lib/live-collaboration-v119.js';
 import {allowRequest,originAllowed,applyHeaders} from '../lib/security.js';
 
 export default function handler(req,res){
@@ -13,6 +13,7 @@ export default function handler(req,res){
     if(body.action==='create')data=createRoom(body);
     else if(body.action==='read')data=readRoom(body);
     else if(body.action==='update')data=updateRoom(body);
+    else if(body.action==='subscribe')return subscribeRoom(body,req,res);
     else return res.status(400).json({error:'unsupported_collaboration_action'});
     return res.status(data.ok===false?409:200).json(data);
   }catch(e){return res.status(e.statusCode||502).json({error:e.code||'collaboration_error'})}
