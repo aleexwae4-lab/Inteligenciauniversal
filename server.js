@@ -23,6 +23,7 @@ import uiDiagnosticsHandler from './api/ui-diagnostics.js';
 import liveDataHandler from './api/live-data.js';
 import knowledgeHandler from './api/knowledge.js';
 import webIntelligenceHandler from './api/web-intelligence.js';
+import waewebConnectHandler from './api/waeweb-connect.js';
 import { handlePremiumBackend, isPremiumBackendPath } from './backend-v73/app.js';
 import { warmProviderConnections } from './lib/providers.js';
 
@@ -121,6 +122,10 @@ const apiRoutes = new Map([
   ['/api/web/sources', webIntelligenceHandler],
   ['/api/web/health', webIntelligenceHandler],
   ['/api/web/metrics', webIntelligenceHandler],
+  ['/api/waeweb/status', waewebConnectHandler],
+  ['/api/waeweb/search', waewebConnectHandler],
+  ['/api/waeweb/stream', waewebConnectHandler],
+  ['/api/waeweb/retrieve', waewebConnectHandler],
   ['/api/mobile', mobilePremiumHandler],
   ['/api/ui-diagnostics', uiDiagnosticsHandler],
 ]);
