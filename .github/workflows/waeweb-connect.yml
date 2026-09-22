@@ -1,0 +1,25 @@
+name: Universal Core WAEWEB Connect QA
+on:
+  push:
+    branches: ["feat/waeweb-connect-v1"]
+    paths:
+      - "lib/waeweb-connect.js"
+      - "api/waeweb-connect.js"
+      - "tests/waeweb-connect.test.js"
+      - ".github/workflows/waeweb-connect.yml"
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  connector:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Validate connector and route syntax
+        run: node --check lib/waeweb-connect.js && node --check api/waeweb-connect.js && node --check server.js
+      - name: Validate opt-in server-only contract
+        run: node --test tests/waeweb-connect.test.js
