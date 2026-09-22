@@ -48,8 +48,8 @@ test('primary and fallback routes both keep evidence without disturbing existing
   const backend = readFileSync(new URL('../lib/runtime.js', import.meta.url),'utf8');
   const providers = readFileSync(new URL('../lib/providers.js', import.meta.url),'utf8');
   assert.match(client,/web_enabled:useWeb/);
-  assert.match(client,/withRetrievedSources\(data.reply,data.web_sources,incoming.message\)/);
-  assert.match(backend,/const realSources=\[\.\.\.\(generated.sources\|\|\[\]\),\.\.\.gatheredSources\]/);
+  assert.match(client,/withRetrievedSources\(data.reply,topicSources,incoming.message\)/);
+  assert.match(backend,/const realSources=relevantSources\(message,\[\.\.\.\(generated.sources\|\|\[\]\),\.\.\.gatheredSources\]\)/);
   assert.match(backend,/appendSourceLinks\(generated.text, realSources, message\)/);
   assert.match(providers,/web_enabled:webEnabled/);
 });
