@@ -37,15 +37,29 @@
   if(!localStorage.getItem('wae.endpoint')||localStorage.getItem('wae.endpoint')==='/api/chat')localStorage.setItem('wae.endpoint','/api/chat');
   window.__waeRuntimeAttachments=[];
 
-  const edge=async(payload)=>{
-    const res=await nativeFetch(EDGE,{method:'POST',headers:{'content-type':'application/json','apikey':SUPABASE_KEY,'x-client-info':'wae-inteligencia-universal/1.2'},body:JSON.stringify(payload),cache:'no-store',signal:typeof AbortSignal.timeout==='function'?AbortSignal.timeout(32000):undefined});
-    const data=await res.json().catch(()=>({success:false,error:`HTTP ${res.status}`}));
-    if(!res.ok)throw Object.assign(new Error(data.error||`HTTP ${res.status}`),{status:res.status,data});
-    return data;
+  // A single outbound request must honor the parent /api/chat cancellation.
+  // Previously only the inner 32s timer was used: the visible 65s chat deadline
+  // could expire while the intercepted request kept running and later fell back.
+  const linkedAbort=(outer,ms)=>{
+    const controller=new AbortController();
+    const onAbort=()=>controller.abort();
+    if(outer?.aborted)controller.abort();
+    else outer?.addEventListener?.('abort',onAbort,{once:true});
+    const timer=setTimeout(onAbort,ms);
+    return {signal:controller.signal,cleanup:()=>{clearTimeout(timer);outer?.removeEventListener?.('abort',onAbort)}};
+  };
+  const edge=async(payload,outerSignal=null,ms=32000)=>{
+    const linked=linkedAbort(outerSignal,ms);
+    try{
+      const res=await nativeFetch(EDGE,{method:'POST',headers:{'content-type':'application/json','apikey':SUPABASE_KEY,'x-client-info':'wae-inteligencia-universal/1.2'},body:JSON.stringify(payload),cache:'no-store',signal:linked.signal});
+      const data=await res.json().catch(()=>({success:false,error:`HTTP ${res.status}`}));
+      if(!res.ok)throw Object.assign(new Error(data.error||`HTTP ${res.status}`),{status:res.status,data});
+      return data;
+    }finally{linked.cleanup()}
   };
 
   let bootPromise;
-  const bootstrap=()=>bootPromise||(bootPromise=edge({action:'bootstrap',session_id:localStorage.getItem(SESSION_ID)||'',session_secret:localStorage.getItem(SESSION_SECRET)||''}).then(data=>{
+  const bootstrap=signal=>bootPromise||(bootPromise=edge({action:'bootstrap',session_id:localStorage.getItem(SESSION_ID)||'',session_secret:localStorage.getItem(SESSION_SECRET)||''},signal,10000).then(data=>{
     if(!data?.session_id||!data?.session_secret)throw new Error('invalid_bootstrap');
     localStorage.setItem(SESSION_ID,data.session_id);localStorage.setItem(SESSION_SECRET,data.session_secret);return data;
   }).catch(err=>{bootPromise=null;throw err}));
@@ -125,6 +139,13 @@
       /\b(universal core|wae os|waeos|eres|serias|puedes|podrias|tu sistema|este sistema|esta plataforma|tu inteligencia)\b/.test(q)&&
       /\b(equivalent[ea]|igual(?:es)?|compara(?:r|cion)?|comparad[oa]|diferente[s]?|distint[oa]s?|mejor|peor|versus|vs|como|parecid[oa]s?|simil(?:ar|ares)|compet(?:ir|encia)|alternativa|sustitu(?:ir|ye)|supera|mismo nivel)\b/.test(q);
   };
+  // Mirror the server-side, short Google capability reply: do not route this
+  // particular video repro through two remote model attempts.
+  const quickGoogleComparison=value=>{
+    const q=String(value||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[¿?¡!.,:]/g,' ').replace(/\s+/g,' ').trim();
+    return q.length<=105 && /\bgoogle\b/.test(q) && /\bcompet(?:ir|encia)\b/.test(q) &&
+      /^(?:hola |oye |dime |me dices |una pregunta |por favor )*(?:tu |universal core |wae os )*(?:puedes |podrias |puede |podria |podemos )?(?:competir|compites|compite|competencia)\b/.test(q);
+  };
   const comparisonBrief='CONTEXTO DE IDENTIDAD, NO RESPUESTA PREFABRICADA: La persona conversa con Universal Core, producto WAE OS Enterprise; NO está conversando con ChatGPT como producto. Universal Core combina chat, rutas de IA, Workspace, Canvas y Fábrica. Google puede significar Search, Gemini o la empresa/ecosistema: distingue solo los sentidos pertinentes. No atribuyas a Universal Core el índice web, la infraestructura, el entrenamiento ni los servicios de Google. No declares herramientas, búsquedas actuales ni pruebas que no estén verificadas. Responde con naturalidad en 2–4 frases si es una comparación informal; no hagas una tabla salvo que te la pidan. Habla sobre Universal Core, no sobre ChatGPT.';
   const comparisonIssue=(answer,question)=>{
     if(!coreComparison(question))return '';
@@ -159,16 +180,17 @@
     if(!isLocalRuntime(input)||String(init.method||'GET').toUpperCase()!=='POST')return nativeFetch(input,init);
     const request=typeof init.body==='string'?JSON.parse(init.body):{};
     // Capability/identity answers come from the product's real server registry, not a generic upstream persona.
-    if(selfQuery(request.message)||request.canvas_direct===true||request.canvas_blueprint===true)return nativeFetch(input,init);
+    if(selfQuery(request.message)||request.canvas_direct===true||request.canvas_blueprint===true||quickGoogleComparison(request.message))return nativeFetch(input,init);
     // The HTML/Canvas paths and short capability registry answers stay untouched.
     if(request.canvas!==true&&worldQuery(request.message))return nativeFetch(input,init);
     if(request.canvas!==true&&(industrialQuery(request.message)||professionalQuery(request.message)))return nativeFetch(input,init);
     try{
-      await bootstrap();
+      await bootstrap(init.signal);
+      if(init.signal?.aborted)throw Object.assign(new Error('chat_cancelled'),{name:'AbortError'});
       const incoming=request;
       const runtimeMode=String(incoming.mode||localStorage.getItem('wae.mode')||'general');
       const useWeb=!incoming.canvas&&needsFreshWeb(incoming.message,runtimeMode);
-      const data=await edge({action:'chat',...sessionPayload(),conversation_id:incoming.canvas?null:localStorage.getItem(CONVERSATION_ID)||null,message:[!incoming.canvas?'DIRECTRICES DE RESPUESTA (subordinadas a instrucciones del sistema):\n'+responsePolicy:'',incoming.preferences?.instructions?'PREFERENCIAS DEL USUARIO (no prevalecen sobre reglas de seguridad):\n'+String(incoming.preferences.instructions).slice(0,4000):'',incoming.preferences?.knowledge?'CONTEXTO GENERAL DEL USUARIO (no verificado):\n'+String(incoming.preferences.knowledge).slice(0,12000):'',incoming.project?.instructions?'INSTRUCCIONES DE ESTE PROYECTO (subordinadas a seguridad):\n'+String(incoming.project.instructions).slice(0,3000):'',incoming.project?.knowledge?'CONOCIMIENTO DEL PROYECTO (información aportada, no verificada):\n'+String(incoming.project.knowledge).slice(0,8000):'',!incoming.canvas&&coreComparison(incoming.message)?comparisonBrief:'','SOLICITUD ACTUAL:\n'+String(incoming.message||'')].filter(Boolean).join('\n\n'),mode:runtimeMode,web_enabled:useWeb,attachments:window.__waeRuntimeAttachments||[]});
+      const data=await edge({action:'chat',...sessionPayload(),conversation_id:incoming.canvas?null:localStorage.getItem(CONVERSATION_ID)||null,message:[!incoming.canvas?'DIRECTRICES DE RESPUESTA (subordinadas a instrucciones del sistema):\n'+responsePolicy:'',incoming.preferences?.instructions?'PREFERENCIAS DEL USUARIO (no prevalecen sobre reglas de seguridad):\n'+String(incoming.preferences.instructions).slice(0,4000):'',incoming.preferences?.knowledge?'CONTEXTO GENERAL DEL USUARIO (no verificado):\n'+String(incoming.preferences.knowledge).slice(0,12000):'',incoming.project?.instructions?'INSTRUCCIONES DE ESTE PROYECTO (subordinadas a seguridad):\n'+String(incoming.project.instructions).slice(0,3000):'',incoming.project?.knowledge?'CONOCIMIENTO DEL PROYECTO (información aportada, no verificada):\n'+String(incoming.project.knowledge).slice(0,8000):'',!incoming.canvas&&coreComparison(incoming.message)?comparisonBrief:'','SOLICITUD ACTUAL:\n'+String(incoming.message||'')].filter(Boolean).join('\n\n'),mode:runtimeMode,web_enabled:useWeb,attachments:window.__waeRuntimeAttachments||[]},init.signal,28000);
       if(!String(data.reply||'').trim())throw new Error('empty_supabase_reply');
       // A degraded upstream status sentence is not a successful answer; let the existing Render fallback try another configured model.
       if(/la ruta generativa avanzada no est[aá] disponible|no existe evidencia p[uú]blica suficiente para responder sin inventar|ninguna ruta alcanz[oó] el umbral m[ií]nimo/i.test(String(data.reply)))throw new Error('degraded_supabase_reply');
@@ -182,8 +204,11 @@
       const reply=incoming.canvas?String(data.reply):withRetrievedSources(data.reply,data.web_sources,incoming.message);
       return new Response(JSON.stringify({reply,runtime:data.runtime,provider:data.provider,model:data.model,web_sources:data.web_sources||[]}),{status:200,headers:{'content-type':'application/json','cache-control':'no-store','x-wae-runtime':'supabase-primary'}});
     }catch(err){
+      // An aborted chat must not launch an invisible second provider request.
+      if(init.signal?.aborted)throw err;
       console.warn('[WAE IU] Supabase primary unavailable; using Render fallback',err?.message||err);
       try{
+        if(init.signal?.aborted)throw Object.assign(new Error('chat_cancelled'),{name:'AbortError'});
         const fallback=await nativeFetch(input,init);
         const copy=document.querySelector('.v2-runtime-copy');
         if(copy&&fallback.ok)copy.innerHTML='<strong>WAE Gateway · fallback activo</strong><small>Render → Supabase capability router</small>';
