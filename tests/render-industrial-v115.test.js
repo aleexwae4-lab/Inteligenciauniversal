@@ -57,7 +57,7 @@ test('public-service missions remain politically neutral and never claim authori
 });
 test('live user-visible chat routes industry to real Render backend without replacing Canvas or UI',()=>{
   const client=read('runtime-client.js'),runtime=read('lib/runtime.js');
-  const shortcut=client.indexOf('if(request.canvas!==true&&industrialQuery(request.message))return nativeFetch(input,init);');
+  const shortcut=client.indexOf('if(request.canvas!==true&&(industrialQuery(request.message)||professionalQuery(request.message)))return nativeFetch(input,init);');
   const upstream=client.indexOf('      await bootstrap();',shortcut);
   assert.ok(shortcut>0&&upstream>shortcut,'sector-specific chat must bypass generic upstream');
   assert.match(client,/request.canvas_direct===true\|\|request.canvas_blueprint===true/);
