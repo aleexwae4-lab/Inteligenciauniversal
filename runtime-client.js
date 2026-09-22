@@ -155,6 +155,29 @@
     if(raw.length>3200&&question.length<180)return 'disproportionate_comparison';
     return '';
   };
+  // v120: this is a user's question about useful outcomes, NOT a request
+  // for a long inventory or an unsupported claim of connected capabilities.
+  const purposeQuestion=value=>{
+    const q=String(value||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/\s+/g,' ').trim();
+    return q.length>=22&&q.length<=1100&&
+      /\b(universal core|wae os|waeos|eres|tu|tuyo|tu sistema|este sistema)\b/.test(q)&&
+      /\b(proposito|para que existes|para que sirves|que aportas|que haces por mi|que podrias hacer por mi|que puedes hacer por mi|que problema resuelves|en que te diferencias)\b/.test(q)&&
+      /\b(google|buscador(?:es)?|busqueda|informacion|investigar|respuesta|sistema|inteligencia)\b/.test(q);
+  };
+  const purposeBrief='PROPÓSITO DE ESTA CONVERSACIÓN, NO UNA FICHA DE VENTAS: la persona pregunta cómo Universal Core le ayuda a pasar de información a un resultado concreto. Responde en 2–4 párrafos breves con un ejemplo útil aplicado a su pregunta, sin enumerar características ni repetir el mismo argumento en tablas y listas. Google Search también puede generar resúmenes y respuestas; no digas que solo devuelve URLs o no crea contenido. No digas que envías correos, intervienes en cuentas, fusionas fuentes web o ejecutas tareas externas salvo que exista evidencia real de la herramienta utilizada en ESTA solicitud. Distingue lo que puedes preparar aquí de lo que ya hiciste y no inventes conectores activos, memoria garantizada ni resultados. Si piden detalle, sí puedes desarrollarlo; no impongas una plantilla.';
+  const purposeIssue=(answer,question,hasWebEvidence=false)=>{
+    if(!purposeQuestion(question))return '';
+    const raw=String(answer||''),plain=raw.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/\s+/g,' ').trim();
+    const q=String(question||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase();
+    if(!/\b(universal core|wae os|waeos)\b/.test(plain))return 'missing_core_subject';
+    const tableRequested=/\b(tabla|cuadro comparativo|matriz|en columnas)\b/.test(q);
+    if(!tableRequested&&/\|\s*:?-{3,}:?\s*\|/.test(raw))return 'unrequested_table';
+    if(/\b(enviar|envia|envio|mandar|manda|mandamos)\s+(?:tus\s+)?(?:correos|emails|e-mails)\b/.test(plain))return 'unverified_email_action';
+    if(!hasWebEvidence&&/\b(combin[ao]|sintetiz[ao]|extrai?go|recupero)\s+(?:informacion|datos|fuentes)\s+de\s+(?:varios|multiples|diferentes)\s+(?:sitios|paginas|fuentes)\b/.test(plain))return 'unverified_multisource_claim';
+    if(/\b(?:google|buscador(?:es)?|bing)\b.{0,65}\b(?:solo|unicamente|no genera contenido|no crea contenido)\b/.test(plain))return 'false_search_binary';
+    if(!tableRequested&&q.length<350&&raw.length>2600)return 'disproportionate_purpose';
+    return '';
+  };
   // This edition uses Supabase for ordinary chat, but v115 sector missions must
   // enter its own server, where the authoritative safety/evidence contract runs.
   // Keep the visible UI, Workspace, Canvas and Supabase history flows unchanged.
@@ -189,12 +212,14 @@
       const incoming=request;
       const runtimeMode=String(incoming.mode||localStorage.getItem('wae.mode')||'general');
       const useWeb=!incoming.canvas&&needsFreshWeb(incoming.message,runtimeMode);
-      const data=await edge({action:'chat',...sessionPayload(),conversation_id:incoming.canvas?null:localStorage.getItem(CONVERSATION_ID)||null,message:[!incoming.canvas?'DIRECTRICES DE RESPUESTA (subordinadas a instrucciones del sistema):\n'+responsePolicy:'',incoming.preferences?.instructions?'PREFERENCIAS DEL USUARIO (no prevalecen sobre reglas de seguridad):\n'+String(incoming.preferences.instructions).slice(0,4000):'',incoming.preferences?.knowledge?'CONTEXTO GENERAL DEL USUARIO (no verificado):\n'+String(incoming.preferences.knowledge).slice(0,12000):'',incoming.project?.instructions?'INSTRUCCIONES DE ESTE PROYECTO (subordinadas a seguridad):\n'+String(incoming.project.instructions).slice(0,3000):'',incoming.project?.knowledge?'CONOCIMIENTO DEL PROYECTO (información aportada, no verificada):\n'+String(incoming.project.knowledge).slice(0,8000):'',!incoming.canvas&&coreComparison(incoming.message)?comparisonBrief:'','SOLICITUD ACTUAL:\n'+String(incoming.message||'')].filter(Boolean).join('\n\n'),mode:runtimeMode,web_enabled:useWeb,attachments:window.__waeRuntimeAttachments||[]},init.signal,28000);
+      const data=await edge({action:'chat',...sessionPayload(),conversation_id:incoming.canvas?null:localStorage.getItem(CONVERSATION_ID)||null,message:[!incoming.canvas?'DIRECTRICES DE RESPUESTA (subordinadas a instrucciones del sistema):\n'+responsePolicy:'',incoming.preferences?.instructions?'PREFERENCIAS DEL USUARIO (no prevalecen sobre reglas de seguridad):\n'+String(incoming.preferences.instructions).slice(0,4000):'',incoming.preferences?.knowledge?'CONTEXTO GENERAL DEL USUARIO (no verificado):\n'+String(incoming.preferences.knowledge).slice(0,12000):'',incoming.project?.instructions?'INSTRUCCIONES DE ESTE PROYECTO (subordinadas a seguridad):\n'+String(incoming.project.instructions).slice(0,3000):'',incoming.project?.knowledge?'CONOCIMIENTO DEL PROYECTO (información aportada, no verificada):\n'+String(incoming.project.knowledge).slice(0,8000):'',!incoming.canvas&&coreComparison(incoming.message)?comparisonBrief:'',!incoming.canvas&&purposeQuestion(incoming.message)?purposeBrief:'','SOLICITUD ACTUAL:\n'+String(incoming.message||'')].filter(Boolean).join('\n\n'),mode:runtimeMode,web_enabled:useWeb,attachments:window.__waeRuntimeAttachments||[]},init.signal,28000);
       if(!String(data.reply||'').trim())throw new Error('empty_supabase_reply');
       // A degraded upstream status sentence is not a successful answer; let the existing Render fallback try another configured model.
       if(/la ruta generativa avanzada no est[aá] disponible|no existe evidencia p[uú]blica suficiente para responder sin inventar|ninguna ruta alcanz[oó] el umbral m[ií]nimo/i.test(String(data.reply)))throw new Error('degraded_supabase_reply');
       const comparisonFailure=!incoming.canvas?comparisonIssue(data.reply,incoming.message):'';
       if(comparisonFailure)throw new Error('comparison_quality_'+comparisonFailure);
+      const purposeFailure=!incoming.canvas?purposeIssue(data.reply,incoming.message,Array.isArray(data.web_sources)&&data.web_sources.length>0):'';
+      if(purposeFailure)throw new Error('purpose_quality_'+purposeFailure);
       // Only advance cloud conversation pointers after a valid answer. A failed
       // generation must not change the active conversation in the user's UI.
       if(data.conversation_id&&!incoming.canvas){localStorage.setItem(CONVERSATION_ID,data.conversation_id);window.WAENavigation?.remoteUpdated?.(data.conversation_id)}
