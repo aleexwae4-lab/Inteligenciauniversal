@@ -51,7 +51,7 @@ test('comparison routing, primary policy and cache version agree with live Rende
  assert.match(client,/Si comparan Universal Core con Google/);
  assert.match(html,/runtime-client\.js\?v=24/);
  assert.match(sw,/runtime-client\.js\?v=24/);
- assert.match(sw,/wae-universal-render-firstturn-v42/);
+ assert.match(sw,/wae-universal-render-density-v43/);
  assert.match(sw,/factory-projects-render-v2/);
  assert.match(sw,/continuity-backup-v7/);
 });
