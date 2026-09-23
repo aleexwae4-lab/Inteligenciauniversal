@@ -222,8 +222,9 @@
   const answerDepth=(question,mode,files=[])=>{
     const q=String(question||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().trim();
     if(/\b(?:breve|corto|concis[oa]|resumen corto|en una frase|en dos frases|directo al grano|solo (?:el|la|los|las|una|un) (?:dato|numero|cifra|respuesta)|sin explicacion|sin rodeos)\b/.test(q))return 'direct';
-    if((Array.isArray(files)&&files.length>0)||['code','research','analysis','design','executive'].includes(String(mode||'').toLowerCase())||/\b(?:detallad[oa]|a fondo|profund[oa]|exhaustiv[oa]|complet[oa]|paso a paso|todos los pasos|manual|tutorial|auditoria|investigacion (?:integral|exhaustiva|completa)|arquitectura|implementar|implementa|desarrolla|programa|corrige|soluciona|construye|crea (?:un|una) (?:sistema|aplicacion|proyecto|documento|libro)|codigo|plan (?:de negocio|operativo|estrategico)|proyecto (?:completo|integral))\b/.test(q))return 'deep';
+    if((Array.isArray(files)&&files.length>0)||/\b(?:detallad[oa]|a fondo|profund[oa]|exhaustiv[oa]|complet[oa]|paso a paso|todos los pasos|extens[oa]|ampliamente|manual|tutorial|auditoria|investigacion (?:integral|exhaustiva|completa)|arquitectura|implementar|implementa|desarrolla|programa|corrige|soluciona|construye|crea (?:un|una) (?:sistema|aplicacion|proyecto|documento|libro)|codigo|plan (?:de negocio|operativo|estrategico)|proyecto (?:completo|integral))\b/.test(q))return 'deep';
     if(q.length<=250&&/\b(?:cuant[oa]s?|que (?:es|significa)|quien|cual|cuando|donde|en que se diferencia|es cierto|puedes|podrias|por que)\b/.test(q))return 'direct';
+    if(['code','research','analysis','design','executive'].includes(String(mode||'').toLowerCase()))return 'deep';
     return 'balanced';
   };
   const focusBrief=(question,mode,files=[])=>{
