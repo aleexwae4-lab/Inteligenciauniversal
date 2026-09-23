@@ -105,7 +105,7 @@ test('Premium web asset is refreshed without modifying original visual and PWA c
   const html=read('index.html'),sw=read('sw.js'),client=read('runtime-client.js');
   assert.match(html,/runtime-client\.js\?v=24&industrial=v115&professional=v116/);
   assert.match(sw,/runtime-client\.js\?v=24&industrial=v115&professional=v116/);
-  assert.match(sw,/wae-universal-render-firstturn-v42/);
+  assert.match(sw,/wae-universal-render-density-v43/);
   assert.match(client,/request\.canvas_direct===true\|\|request\.canvas_blueprint===true/);
 });
 test('identity remains compact and grounded in assistance, not financial promises',()=>{
