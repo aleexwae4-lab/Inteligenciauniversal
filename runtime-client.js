@@ -217,6 +217,34 @@
     return !terms.length||terms.some(t=>src.includes(t));
   };
   const evidenceBrief='CONTROL DE INVESTIGACIÓN: Usa conocimiento general para contestar. Cuando el dato requiera actualidad, recupera SOLO fuentes pertinentes para el sujeto de la pregunta. No cites, describas ni anuncies resultados de búsqueda ajenos al tema; los errores del buscador no demuestran que un dato sea inexistente. Para número de ingenieros en una empresa, distingue ingenieros de plantilla total; si no puedes verificar un desglose, di únicamente que no puedes confirmar esa cifra exacta, sin fabricar cifras ni ofrecer un largo protocolo de búsqueda. Nunca uses «evidencia proporcionada», «W1-W5» o una lista de documentos no pertinentes como sustituto de la respuesta.';
+  // Response density: short facts stay short; substantial deliverables stay complete.
+  // This is a prompt and exact-duplicate cleanup, NEVER a provider rejection.
+  const answerDepth=(question,mode,files=[])=>{
+    const q=String(question||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().trim();
+    if(/\b(?:breve|corto|concis[oa]|resumen corto|en una frase|en dos frases|directo al grano|solo (?:el|la|los|las|una|un) (?:dato|numero|cifra|respuesta)|sin explicacion|sin rodeos)\b/.test(q))return 'direct';
+    if((Array.isArray(files)&&files.length>0)||['code','research','analysis','design','executive'].includes(String(mode||'').toLowerCase())||/\b(?:detallad[oa]|a fondo|profund[oa]|exhaustiv[oa]|complet[oa]|paso a paso|todos los pasos|manual|tutorial|auditoria|investigacion (?:integral|exhaustiva|completa)|arquitectura|implementar|implementa|desarrolla|programa|corrige|soluciona|construye|crea (?:un|una) (?:sistema|aplicacion|proyecto|documento|libro)|codigo|plan (?:de negocio|operativo|estrategico)|proyecto (?:completo|integral))\b/.test(q))return 'deep';
+    if(q.length<=250&&/\b(?:cuant[oa]s?|que (?:es|significa)|quien|cual|cuando|donde|en que se diferencia|es cierto|puedes|podrias|por que)\b/.test(q))return 'direct';
+    return 'balanced';
+  };
+  const focusBrief=(question,mode,files=[])=>{
+    const common='DENSIDAD INFORMATIVA: responde al fondo de la solicitud desde la primera frase. Cada párrafo adicional debe aportar información NUEVA: dato, causa, paso ejecutable, prueba, ejemplo útil o decisión. No repitas una idea como introducción, tabla y conclusión. No agregues autopresentación, índices, listas de capacidades, advertencias ni invitaciones a continuar si no aportan. No inventes hechos, herramientas, cifras o fuentes. Usa negritas, tablas y títulos solamente cuando mejoren la comprensión.';
+    const depth=answerDepth(question,mode,files);
+    return common+(depth==='direct'?' CONSULTA PUNTUAL: respuesta concreta primero; normalmente 1–2 párrafos breves y solo los matices pertinentes, pero sin cuota rígida.':depth==='deep'?' ENCARGO PROFUNDO: entrega todos los detalles útiles, código, metodología, pruebas y riesgos pertinentes; una respuesta extensa está bien si cada apartado aporta valor.':' CONSULTA GENERAL: desarrolla explicación y aplicación solo si añaden algo distinto; no rellenes con secciones de plantilla.');
+  };
+  const tidyAnswer=(answer,question,mode,files=[])=>{
+    const raw=String(answer||'');
+    if(answerDepth(question,mode,files)==='deep'||raw.length<150||/\x60{3}|~~~/.test(raw)||/^\s*\|.*\|\s*$/m.test(raw))return raw;
+    const parts=raw.split(/(\n[ \t]*\n+)/),seen=new Set(),result=[];
+    for(let i=0;i<parts.length;i++){
+      const paragraph=parts[i];
+      if(i%2){result.push(paragraph);continue}
+      const norm=paragraph.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().trim().replace(/\s+/g,' ').replace(/^\*{1,2}/,'').replace(/\*{1,2}$/,'');
+      if(norm.length>=65&&seen.has(norm))continue;
+      if(norm.length>=65)seen.add(norm);
+      result.push(paragraph);
+    }
+    return result.join('').replace(/\n[ \t]*\n(?:[ \t]*\n)+/g,'\n\n').trim();
+  };
   // A dated, sourced finding is answered by the local knowledge registry.
   // Avoid speculative and conflicting counts from ordinary upstream chat.
   const datedAnthropicQuestion=value=>{
@@ -283,7 +311,7 @@
       const incoming=request;
       const runtimeMode=String(incoming.mode||localStorage.getItem('wae.mode')||'general');
       const useWeb=!incoming.canvas&&needsFreshWeb(incoming.message,runtimeMode);
-      const chatPayload={action:'chat',...sessionPayload(),conversation_id:incoming.canvas?null:localStorage.getItem(CONVERSATION_ID)||null,message:[!incoming.canvas?'DIRECTRICES DE RESPUESTA (subordinadas a instrucciones del sistema):\n'+responsePolicy:'',incoming.preferences?.instructions?'PREFERENCIAS DEL USUARIO (no prevalecen sobre reglas de seguridad):\n'+String(incoming.preferences.instructions).slice(0,4000):'',incoming.preferences?.knowledge?'CONTEXTO GENERAL DEL USUARIO (no verificado):\n'+String(incoming.preferences.knowledge).slice(0,12000):'',incoming.project?.instructions?'INSTRUCCIONES DE ESTE PROYECTO (subordinadas a seguridad):\n'+String(incoming.project.instructions).slice(0,3000):'',incoming.project?.knowledge?'CONOCIMIENTO DEL PROYECTO (información aportada, no verificada):\n'+String(incoming.project.knowledge).slice(0,8000):'',!incoming.canvas&&coreComparison(incoming.message)?comparisonBrief:'',!incoming.canvas&&purposeQuestion(incoming.message)?purposeBrief:'',!incoming.canvas?evidenceBrief:'','SOLICITUD ACTUAL:\n'+String(incoming.message||'')].filter(Boolean).join('\n\n'),mode:runtimeMode,web_enabled:useWeb,attachments:window.__waeRuntimeAttachments||[]};
+      const chatPayload={action:'chat',...sessionPayload(),conversation_id:incoming.canvas?null:localStorage.getItem(CONVERSATION_ID)||null,message:[!incoming.canvas?'DIRECTRICES DE RESPUESTA (subordinadas a instrucciones del sistema):\n'+responsePolicy:'',incoming.preferences?.instructions?'PREFERENCIAS DEL USUARIO (no prevalecen sobre reglas de seguridad):\n'+String(incoming.preferences.instructions).slice(0,4000):'',incoming.preferences?.knowledge?'CONTEXTO GENERAL DEL USUARIO (no verificado):\n'+String(incoming.preferences.knowledge).slice(0,12000):'',incoming.project?.instructions?'INSTRUCCIONES DE ESTE PROYECTO (subordinadas a seguridad):\n'+String(incoming.project.instructions).slice(0,3000):'',incoming.project?.knowledge?'CONOCIMIENTO DEL PROYECTO (información aportada, no verificada):\n'+String(incoming.project.knowledge).slice(0,8000):'',!incoming.canvas&&coreComparison(incoming.message)?comparisonBrief:'',!incoming.canvas&&purposeQuestion(incoming.message)?purposeBrief:'',!incoming.canvas?evidenceBrief:'',!incoming.canvas?focusBrief(incoming.message,runtimeMode,window.__waeRuntimeAttachments||[]):'','SOLICITUD ACTUAL:\n'+String(incoming.message||'')].filter(Boolean).join('\n\n'),mode:runtimeMode,web_enabled:useWeb,attachments:window.__waeRuntimeAttachments||[]};
       const data=await chatWithSessionRepair(chatPayload,init.signal);
       if(!String(data.reply||'').trim())throw new Error('empty_supabase_reply');
       // A degraded upstream status sentence is not a successful answer; let the existing Render fallback try another configured model.
@@ -302,7 +330,7 @@
       if(data.conversation_id&&!incoming.canvas){localStorage.setItem(CONVERSATION_ID,data.conversation_id);window.WAENavigation?.remoteUpdated?.(data.conversation_id)}
       window.__iuLastRuntime=data;
       if(!incoming.canvas)queueMicrotask(()=>{updateRuntimeCard(data);loadConversations().catch(()=>{})});
-      const reply=incoming.canvas?String(data.reply):withRetrievedSources(data.reply,topicSources,incoming.message);
+      const reply=incoming.canvas?String(data.reply):tidyAnswer(withRetrievedSources(data.reply,topicSources,incoming.message),incoming.message,runtimeMode,window.__waeRuntimeAttachments||[]);
       return new Response(JSON.stringify({reply,runtime:data.runtime,provider:data.provider,model:data.model,web_sources:data.web_sources||[]}),{status:200,headers:{'content-type':'application/json','cache-control':'no-store','x-wae-runtime':'supabase-primary'}});
     }catch(err){
       // An aborted chat must not launch an invisible second provider request.
