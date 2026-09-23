@@ -136,7 +136,7 @@ test('regression contracts keep existing UI, abort timing and Android cache cohe
  assert.doesNotMatch(client,/retryColdStart/); // only backend runtime owns this decision
  assert.match(nav,/remoteInvalidated:id/);
  assert.match(runtime,/retryColdStart:attachments\.length===0&&requestedTools\.length===0/);
- assert.match(sw,/wae-universal-render-firstturn-v42/);
+ assert.match(sw,/wae-universal-render-density-v43/);
  assert.match(html,/firstturn=v123/);assert.match(sw,/firstturn=v123/);
  assert.match(html,/navigation-premium-v1\.js\?v=10/);
  assert.match(pkg.scripts.check,/tests\/first-turn-recovery-v123\.test\.js/);
