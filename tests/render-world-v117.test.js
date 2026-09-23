@@ -102,7 +102,7 @@ test('PWA, existing UI and installation health remain compatible',()=>{
   const html=read('index.html'),sw=read('sw.js');
   assert.match(html,/runtime-client\.js\?v=24&industrial=v115&professional=v116&world=v117/);
   assert.match(sw,/runtime-client\.js\?v=24&industrial=v115&professional=v116&world=v117/);
-  assert.match(sw,/wae-universal-render-firstturn-v42/);
+  assert.match(sw,/wae-universal-render-density-v43/);
   const identity=coreSelfResponse({providers:[{id:'wae_edge',configured:true}],tools:[{id:'web_search',configured:false},{id:'github_search',configured:false}],memory:{configured:false}});
   assert.match(identity,/retos mundiales con evidencia/);
   assert.ok(identity.length<1100,'identity must remain mobile friendly');
