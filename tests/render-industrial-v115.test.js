@@ -70,7 +70,7 @@ test('premium UI and cache-busted web route remain consistent',()=>{
   const html=read('index.html'),sw=read('sw.js'),app=read('app.js');
   assert.match(html,/runtime-client\.js\?v=24&industrial=v115/);
   assert.match(sw,/runtime-client\.js\?v=24&industrial=v115/);
-  assert.match(sw,/wae-universal-render-firstturn-v42/);
+  assert.match(sw,/wae-universal-render-density-v43/);
   assert.match(app,/fetch\('\/api\/chat'/);
 });
 test('capability identity remains concise, honest and sector aware',()=>{
