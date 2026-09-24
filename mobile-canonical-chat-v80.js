@@ -142,6 +142,7 @@
   };
 
   const bindConversationRotation=()=>{
+    if(typeof document?.getElementById!=='function')return;
     for(const id of ['newChatBtn','drawerNewChat']){
       const el=document.getElementById(id);
       if(el&&!el.dataset.contextV103){el.dataset.contextV103='1';el.addEventListener('click',()=>rotateConversation(),{capture:true})}
