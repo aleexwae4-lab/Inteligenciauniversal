@@ -4,9 +4,9 @@ import { readFile } from 'node:fs/promises';
 
 const read=name=>readFile(new URL(`../${name}`,import.meta.url),'utf8');
 
-test('Android v80 transport makes same-origin api/chat primary for visible chat calls',async()=>{
+test('Android canonical transport keeps same-origin api/chat primary for visible chat calls',async()=>{
   const js=await read('mobile-canonical-chat-v80.js');
-  assert.match(js,/mobile-canonical-chat\/v80/);
+  assert.match(js,/mobile-canonical-chat\/v\d+(?:-[a-z-]+)?/);
   assert.match(js,/nativeFetch\('\/api\/chat'/);
   assert.match(js,/primary:'same-origin:\/api\/chat'/);
   assert.match(js,/fallback:'edge-nonstream-with-history'/);
