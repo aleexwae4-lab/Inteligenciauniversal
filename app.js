@@ -56,7 +56,7 @@ async function getAIReply(message){
   try{
     const r=await fetch('/api/chat',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({message,mode:state.mode,preferences:{responseStyle:'premium-rich',voiceNatural:true}}),signal:c.signal});
     const d=await r.json().catch(()=>({}));
-    if(!r.ok||!d||typeof d.reply!=='string')throw new Error(d?.error||`runtime_${r.status}`);
+    if(!r.ok||!d||d.success===false||typeof d.reply!=='string')throw new Error(d?.error||`runtime_${r.status}`);
     const clean=sanitizeAssistantText(d.reply);
     const terminal=/no obtuvo una respuesta suficientemente confiable|ninguna ruta alcanzó el umbral|tu solicitud quedó preservada|la ia no respondió|reconectando el núcleo de inteligencia/i.test(clean);
     if(!clean||d.recoverable===true||d.answer_assurance?.finalSafeFallback===true||(d.degraded===true&&terminal))throw new Error('no_generative_answer');
