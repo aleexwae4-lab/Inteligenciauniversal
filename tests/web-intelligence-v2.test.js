@@ -6,7 +6,7 @@ import { evaluateRobots, retrieveWebDocument } from '../lib/web/direct-retrieval
 import { safeWebFetchV2 } from '../lib/web/security-v2.js';
 import { buildSpecialistQueries } from '../lib/web/specialists-v2.js';
 import { shouldPersistWebEvidence } from '../lib/web/persistence-v2.js';
-import { researchWebV2 } from '../lib/web/research-v2.js';
+import { researchWebV2, webIntelligenceHealthV2 } from '../lib/web/research-v2.js';
 import { findSourceByUrl } from '../lib/web/source-registry-v1.js';
 
 const response=(body,{status=200,type='text/html',headers={}}={})=>new Response(body,{status,headers:{'content-type':type,...headers}});
@@ -152,4 +152,15 @@ test('v2 research performs specialist discovery plus direct retrieval and produc
   }finally{
     if(old===undefined)delete process.env.TAVILY_API_KEY;else process.env.TAVILY_API_KEY=old;
   }
+});
+
+
+test('web health never markets instant answers as a configured general search engine',()=>{
+  const state=webIntelligenceHealthV2();
+  const expected=state.providers.providers.some(provider=>provider.configured&&['tavily','brave','google_custom_search'].includes(provider.id));
+  assert.equal(state.searchCapabilities.generalSearchConfigured,expected);
+  assert.equal(state.searchCapabilities.keylessInstantAnswersConfigured,true);
+  assert.equal(state.searchCapabilities.interactiveBrowser,false);
+  assert.equal(state.searchCapabilities.liveQueryVerified,false);
+  assert.equal(state.status,expected?'configured':'partial');
 });

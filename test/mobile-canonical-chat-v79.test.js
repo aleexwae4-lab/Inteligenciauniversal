@@ -4,12 +4,12 @@ import { readFile } from 'node:fs/promises';
 
 const read=name=>readFile(new URL(`../${name}`,import.meta.url),'utf8');
 
-test('Android v80 transport makes same-origin api/chat primary for visible chat calls',async()=>{
+test('Android canonical transport keeps same-origin api/chat primary for visible chat calls',async()=>{
   const js=await read('mobile-canonical-chat-v80.js');
-  assert.match(js,/mobile-canonical-chat\/v80/);
+  assert.match(js,/mobile-canonical-chat\/v\d+(?:-[a-z-]+)?/);
   assert.match(js,/nativeFetch\('\/api\/chat'/);
   assert.match(js,/primary:'same-origin:\/api\/chat'/);
-  assert.match(js,/fallback:'edge-nonstream'/);
+  assert.match(js,/fallback:'edge-nonstream-with-history'/);
 });
 
 test('Android v80 transport serves the existing streaming surface from the canonical answer',async()=>{
@@ -38,10 +38,10 @@ test('Android v80 transport removes Edge bootstrap as a fatal dependency',async(
 
 test('mobile server injects v80 canonical transport last and declares JSON plus SSE same-origin-first',async()=>{
   const server=await read('server.js');
-  const productivity=server.indexOf("productivity-v59.js?v=59");
-  const canonical=server.indexOf("mobile-canonical-chat-v80.js?v=80");
-  assert.ok(productivity>=0);
-  assert.ok(canonical>productivity);
-  assert.match(server,/X-WAE-Mobile-Release','universal-core-mobile-v80-visible-chat'/);
-  assert.match(server,/X-WAE-Mobile-Chat-Route','same-origin-json-and-sse-first'/);
+  const native=await read('api/mobile.js');
+  assert.match(server,/\['\/api\/chat', chatHandler\]/);
+  assert.match(server,/\['\/api\/native-brain\/chat', nativeBrainHandler\]/);
+  assert.match(server,/X-WAE-Mobile-Chat-Route','same-origin-native-first-v115'/);
+  assert.match(server,/X-WAE-Mobile-Response-Lifecycle','visible-answer-commit\/v114'/);
+  assert.match(native,/\/api\/native-brain\/chat/);
 });

@@ -63,3 +63,48 @@ test('v99 capability contract preserves strict benchmark-scoped claim discipline
   assert.equal(caps.falseSuperiorityClaimsBlocked,true);
   assert.equal(caps.benchmarkScopedClaimsOnly,true);
 });
+
+
+test('mobile clip: live browser capability questions resolve via observed web configuration',async()=>{
+  assert.equal(classifySelfAwarenessV99({message:'¿Tienes navegador en tiempo real?'}).kind,'web');
+  assert.equal(classifySelfAwarenessV99({message:'¿Tienes acceso a internet?'}).kind,'web');
+  assert.equal(classifySelfAwarenessV99({message:'¿Puedes buscar en internet las noticias de hoy?'}).eligible,false);
+  assert.equal(classifySelfAwarenessV99({message:'¿Puedes buscar en internet?'}).kind,'web');
+  assert.equal(classifySelfAwarenessV99({message:'¿Tienes navegador en tiempo real?',mode:'research'}).eligible,false);
+  assert.equal(classifySelfAwarenessV99({message:'Busca los repositorios actuales de GitHub'}).eligible,false);
+  const names=['TAVILY_API_KEY','BRAVE_SEARCH_API_KEY','GOOGLE_CUSTOM_SEARCH_API_KEY','GOOGLE_CUSTOM_SEARCH_ENGINE_ID'];
+  const before=Object.fromEntries(names.map(name=>[name,process.env[name]]));
+  try{
+    for(const name of names)delete process.env[name];
+    const {toolRegistry}=await import('../lib/tools.js');
+    assert.equal(toolRegistry().find(item=>item.id==='web_search')?.configured,false);
+    const tools=await read('lib/tools.js');
+    assert.match(tools,/allowKeylessWeb!==true/);
+    const partial=buildSelfAwarenessReplyV99({kind:'web'});
+    assert.match(partial,/no tiene configurado un motor de b[uú]squeda general/i);
+    assert.match(partial,/DuckDuckGo/i);
+    assert.doesNotMatch(partial,/no dispongo de un navegador/i);
+    process.env.BRAVE_SEARCH_API_KEY='web-capability-regression';
+    const configured=buildSelfAwarenessReplyV99({kind:'web'});
+    assert.match(configured,/motor de b[uú]squeda general est[aá] configurado/i);
+    assert.match(configured,/no es un navegador gr[aá]fico/i);
+    assert.equal(selfAwarenessCapabilitiesV99().availabilityAware,true);
+  }finally{
+    for(const name of names){
+      if(before[name]===undefined)delete process.env[name];
+      else process.env[name]=before[name];
+    }
+  }
+});
+
+test('native-first mobile chat and runtime web tool cannot bypass the capability fix',async()=>{
+  const native=await read('lib/native-brain-v5.js');
+  const runtime=await read('lib/runtime.js');
+  assert.match(native,/webAwareness\.eligible&&webAwareness\.kind==='web'/);
+  assert.ok(native.indexOf('webAwareness.eligible')<native.indexOf('const mission=planNativeMission'));
+  assert.match(runtime,/payload\.web_enabled===true\|\|cognitivePolicy\.autoResearch/);
+  assert.match(runtime,/requestedTools:toolsForMission/);
+  assert.match(runtime,/explicitOfflineContinuity/);
+  assert.match(runtime,/continuityLane:true/);
+  assert.match(runtime,/cacheEligible=!contextualFollowup&&!userContextState\.affectsGeneration&&!industrialMission&&payload\.web_enabled!==true&&!cognitivePolicy\.autoResearch/);
+});

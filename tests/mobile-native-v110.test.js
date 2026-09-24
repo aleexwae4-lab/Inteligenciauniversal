@@ -4,14 +4,16 @@ import { readFile } from 'node:fs/promises';
 
 const read=path=>readFile(new URL(`../${path}`,import.meta.url),'utf8');
 
-test('v110 mobile brain makes full Universal Core the primary chat route and keeps Edge as fallback',async()=>{
+test('v112 mobile brain uses native server first and retains governed fallback',async()=>{
   const [brain,premium]=await Promise.all([read('mobile-brain-v110.js'),read('premium-v5.js')]);
-  assert.match(brain,/mobile-brain\/v110-full-universal-core/);
-  assert.match(brain,/priorFetch\('\/api\/chat'/);
-  assert.match(brain,/primary:'\/api\/chat',fallback:'supabase-edge'/);
-  assert.match(brain,/web_enabled:body\.web_enabled===true/);
+  assert.match(brain,/interface-brain\/v112-server-first/);
+  assert.match(brain,/xhr\.open\('POST','\/api\/native-brain\/chat'/);
+  assert.match(brain,/primary:'xhr:\/api\/native-brain\/chat'/);
+  assert.match(brain,/fallback:'original governed route'/);
+  assert.match(brain,/web_enabled:body\.web_enabled===true\|\|mode==='research'/);
   assert.match(brain,/responseStyle:'premium-rich'/);
   assert.match(brain,/attachments:Array\.isArray\(body\.attachments\)/);
+  assert.match(brain,/return priorFetch\(input,bypassInit\(init,body\)\)/);
   assert.match(premium,/mobile-brain-v110\.js\?v=110/);
   assert.match(premium,/loadUniversalBrain\(\)/);
   assert.doesNotMatch(premium,/reference-interface-v108/);
