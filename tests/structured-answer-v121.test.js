@@ -33,9 +33,9 @@ test('the live edge source connects schema guard before persisting a response',(
   const source=readFileSync(new URL('../supabase/functions/wae-local-voice-demo-v61/index-v63.ts',import.meta.url),'utf8');
   const common=readFileSync(new URL('../supabase/functions/wae-local-voice-demo-v61/common.ts',import.meta.url),'utf8');
   assert.match(source,/import \{requiresJsonObjectV121,validateJsonAnswerV121,jsonRepairPromptV121\}/);
-  assert.match(source,/structured_output_contract_failed/);
+  assert.match(source,/import \{acceptAnswerV124\} from '\.\/answer-integrity-v124\.js'/);
   assert.match(source,/stream:stream&&!jsonRequired/);
   assert.match(source,/if\(jsonRequired&&stream\)onDelta/);
-  assert.match(source,/if\(checked&&!checked\.ok\)\{run\.generated=null/);
+  assert.match(source,/if\(checked\?\.ok\)run\.generated\.text=checked\.text/);
   assert.match(common,/latest user request controls output format/i);
 });
