@@ -165,3 +165,22 @@ test('v120 never promotes an upgrade that loses requirements, even if labelled p
     candidateReport:{premiumPass:true,hardReject:true},
   }),false);
 });
+
+
+test('v120 requires answer-level source attribution, not only a list of retrieved URLs', () => {
+  const withoutCitation=assessFrontierQualityV102({
+    question:'Investiga precios actuales y cita cada fuente',
+    mode:'research',
+    quality:quality(.96,{evidence:.68}),
+    sources:[{key:'W1',url:'https://example.org/verified-source'}],
+  });
+  assert.equal(withoutCitation.premiumPass,false);
+  assert.ok(withoutCitation.reasons.includes('source_attribution_missing'));
+  const withCitation=assessFrontierQualityV102({
+    question:'Investiga precios actuales y cita cada fuente',
+    mode:'research',
+    quality:quality(.96,{evidence:1}),
+    sources:[{key:'W1',url:'https://example.org/verified-source'}],
+  });
+  assert.equal(withCitation.premiumPass,true);
+});
