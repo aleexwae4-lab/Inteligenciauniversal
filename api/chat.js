@@ -127,9 +127,14 @@ export default async function handler(req,res) {
   res.once?.('close',()=>{if(!res.writableEnded)abortClient()});
 
   const body = req.body || {};
-  const userKey = body.userKey || body.sessionId || getClientIp(req);
-  const intent=normalizeUserIntent(body.message || body.task || '');
-  const runtimeBody=intent.changed?{...body,message:intent.text}:body;
+  const headerRequestId=String(req.headers?.['x-wae-request-id']||'').trim();
+  const bodyRequestId=String(body.client_request_id||'').trim();
+  const clientRequestId=/^[A-Za-z0-9_-]{16,128}$/.test(bodyRequestId)?bodyRequestId:/^[A-Za-z0-9_-]{16,128}$/.test(headerRequestId)?headerRequestId:'wae_'+crypto.randomUUID().replaceAll('-','');
+  res.setHeader('X-WAE-Request-Id',clientRequestId);
+  const requestBody={...body,client_request_id:clientRequestId};
+  const userKey = requestBody.userKey || requestBody.sessionId || getClientIp(req);
+  const intent=normalizeUserIntent(requestBody.message || requestBody.task || '');
+  const runtimeBody=intent.changed?{...requestBody,message:intent.text}:requestBody;
   const userContext=userContextStateV92(runtimeBody);
   const contextualFollowup=contextualFollowupV103(runtimeBody.message||runtimeBody.task||'',runtimeBody.history||[]);
   const budget=responseBudgetMs(runtimeBody);
