@@ -4,7 +4,7 @@
 if(window.__waeFactoryAgentV3)return;
 const $=s=>document.querySelector(s);
 const KEY='wae.render.factory.agent.v3', MAX_MESSAGE=700, MAX_TURNS=16;
-let store={},busy=false,lastId='',form,feed,entry,send,status,root;
+let store={},busy=false,lastId='',form,feed,entry,send,status,root,stage;
 const factory=()=>window.__waeFactoryV1;
 const project=()=>factory()?.snapshot();
 function load(){
@@ -87,10 +87,11 @@ async function build(){
     save();
     const action=refining?'Actualicé tu producto.':'Construí la primera versión de tu producto.';
     const detail=multiFile
-      ?'Plan: '+String(data.plan||'Proyecto construido').slice(0,220)+'\nArchivos guardados: '+data.project.files.length+'. Cambios: '+(data.changes||[]).map(c=>c.name).join(', ').slice(0,130)+'. Vista previa actualizada. Auditoría estructural aprobada; backend y pruebas de navegador no ejecutados.'
-      :'QA estructural aprobado. '+(data.experts?.length||0)+' responsabilidades registradas. La vista previa ya está actualizada; comprueba los botones y el contenido antes de publicarlo.';
+      ?'Archivos actualizados: '+data.project.files.length+'. Vista previa lista. Auditoría estructural aprobada; backend y pruebas de navegador no ejecutados.'
+      :'Vista previa actualizada. Auditoría estructural aprobada; prueba botones y contenido antes de publicar.';
     remember('assistant',action+' '+detail);
     state('Producto construido y guardado. Puedes pedirme otro cambio.');
+    if(window.matchMedia('(max-width:899px)').matches)setMobileView('preview');
   }catch(error){
     const message=error?.name==='AbortError'?'La construcción agotó el tiempo de espera.':'No pude aplicar el cambio: '+String(error.message||'Error de conexión.');
     // Keep the actual brief editable for a native retry instead of making users retype it.
@@ -102,18 +103,27 @@ async function build(){
   }
 }
 function changeProject(){
-  const id=project()?.id;if(!id||id===lastId)return;renderMessages();
+  const id=project()?.id;if(!id||id===lastId)return;renderMessages();setMobileView('build');
+}
+function setMobileView(view){
+  if(!stage)return;
+  const next=view==='preview'?'preview':'build';stage.dataset.wfView=next;
+  stage.querySelectorAll('[data-wf-mobile-view]').forEach(button=>{const pressed=button.dataset.wfMobileView===next;button.setAttribute('aria-pressed',String(pressed));button.classList.toggle('active',pressed)});
+  if(next==='preview')factory()?.preview();
 }
 function init(){
   root=$('#panel-factory');const body=root?.querySelector('.wf-body');
   if(!root||!body||!factory()?.commitGenerated)return;
   root.classList.add('wf-agent-mode');
   const heading=root.querySelector('.wf-head small');if(heading)heading.textContent='Dile al agente qué crear · Mira el producto · Pide cambios';
-  const stage=document.createElement('div');stage.className='wf-stage';
+  stage=document.createElement('div');stage.className='wf-stage';stage.dataset.wfView='build';
+  const mobileNav=document.createElement('nav');mobileNav.className='wf-mobile-nav';mobileNav.setAttribute('aria-label','Vista de la Fábrica');
+  mobileNav.innerHTML='<button type="button" data-wf-mobile-view="build" aria-pressed="true" class="active">✦ Crear y mejorar</button><button type="button" data-wf-mobile-view="preview" aria-pressed="false">◉ Ver producto</button>';
+  stage.append(mobileNav);mobileNav.querySelectorAll('[data-wf-mobile-view]').forEach(button=>button.addEventListener('click',()=>setMobileView(button.dataset.wfMobileView)));
   root.insertBefore(stage,body);
   const chat=document.createElement('section');chat.className='wf-agent';
   chat.setAttribute('aria-label','Asistente constructor de productos');
-  chat.innerHTML='<header class="wf-agent-top"><strong>✦ Agente constructor</strong><label class="wf-engine-label">Modo <select id="wfAgentEngine" aria-label="Motor de construcción"><option value="project">🧩 Proyecto multifichero</option><option value="html">⚡ HTML rápido</option></select></label></header><div id="wfAgentFeed" class="wf-agent-feed" role="log" aria-live="polite"></div><div class="wf-agent-prompts"><button type="button" data-brief="Crea una página web para mi negocio, moderna, móvil y con botones funcionales.">Página web</button><button type="button" data-brief="Construye un dashboard empresarial responsive con datos demostrativos claramente etiquetados y filtros funcionales.">Dashboard</button><button type="button" data-brief="Crea una presentación ejecutiva interactiva con cinco diapositivas y controles de navegación.">Presentación</button></div><form id="wfAgentForm" class="wf-agent-form"><label for="wfAgentText">¿Qué construimos o mejoramos?</label><textarea id="wfAgentText" rows="3" maxlength="2100" placeholder="Ej.: Crea una app para controlar ventas de mi tienda…"></textarea><div class="wf-agent-actions"><button id="wfAgentBuild" type="submit" class="wf-agent-primary">✦ Construir</button><button id="wfAgentUndo" type="button">↶ Deshacer</button><button id="wfAgentCode" type="button" aria-pressed="false">⌘ Código</button><button id="wfAgentExport" type="button">↓ HTML</button><button id="wfAgentProject" type="button">↓ ZIP</button><button id="wfAgentPreview" type="button">◉ Vista</button><button id="wfAgentToCanvas" type="button">↗ Canvas</button><button id="wfAgentFromCanvas" type="button">↙ Importar Canvas</button></div><div id="wfAgentStatus" class="wf-agent-status" role="status"></div></form>';
+  chat.innerHTML='<header class="wf-agent-top"><strong>✦ Agente constructor</strong><label class="wf-engine-label">Modo <select id="wfAgentEngine" aria-label="Motor de construcción"><option value="project">🧩 Proyecto multifichero</option><option value="html">⚡ HTML rápido</option></select></label></header><div id="wfAgentFeed" class="wf-agent-feed" role="log" aria-live="polite"></div><div class="wf-agent-prompts"><button type="button" data-brief="Crea una página web para mi negocio, moderna, móvil y con botones funcionales.">Página web</button><button type="button" data-brief="Construye un dashboard empresarial responsive con datos demostrativos claramente etiquetados y filtros funcionales.">Dashboard</button><button type="button" data-brief="Crea una presentación ejecutiva interactiva con cinco diapositivas y controles de navegación.">Presentación</button></div><form id="wfAgentForm" class="wf-agent-form"><label for="wfAgentText">¿Qué construimos o mejoramos?</label><textarea id="wfAgentText" rows="3" maxlength="2100" placeholder="Ej.: Crea una app para controlar ventas de mi tienda…"></textarea><div class="wf-agent-actions"><button id="wfAgentBuild" type="submit" class="wf-agent-primary">✦ Construir</button><button id="wfAgentPreview" type="button" class="wf-agent-see">◉ Ver producto</button><details class="wf-agent-more"><summary>Más herramientas</summary><div class="wf-agent-more-items"><button id="wfAgentUndo" type="button">↶ Deshacer</button><button id="wfAgentCode" type="button" aria-pressed="false">⌘ Código</button><button id="wfAgentExport" type="button">↓ HTML</button><button id="wfAgentProject" type="button">↓ ZIP</button><button id="wfAgentToCanvas" type="button">↗ Canvas</button><button id="wfAgentFromCanvas" type="button">↙ Importar Canvas</button></div></details></div><div id="wfAgentStatus" class="wf-agent-status" role="status"></div></form>';
   stage.append(chat,body);
   form=$('#wfAgentForm');feed=$('#wfAgentFeed');entry=$('#wfAgentText');send=$('#wfAgentBuild');status=$('#wfAgentStatus');
   load();renderMessages();
@@ -123,7 +133,7 @@ function init(){
   $('#wfAgentCode').addEventListener('click',()=>{
     root.classList.toggle('wf-code-visible');const active=root.classList.contains('wf-code-visible');
     $('#wfAgentCode').setAttribute('aria-pressed',String(active));$('#wfAgentCode').textContent=active?'◉ Vista simple':'⌘ Código';
-    factory().preview();
+    factory().preview();if(window.matchMedia('(max-width:899px)').matches)setMobileView('preview');
   });
   $('#wfAgentUndo').addEventListener('click',()=>{
     if(busy)return;
@@ -131,10 +141,11 @@ function init(){
     if(!r.ok){state(r.error,true);return}
     remember('assistant','Restauré la versión anterior de tu producto. Puedes pedirme una nueva modificación.');
     state('Versión anterior restaurada.');
+    if(window.matchMedia('(max-width:899px)').matches)setMobileView('preview');
   });
   $('#wfAgentExport').addEventListener('click',()=>$('#wfExportHTML')?.click());
   $('#wfAgentProject').addEventListener('click',()=>$('#wfExportZIP')?.click());
-  $('#wfAgentPreview').addEventListener('click',()=>{factory().preview();$('#wfPreview')?.scrollIntoView({behavior:'smooth',block:'nearest'});});
+  $('#wfAgentPreview').addEventListener('click',()=>{setMobileView('preview');if(!window.matchMedia('(max-width:899px)').matches)$('#wfPreview')?.scrollIntoView({behavior:'smooth',block:'nearest'});});
   $('#wfAgentToCanvas').addEventListener('click',()=>{if(!busy)$('#wfSendCanvas')?.click()});
   $('#wfAgentFromCanvas').addEventListener('click',()=>{if(!busy)$('#wfImportCanvas')?.click()});
   document.addEventListener('wae:factory-project-changed',()=>{if(!busy)changeProject()});
@@ -142,7 +153,7 @@ function init(){
   $('#wfNewProject')?.addEventListener('click',()=>{if(!busy)queueMicrotask(changeProject)});
   $('#wfImportCanvas')?.addEventListener('click',()=>{if(!busy)queueMicrotask(changeProject)});
   root.addEventListener('click',event=>{if(event.target?.closest('[data-tab="factory"]'))queueMicrotask(changeProject)});
-  window.__waeFactoryAgentV3={version:'3',build,changeProject};
+  window.__waeFactoryAgentV3={version:'4-mobile-ux',build,changeProject,setMobileView};
 }
 document.readyState==='loading'?document.addEventListener('DOMContentLoaded',init,{once:true}):init();
 })();
