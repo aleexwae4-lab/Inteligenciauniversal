@@ -229,7 +229,7 @@ function autosizeInput(){
 function showRetryTurn(message){
   $('#waeRetryTurn')?.remove();
   const e=document.createElement('div');e.id='waeRetryTurn';e.className='wae-retry-turn';e.setAttribute('role','alert');
-  const label=document.createElement('span');label.textContent='La generación no se completó. Tu consulta está conservada.';
+  const label=document.createElement('span');label.textContent='La generación no se completó. Conservé tu pregunta para reintentar.';
   const retry=document.createElement('button');retry.type='button';retry.textContent='↻ Reintentar';
   retry.addEventListener('click',()=>{if(state.busy)return;const i=$('#messageInput');if(!i)return;i.value=message;autosizeInput();$('#composer').requestSubmit()});
   e.append(label,retry);$('#messages').append(e);scrollChat();
