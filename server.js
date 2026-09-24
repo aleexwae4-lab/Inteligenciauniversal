@@ -93,13 +93,22 @@ async function runApi(req, res, handler) {
     req.body = await readJsonBody(req);
     await handler(req, res);
   } catch (error) {
-    if (!res.headersSent) {
-      res.statusCode = error.statusCode || 500;
-      res.setHeader('Content-Type', 'application/json; charset=utf-8');
+    const status = Number(error?.statusCode);
+    const publicError = status === 400 && error?.message === 'invalid_json'
+      ? 'invalid_json'
+      : status === 413 && error?.message === 'request_body_too_large'
+      ? 'request_body_too_large'
+      : 'internal_error';
+    // Once a streamed response has started, a JSON error would corrupt it.
+    if (res.headersSent) {
+      if (!res.writableEnded) res.destroy();
+      return;
     }
-    if (!res.writableEnded) {
-      res.end(JSON.stringify({ error: error.message || 'internal_error' }));
-    }
+    res.statusCode = publicError === 'internal_error' ? 500 : status;
+    res.setHeader('Content-Type', 'application/json; charset=utf-8');
+    res.setHeader('Cache-Control', 'no-store');
+    // Never expose raw upstream errors, environment details, or file paths on HTTP 5xx.
+    if (!res.writableEnded) res.end(JSON.stringify({ error: publicError }));
   }
 }
 
