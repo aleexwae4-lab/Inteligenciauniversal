@@ -311,8 +311,10 @@
         headers:{accept:'application/json'}
       });
       const info=response.ok?await response.json():null;
-      const ready=info?.waewebConnect?.configured===true &&
-        info?.waewebConnect?.contract==='waeweb-connect/v1';
+      const ready=(info?.waewebConnect?.configured===true &&
+        info?.waewebConnect?.contract==='waeweb-connect/v1') ||
+        (info?.waewebPublic?.configured===true &&
+        info?.waewebPublic?.contract==='waeweb-public-readonly/v1');
       waewebState={until:Date.now()+60000,ready};
       return ready;
     }catch{
