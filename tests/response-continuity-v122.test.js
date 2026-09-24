@@ -38,7 +38,7 @@ test('browser and server agree on narrow dated research routing, preserve unrela
 });
 test('provider attempts have an abortable total budget and preserve safe non-answer rejection',()=>{
  const provider=read('lib/providers.js');
- assert.match(provider,/const deadline=Date\.now\(\)\+Math\.min\(50000/);
+ assert.match(provider,/const deadline=Date\.now\(\)\+Math\.min\(55000/);
  assert.match(provider,/Math\.min\(maxAttempt,remaining\)/);
  assert.match(provider,/signal:controller\.signal/);
  assert.match(provider,/AbortSignal\.any\(\[parentSignal,timeout\(ms\)\]\)/);
@@ -53,7 +53,7 @@ test('primary timeout leaves space for the Render fallback, trace has no user pr
  assert.match(client,/signal,7000\)\.then\(data/);
  assert.match(client,/chatWithSessionRepair\(chatPayload,init\.signal\)/);
  assert.match(client,/if\(init\.signal\?\.aborted\)throw err/);
- assert.match(app,/setTimeout\(\(\)=>c\.abort\(\),65000\)/);
+ assert.match(app,/setTimeout\(\(\)=>c\.abort\(\),100000\)/);
  assert.match(api,/X-WAE-Request-ID/);
  assert.match(api,/\[WAE Chat\]/);
  assert.doesNotMatch(api,/message:body\.message|sessionId:body\.sessionId/);
