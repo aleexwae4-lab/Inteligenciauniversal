@@ -65,6 +65,6 @@ test('primary and fallback share intent and cleanup without triggering more fail
  assert.match(providers,/retryColdStart=false/);
  assert.doesNotMatch(fallback,/qualityGate:answer=>[^;\n]*removeRedundantParagraphs/);
  assert.match(html,/density=v124/);assert.match(sw,/density=v124/);
- assert.match(sw,/wae-universal-render-waeweb-v44/);
+ assert.match(sw,/wae-universal-render-waeweb-public-v45/);
  assert.match(pkg.scripts.check,/tests\/answer-density-v124\.test\.js/);
 });
