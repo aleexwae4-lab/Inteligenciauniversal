@@ -298,6 +298,28 @@
       return edge({...payload,...sessionPayload(),conversation_id:null},signal,16000);
     }
   };
+  // Native WAEWEB routing only when the first-party Render backend reports
+  // the authenticated Connect adapter configured. No credentials reach JS.
+  // A failed readiness probe does NOT replace the existing Supabase-first route.
+  let waewebState={until:0,ready:false};
+  const waewebResearchReady=async(signal)=>{
+    if(Date.now()<waewebState.until)return waewebState.ready;
+    const linked=linkedAbort(signal,1800);
+    try{
+      const response=await nativeFetch('/api/research',{
+        method:'GET',cache:'no-store',signal:linked.signal,
+        headers:{accept:'application/json'}
+      });
+      const info=response.ok?await response.json():null;
+      const ready=info?.waewebConnect?.configured===true &&
+        info?.waewebConnect?.contract==='waeweb-connect/v1';
+      waewebState={until:Date.now()+60000,ready};
+      return ready;
+    }catch{
+      waewebState={until:Date.now()+15000,ready:false};
+      return false;
+    }finally{linked.cleanup()}
+  };
   window.fetch=async(input,init={})=>{
     if(!isLocalRuntime(input)||String(init.method||'GET').toUpperCase()!=='POST')return nativeFetch(input,init);
     const request=typeof init.body==='string'?JSON.parse(init.body):{};
@@ -306,6 +328,9 @@
     // The HTML/Canvas paths and short capability registry answers stay untouched.
     if(request.canvas!==true&&worldQuery(request.message))return nativeFetch(input,init);
     if(request.canvas!==true&&(industrialQuery(request.message)||professionalQuery(request.message)))return nativeFetch(input,init);
+    // Research queries use the native Render source router when WAEWEB is
+    // configured. Ordinary chat stays on its proven Supabase-first path.
+    if(request.canvas!==true&&needsFreshWeb(request.message,String(request.mode||localStorage.getItem('wae.mode')||'general'))&&await waewebResearchReady(init.signal))return nativeFetch(input,init);
     try{
       await bootstrap(init.signal);
       if(init.signal?.aborted)throw Object.assign(new Error('chat_cancelled'),{name:'AbortError'});

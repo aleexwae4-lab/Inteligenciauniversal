@@ -68,7 +68,7 @@ test('primary and fallback gates run before persistence, product UI and v119 mod
  assert.match(runtime,/relevantSources\(message,\[\.\.\.\(generated\.sources/);
  assert.match(html,/evidence=v121/);
  assert.match(sw,/evidence=v121/);
- assert.match(sw,/wae-universal-render-density-v43/);
+ assert.match(sw,/wae-universal-render-waeweb-v44/);
  assert.match(pkg.scripts.check,/tests\/topic-relevance-v121\.test\.js/);
  assert.match(html,/live-workspace-v119\.js/);
 });
