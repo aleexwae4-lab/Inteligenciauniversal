@@ -12,7 +12,7 @@ test('Edge never turns arbitrary snippets into a success:true assistant completi
 
 test('Explicit web_enabled:false prevents surprise fallback searches',()=>{
   assert.match(edge,/rescueEligible&&ctx\.reqs\.web===true/);
-  assert.match(edge,/if\(!generated\)\{await trace/);
+  assert.match(edge,/if\(!run\.generated\)\{await trace/);
 });
 
 test('No generative reply returns HTTP 503, success false and evidence as diagnostics',()=>{
