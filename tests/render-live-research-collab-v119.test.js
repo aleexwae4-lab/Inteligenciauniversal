@@ -13,7 +13,8 @@ test('v119 reports honest multi-source research and collaboration capabilities',
  assert.equal(h.research.version,r.version);assert.equal(h.collaboration.version,c.version);
 });
 test('unconfigured general web is distinct from the keyless recent-news index',async()=>{
- const oldFetch=globalThis.fetch,existing=process.env.TAVILY_API_KEY;delete process.env.TAVILY_API_KEY;
+ const oldFetch=globalThis.fetch,existing=process.env.TAVILY_API_KEY,oldPublic=process.env.WAEWEB_PUBLIC_SEARCH_ENABLED,oldPrivate=process.env.WAEWEB_CONNECT_ENABLED;
+ delete process.env.TAVILY_API_KEY;delete process.env.WAEWEB_PUBLIC_SEARCH_ENABLED;delete process.env.WAEWEB_CONNECT_ENABLED;
  let url='';globalThis.fetch=async(input)=>{url=String(input);return{ok:true,json:async()=>({articles:[{title:'News index entry',url:'https://example.org/news',seendate:'20260921T210000Z'},{title:'Unsafe URL',url:'javascript:alert(1)'}]})}};
  try{
   const news=await retrieveResearch('Noticias de hoy sobre energía',{mode:'auto'});
@@ -23,7 +24,9 @@ test('unconfigured general web is distinct from the keyless recent-news index',a
   const forced=await retrieveResearch('Noticias de hoy sobre energía',{mode:'web'});
   assert.equal(forced.ok,false);assert.equal(forced.code,'general_web_not_configured');assert.deepEqual(forced.results,[]);
   await assert.rejects(retrieveResearch('a',{mode:'academic'}),e=>e.code==='research_bad_query');
- }finally{globalThis.fetch=oldFetch;if(existing!==undefined)process.env.TAVILY_API_KEY=existing}
+ }finally{globalThis.fetch=oldFetch;if(existing!==undefined)process.env.TAVILY_API_KEY=existing;else delete process.env.TAVILY_API_KEY;
+  if(oldPublic!==undefined)process.env.WAEWEB_PUBLIC_SEARCH_ENABLED=oldPublic;else delete process.env.WAEWEB_PUBLIC_SEARCH_ENABLED;
+  if(oldPrivate!==undefined)process.env.WAEWEB_CONNECT_ENABLED=oldPrivate;else delete process.env.WAEWEB_CONNECT_ENABLED;}
 });
 test('public academic retrieval uses keyless Crossref, actual returned bibliographic metadata and safe URLs',async()=>{
  const old=globalThis.fetch,oldKey=process.env.OPENALEX_API_KEY;delete process.env.OPENALEX_API_KEY;
