@@ -52,7 +52,7 @@
   #panel-factory.wf-agent-mode #wfPreview{height:100%!important;min-height:0!important;flex:1 1 auto!important}
   #panel-factory .wf-stage[data-wf-view="build"] .wf-body{display:none!important}
   #panel-factory .wf-stage[data-wf-view="preview"] .wf-agent{display:none!important}
-  #panel-factory.wf-agent-mode.wf-code-visible .wf-body{height:100%!important;min-height:0!important;grid-template-rows:auto minmax(125px,.9fr) minmax(0,1fr)!important}
+  #panel-factory.wf-agent-mode.wf-code-visible .wf-body{flex:1 1 auto!important;height:100%!important;min-height:0!important;overflow:hidden!important;grid-template-rows:auto minmax(125px,.9fr) minmax(0,1fr)!important}
   #panel-factory.wf-agent-mode.wf-code-visible .wf-code{min-height:0!important}
   #panel-factory.wf-agent-mode.wf-code-visible #wfEditor{font-size:12px!important;line-height:1.5!important}
   #panel-html[data-iu-view="code"] #htmlEditor{font-size:12.5px!important;line-height:1.5!important;overflow-wrap:anywhere;tab-size:2}
