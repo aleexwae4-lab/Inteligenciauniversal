@@ -1,0 +1,9 @@
+/* Render v121 recovery: additive; retains existing premium/factory shell. */
+#workspaceBtn{width:auto;min-width:38px;padding-inline:10px;gap:5px}
+#workspaceBtn .wae-workspace-label{font:650 .7rem/1.2 system-ui,sans-serif;letter-spacing:.01em}
+#profileBtn{cursor:pointer}
+#typingElapsed{font-variant-numeric:tabular-nums}
+.wae-retry-turn{display:flex;flex-wrap:wrap;align-items:center;gap:10px;margin:10px 0;padding:10px 12px;border:1px solid rgba(251,191,36,.3);border-radius:12px;background:rgba(30,23,12,.45);color:#f7e7c7;font-size:.81rem}
+.wae-retry-turn button{padding:8px 12px;border:1px solid rgba(125,211,252,.4);background:#152628;color:#c5fff0;border-radius:9px;cursor:pointer;font-weight:650}
+.wae-retry-turn button:focus-visible,#workspaceBtn:focus-visible,#profileBtn:focus-visible{outline:2px solid #82ddc1;outline-offset:2px}
+@media(max-width:420px){#workspaceBtn{padding-inline:7px}#workspaceBtn .wae-workspace-label{font-size:.64rem}}
