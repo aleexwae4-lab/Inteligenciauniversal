@@ -43,6 +43,14 @@ test('Render v121 intercept rejects HTTP 200 non-generative rescue before advanc
   const advance=runtimeClient.indexOf('localStorage.setItem(CONVERSATION_ID,data.conversation_id)');
   assert.ok(guard>=0&&advance>guard,'reject before conversation pointer changes');
 });
+test('Render v121 refreshes offline cache with the same scripts referenced by the HTML',()=>{
+  const sw=read('sw.js');
+  assert.match(sw,/wae-universal-render-waeweb-public-v45-recovery-v121/);
+  assert.match(sw,/app\.js\?v=121/);
+  assert.match(sw,/waewebpublic=v126&recovery=v121/);
+  assert.match(sw,/render-v121-recovery\.css\?v=1/);
+  assert.match(html,/waewebpublic=v126&recovery=v121/);
+});
 test('Render v121 preserves advanced factory and navigation UI while making status honest',()=>{
   for(const marker of ['canvas-render-factory-v1.js','factory-agent-render-v3.js','navigation-premium-v1.js','workspace-premium-v1.js']){
     assert.ok(html.includes(marker),'lost '+marker);
