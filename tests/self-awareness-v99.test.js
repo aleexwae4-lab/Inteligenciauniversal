@@ -65,7 +65,7 @@ test('v99 capability contract preserves strict benchmark-scoped claim discipline
 });
 
 
-test('mobile clip: live browser capability questions resolve via observed web configuration',()=>{
+test('mobile clip: live browser capability questions resolve via observed web configuration',async()=>{
   assert.equal(classifySelfAwarenessV99({message:'¿Tienes navegador en tiempo real?'}).kind,'web');
   assert.equal(classifySelfAwarenessV99({message:'¿Tienes acceso a internet?'}).kind,'web');
   assert.equal(classifySelfAwarenessV99({message:'Busca los repositorios actuales de GitHub'}).eligible,false);
@@ -73,6 +73,8 @@ test('mobile clip: live browser capability questions resolve via observed web co
   const before=Object.fromEntries(names.map(name=>[name,process.env[name]]));
   try{
     for(const name of names)delete process.env[name];
+    const {toolRegistry}=await import('../lib/tools.js');
+    assert.equal(toolRegistry().find(item=>item.id==='web_search')?.configured,true);
     const partial=buildSelfAwarenessReplyV99({kind:'web'});
     assert.match(partial,/no tiene configurado un motor de b[uú]squeda general/i);
     assert.match(partial,/DuckDuckGo/i);
