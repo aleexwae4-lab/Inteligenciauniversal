@@ -1,0 +1,35 @@
+name: Universal Core Edge Source Gate v123
+
+on:
+  push:
+    branches:
+      - feat/universal-core-edge-source-gate-v123
+  pull_request:
+    paths:
+      - 'supabase/functions/wae-local-voice-demo-v61/**'
+      - '.github/workflows/edge-source-gate-v123.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  deno-edge-source:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - name: Checkout candidate source (no deployment)
+        uses: actions/checkout@v4
+      - name: Set up Deno runtime
+        uses: denoland/setup-deno@v2
+        with:
+          deno-version: v2.x
+      - name: Resolve and type-check actual Edge entrypoint import graph
+        run: |
+          deno check \
+            --config supabase/functions/wae-local-voice-demo-v61/deno.json \
+            supabase/functions/wae-local-voice-demo-v61/index-v63.ts
+      - name: Check native structured-output and factual-memory modules
+        run: |
+          deno check \
+            supabase/functions/wae-local-voice-demo-v61/structured-answer-v121.js \
+            supabase/functions/wae-local-voice-demo-v61/factual-memory-v122.js
