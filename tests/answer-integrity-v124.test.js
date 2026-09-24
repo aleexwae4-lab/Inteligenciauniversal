@@ -35,5 +35,6 @@ test('active Edge source enforces one text for replay, storage, JSON and SSE com
   assert.match(edge,/content:generated\.text,content_json:response/);
   assert.match(edge,/if\(!replayed\.ok\|\|response\.content!==replayed\.text\)continue/);
   assert.equal((edge.match(/reply:fin\.response\.content,response:fin\.response/g)||[]).length,2);
+  assert.match(edge,/stream_verified:run\.generated\.streamed===true/);
   assert.equal(ANSWER_INTEGRITY_VERSION,'wae-answer-integrity/v124');
 });
