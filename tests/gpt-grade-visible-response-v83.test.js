@@ -6,7 +6,7 @@ import { getAgent, VISIBLE_RESPONSE_POLICY_VERSION } from '../lib/agents.js';
 const read = path => fs.readFileSync(new URL(`../${path}`, import.meta.url), 'utf8');
 
 test('v83 visible response policy is attached to every agent', () => {
-  assert.equal(VISIBLE_RESPONSE_POLICY_VERSION, 'gpt-grade-visible/v83');
+  assert.equal(VISIBLE_RESPONSE_POLICY_VERSION, 'gpt-grade-visible/v104');
   for (const mode of ['general','research','code','analysis','design','executive']) {
     const agent = getAgent(mode);
     assert.match(agent.system, /Responde la pregunta o ejecuta la tarea desde la primera frase/);
