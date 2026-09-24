@@ -17,12 +17,12 @@ test('server exposes current mobile route, native-first chat and compatibility h
   // Inspect only the active handler; historical version strings in comments do not
   // establish that the currently served mobile experience still uses that release.
   const activeHandler = server.split('function mobilePremiumHandler(req,res) {')[1]?.split('const apiRoutes = new Map(')[0] || '';
-  assert.match(activeHandler, /X-WAE-Mobile-Release','universal-core-mobile-v\\d+/);
-  assert.match(activeHandler, /X-WAE-Mobile-Chat-Route','same-origin-native-first-v\\d+/);
-  assert.match(activeHandler, /X-WAE-Mobile-Response-Lifecycle','visible-answer-commit\\/v\\d+/);
+  assert.match(activeHandler, /X-WAE-Mobile-Release','universal-core-mobile-v\d+/);
+  assert.match(activeHandler, /X-WAE-Mobile-Chat-Route','same-origin-native-first-v\d+/);
+  assert.match(activeHandler, /X-WAE-Mobile-Response-Lifecycle','visible-answer-commit\/v\d+/);
   assert.match(activeHandler, /X-WAE-Mobile-Compatible','universal-core-mobile-v47-long-session/);
   assert.match(activeHandler, /X-WAE-Mobile-Compatible-Fix','long-session-backpressure-v47/);
-  assert.match(activeHandler, /X-WAE-Native-Brain','wae-native-brain\\/v\\d+/);
+  assert.match(activeHandler, /X-WAE-Native-Brain','wae-native-brain\/v\d+/);
   assert.match(activeHandler, /Cache-Control','no-store/);
   assert.match(server, /desktop.*=== '1'/s);
 });
