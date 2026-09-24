@@ -85,6 +85,6 @@ test('preserves visual capabilities, all domain routers, cache contract and sepa
   assert.match(client,/request\.canvas_direct===true\|\|request\.canvas_blueprint===true/);
   assert.match(html,/runtime-client\.js\?v=24&industrial=v115&professional=v116&world=v117&chatfix=v118/);
   assert.match(sw,/runtime-client\.js\?v=24&industrial=v115&professional=v116&world=v117&chatfix=v118/);
-  assert.match(sw,/wae-universal-render-density-v43/);
+  assert.match(sw,/wae-universal-render-waeweb-v44/);
   assert.match(client,/VISUAL_EDGE/);
 });
