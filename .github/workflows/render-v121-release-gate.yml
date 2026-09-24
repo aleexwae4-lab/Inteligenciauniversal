@@ -1,0 +1,27 @@
+name: Render v121 release gate
+
+on:
+  push:
+    branches:
+      - fix/render-v121-safe-port
+      - deploy/render-vercel-production-a3c2a88
+  pull_request:
+    branches:
+      - deploy/render-vercel-production-a3c2a88
+
+permissions:
+  contents: read
+
+jobs:
+  render-build-and-regressions:
+    runs-on: ubuntu-latest
+    timeout-minutes: 18
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Install pinned project dependencies without running postinstall twice
+        run: npm install --ignore-scripts --no-audit --no-fund
+      - name: Validate Render build, recovery and regression contracts
+        run: npm run check
