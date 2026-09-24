@@ -4,7 +4,7 @@ export const STRUCTURED_OUTPUT_GUARD_VERSION='wae-structured-answer/v121';
 const normalized=value=>String(value??'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase();
 export function requiresJsonObjectV121(question=''){
   const q=normalized(question);
-  return /\bjson\b/.test(q)&&/\b(solo|unicamente|exclusivamente|valido|valid|only|formato|format|devuelve|return|responde|respond|objeto|object)\b/.test(q);
+  return /\bjson\b/.test(q)&&(/\b(solo|unicamente|exclusivamente|only|devuelve|devuelveme|entrega|genera|responde|respond|return|output)\b/.test(q)||/\b(en|formato|as|format)\s+(?:un\s+)?json\b/.test(q));
 }
 function schemaFields(question=''){
   const match=String(question).replace(/\\(["'])/g,'$1').match(/\{([^{}]{0,1200})\}/);
