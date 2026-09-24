@@ -2,7 +2,8 @@ import './lib/network-deadlines-v46.js';
 import { createServer } from 'node:http';
 import { createReadStream } from 'node:fs';
 import { stat } from 'node:fs/promises';
-import { extname, join, normalize, basename } from 'node:path';
+import { extname, join, basename } from 'node:path';
+import { staticPathPolicy } from './lib/static-path-policy-v120.js';
 import { fileURLToPath } from 'node:url';
 import chatHandler from './api/capacity-chat-v60.js';
 import nativeBrainHandler from './api/native-brain.js';
@@ -194,15 +195,19 @@ async function runApi(req, res, handler) {
   }
 }
 
-function safeStaticPath(pathname) {
-  const decoded = decodeURIComponent(pathname);
-  const requested = decoded === '/' || decoded === '/index.html' ? UI_ENTRY : decoded.replace(/^\/+/, '');
-  const normalized = normalize(requested).replace(/^(\.\.[/\\])+/, '');
-  return join(ROOT, normalized);
+function rejectStatic(req, res, status=404) {
+  res.statusCode = status;
+  res.setHeader('Content-Type', 'text/plain; charset=utf-8');
+  res.setHeader('Cache-Control', 'no-store');
+  res.setHeader('X-Content-Type-Options', 'nosniff');
+  res.setHeader('X-WAE-UI-Profile', UI_PROFILE);
+  return res.end(req.method === 'HEAD' ? '' : (status === 400 ? 'Bad Request' : 'Not Found'));
 }
 
 async function serveFile(req, res, pathname) {
-  let filePath = safeStaticPath(pathname);
+  const policy = staticPathPolicy(pathname, UI_ENTRY);
+  if (!policy.allowed) return rejectStatic(req, res, policy.status);
+  let filePath = join(ROOT, policy.path);
   try {
     let info = await stat(filePath);
     if (info.isDirectory()) {
@@ -211,6 +216,8 @@ async function serveFile(req, res, pathname) {
     }
     if (!info.isFile()) throw new Error('not_file');
   } catch {
+    // Missing JS/CSS/images must be 404, never a misleading 200 HTML shell.
+    if (policy.isAsset) return rejectStatic(req, res);
     filePath = join(ROOT, UI_ENTRY);
   }
 
@@ -265,6 +272,15 @@ const server = createServer(async (req, res) => {
 
   const handler = apiRoutes.get(url.pathname) || (url.pathname.startsWith('/api/knowledge/source/') ? knowledgeHandler : null);
   if (handler) return runApi(req, res, handler);
+
+  // Unknown API endpoints must never return the SPA shell as a successful JSON response.
+  if (url.pathname === '/api' || url.pathname.startsWith('/api/')) {
+    res.statusCode = 404;
+    res.setHeader('Content-Type', 'application/json; charset=utf-8');
+    res.setHeader('Cache-Control', 'no-store');
+    res.setHeader('X-Content-Type-Options', 'nosniff');
+    return res.end(req.method === 'HEAD' ? '' : JSON.stringify({ error: 'api_route_not_found' }));
+  }
 
   if (!['GET', 'HEAD'].includes(req.method || '')) {
     res.statusCode = 405;
