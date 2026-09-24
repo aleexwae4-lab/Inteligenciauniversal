@@ -167,7 +167,7 @@
 
   // Install the final bridge after every historical fetch interceptor. v107 intercepts
   // both Edge chat and /api/chat and uses XHR so old fetch wrappers cannot recapture it.
-  if(!document.querySelector('script[data-canonical-brain-v106]')){
+  if(typeof document?.querySelector==='function' && typeof document?.createElement==='function' && document.head?.appendChild && !document.querySelector('script[data-canonical-brain-v106]')){
     const script=document.createElement('script');
     script.src='/canonical-brain-v106.js?v=107';
     script.async=false;
