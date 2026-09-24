@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFile} from 'node:fs/promises';
+import {staticPathPolicy} from '../lib/static-path-policy-v120.js';
 
 const read = path => readFile(new URL('../' + path, import.meta.url), 'utf8');
 
@@ -21,7 +22,10 @@ test('Render chooses entrypoint per profile while sharing intelligence handlers'
   const s = await read('server.js');
   assert.match(s, /process\.env\.WAE_UI_PROFILE/);
   assert.match(s, /const UI_ENTRY = UI_PROFILE === 'premium'/);
-  assert.match(s, /decoded === '\/' \|\| decoded === '\/index\.html' \? UI_ENTRY/);
+  assert.match(s, /staticPathPolicy\\(pathname, UI_ENTRY\\)/);
+  assert.equal(staticPathPolicy('/', 'index.html').path, 'index.html');
+  assert.equal(staticPathPolicy('/', 'ui/enterprise/index.html').path, 'ui/enterprise/index.html');
+  assert.equal(staticPathPolicy('/index.html', 'ui/enterprise/index.html').path, 'ui/enterprise/index.html');
   assert.match(s, /filePath = join\(ROOT, UI_ENTRY\)/);
   assert.match(s, /UI_PROFILE !== 'premium' && isMobileRequest\(req, url\)/);
   assert.match(s, /const handler = apiRoutes\.get\(url\.pathname\)/);
