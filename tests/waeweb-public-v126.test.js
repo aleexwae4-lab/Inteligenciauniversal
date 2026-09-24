@@ -150,6 +150,6 @@ test('production release gate includes public adapter and live canary, leaves UI
  assert.match(sw,/wae-universal-render-waeweb-public-v45/);
  assert.match(html,/waewebpublic=v126/);
  assert.match(sw,/waewebpublic=v126/);
- assert.match(read('scripts/waeweb-public-live-canary.mjs'),/WAEWEB_PUBLIC_SEARCH_ENABLED/);
+ assert.match(read('scripts/waeweb-public-live-canary.mjs'),/waewebPublicConfigured\(\)/);
  assert.match(read('runtime-client.js'),/chatWithSessionRepair\(chatPayload,init\.signal\)/);
 });
