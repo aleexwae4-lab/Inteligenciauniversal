@@ -105,5 +105,5 @@ test('native-first mobile chat and runtime web tool cannot bypass the capability
   assert.match(runtime,/payload\.web_enabled===true\|\|cognitivePolicy\.autoResearch/);
   assert.match(runtime,/requestedTools:toolsForMission/);
   assert.match(runtime,/explicitOfflineContinuity/);
-  assert.match(runtime,/cacheEligible=!contextualFollowup&&!userContextState\.affectsGeneration&&payload\.web_enabled!==true&&!cognitivePolicy\.autoResearch/);
+  assert.match(runtime,/cacheEligible=!contextualFollowup&&!userContextState\.affectsGeneration&&!industrialMission&&payload\.web_enabled!==true&&!cognitivePolicy\.autoResearch/);
 });
