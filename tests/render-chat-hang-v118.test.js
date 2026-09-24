@@ -73,7 +73,7 @@ test('chat timeout contracts cannot launch a second invisible request after pare
   assert.match(client,/chatWithSessionRepair\(chatPayload,init\.signal\)/);
   assert.match(client,/if\(init\.signal\?\.aborted\)throw err;/);
   assert.match(client,/if\(init\.signal\?\.aborted\)throw Object\.assign/);
-  assert.match(app,/setTimeout\(\(\)=>c\.abort\(\),65000\)/);
+  assert.match(app,/setTimeout\(\(\)=>c\.abort\(\),100000\)/);
   assert.match(app,/finally\{\s*state\.busy=false;hideTyping\(\)/);
   assert.match(app,/i\.value=m;autosizeInput\(\)/);
 });
