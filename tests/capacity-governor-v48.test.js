@@ -55,7 +55,11 @@ test('capacity wrapper rejects overload fast with retry metadata and always rele
 test('server routes both chat endpoints through v58 live gateway while preserving v48 governor and v47 mobile resilience',()=>{
   const server=read('server.js');
   const liveGateway=read('api/capacity-chat-v58.js');
-  assert.match(server,/api\/capacity-chat-v58\.js/);
+  const canonical=read('api/capacity-chat-v60.js');
+  const router=read('api/capacity-chat-v105.js');
+  assert.match(server,/api\/capacity-chat-v60\.js/);
+  assert.match(canonical,/capacity-chat-v105\.js/);
+  assert.match(router,/capacity-chat-v91\.js/);
   assert.match(server,/\['\/api\/chat', chatHandler\]/);
   assert.match(server,/\['\/api\/fast-chat', chatHandler\]/);
   assert.match(liveGateway,/from '\.\/capacity-chat\.js'/);
