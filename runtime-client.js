@@ -142,7 +142,7 @@
       .replace(/[¿?¡!.,:]/g,' ').replace(/\s+/g,' ').trim()
       .replace(/^(?:hola|oye|hey|buenas|disculpa|por favor)\s+/,'')
       .replace(/^(?:dime|cuentame|puedes decirme|me puedes decir)\s+/,'');
-    return /^(?:(?:que|quien) eres(?: tu| exactamente| en realidad)?|que tan inteligente (?:eres|es)(?: tu)?|que modelo eres(?: tu)?|(?:que|cuales) (?:capacidades|funciones) (?:tienes|tiene)(?: tu)?|que (?:puedes|sabes) hacer(?: tu)?|como funcionas(?: tu)?|eres chatgpt|eres un modelo de openai|tienes acceso a internet|puedes buscar en internet)$/.test(question);
+    return /^(?:(?:que|quien) eres(?: tu| exactamente| en realidad)?|que tan inteligente (?:eres|es)(?: tu)?|que modelo eres(?: tu)?|(?:que|cuales) (?:capacidades|funciones) (?:tienes|tiene)(?: tu)?|que (?:puedes|sabes) hacer(?: tu)?|como funcionas(?: tu)?|eres (?:un|el) sistema operativo|quien te entreno|eres chatgpt|eres un modelo de openai|tienes acceso a internet|puedes buscar en internet)$/.test(question);
   };
   // Relevant product context, not a canned answer. Do not confuse this
   // application with ChatGPT, Google Search, Gemini or Google as a company.
