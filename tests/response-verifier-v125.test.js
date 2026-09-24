@@ -24,7 +24,7 @@ test('refusal is observable but is not automatically rewritten or fabricated',()
 test('edge verifies before assistant persistence and telemetry stores signals only',()=>{
   const edge=readFileSync(new URL('../supabase/functions/wae-local-voice-demo-v61/index-v63.ts',import.meta.url),'utf8');
   const verifyPos=edge.indexOf('const verification=verifyCompletedAnswerV125');
-  const persistPos=edge.indexOf("db.from('iu_messages').insert");
+  const persistPos=edge.indexOf("const ar=await db.from('iu_messages').insert");
   assert.ok(verifyPos>0&&persistPos>verifyPos);
   assert.match(edge,/response_verification:\{version:'wae-response-verifier\/v125',\.\.\.verification\.signals\}/);
   assert.doesNotMatch(edge,/response_verification:\{[^}]*text:/);
