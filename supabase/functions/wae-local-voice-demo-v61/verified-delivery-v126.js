@@ -3,7 +3,7 @@
  */
 export const VERIFIED_DELIVERY_VERSION='wae-verified-delivery/v126';
 
-export function verifiedDeliveryEventsV126(response={},speechText=()=>'',structured=false){
+export function verifiedDeliveryEventsV126(response={},speechText=(_text)=>'',structured=false){
   const canonical=typeof response?.content==='string'?response.content:'';
   if(!canonical.trim())return [];
   const events=[{event:'content.delta',data:{text:canonical}}];
