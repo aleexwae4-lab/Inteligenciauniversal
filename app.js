@@ -108,7 +108,7 @@ async function getAIReply(message){
     if(!r.ok||!d||d.success===false||typeof d.reply!=='string')throw new Error(d?.error||`runtime_${r.status}`);
     const clean=sanitizeAssistantText(d.reply);
     const terminal=/la ia no respondió|ninguna ruta alcanzó el umbral|tu solicitud quedó preservada|no obtuvo una respuesta suficientemente confiable|reconectando el núcleo de inteligencia/i.test(clean);
-    if(!clean||d.recoverable===true||d.answer_assurance?.finalSafeFallback===true||(d.degraded===true&&terminal))throw new Error('no_generative_answer');
+    if(!clean||d.recoverable===true||d.provider==='web_recovery'||d.resilience?.automatic_evidence_rescue===true||d.answer_assurance?.finalSafeFallback===true||(d.degraded===true&&terminal))throw new Error('no_generative_answer');
     return clean;
   }catch(e){
     console.warn('[WAE IU] runtime unavailable',e?.message||e);
