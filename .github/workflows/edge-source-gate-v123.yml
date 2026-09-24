@@ -32,4 +32,5 @@ jobs:
         run: |
           deno check \
             supabase/functions/wae-local-voice-demo-v61/structured-answer-v121.js \
-            supabase/functions/wae-local-voice-demo-v61/factual-memory-v122.js
+            supabase/functions/wae-local-voice-demo-v61/factual-memory-v122.js \
+            supabase/functions/wae-local-voice-demo-v61/answer-integrity-v124.js
