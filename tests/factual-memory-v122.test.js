@@ -42,5 +42,16 @@ test('edge preparation uses only factual memories before building system prompt 
   assert.match(edge,/mem=factualMemoriesV122\(memr\.data\|\|\[\],q\)/);
   assert.match(edge,/memoryCount:ctx\.mem\.length/);
   assert.match(edge,/memory_count:ctx\.mem\.length/);
+  assert.match(edge,/p_query:q,p_limit:12/);
+  assert.doesNotMatch(edge,/p_query:q,p_limit:6/);
   assert.equal(FACTUAL_MEMORY_VERSION,'wae-factual-memory/v122');
+});
+
+test('bounded retrieval can fill six factual slots even if synthetic entries occupy the first positions',()=>{
+  const real=Array.from({length:10},(_,i)=>({id:'real-'+i,kind:'episodic',content:'Valid recorded event '+i,metadata:{source:'user'}}));
+  const candidates=[synthetic,exemplar,...real];
+  assert.equal(factualMemoriesV122(candidates.slice(0,6)).length,4);
+  const selected=factualMemoriesV122(candidates.slice(0,12));
+  assert.equal(selected.length,6);
+  assert.deepEqual(selected.map(x=>x.id),real.slice(0,6).map(x=>x.id));
 });
