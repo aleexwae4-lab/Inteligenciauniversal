@@ -67,3 +67,14 @@ body.wae-ui-enterprise .chat-heading,
 body.wae-ui-enterprise .capability-grid{
   /* Explicit ownership: enterprise retains the established shell. */
 }
+
+
+/* v121 — legible controls, real turn progress and recoverable failures. */
+#workspaceBtn{width:auto!important;min-width:38px!important;padding-inline:10px!important;gap:5px!important}
+#workspaceBtn .workspace-btn-label{font-size:.70rem;font-weight:650;letter-spacing:.01em}
+#profileBtn{cursor:pointer}
+#typingElapsed{font-variant-numeric:tabular-nums}
+.runtime-error{border:1px solid rgba(251,191,36,.28);border-radius:14px}
+.runtime-error .retry-turn{display:inline-flex;align-items:center;justify-content:center;margin:8px 0 4px;padding:8px 13px;border-radius:9px;border:1px solid rgba(125,211,252,.4);background:rgba(125,211,252,.1);color:inherit;cursor:pointer}
+.runtime-error .retry-turn:focus-visible,#workspaceBtn:focus-visible,#profileBtn:focus-visible{outline:2px solid #82ddc1;outline-offset:2px}
+@media(max-width:420px){#workspaceBtn .workspace-btn-label{font-size:.64rem}#workspaceBtn{padding-inline:7px!important}}
