@@ -96,7 +96,7 @@ async function getAIReply(message){
     console.warn('[WAE Core Tool] real execution did not complete',error?.code||error?.message);
     return 'La evidencia visual sigue preparada. '+String(error?.message||'No se pudo completar el análisis.').slice(0,220)+' No afirmaré que analicé la imagen hasta recibir un resultado real. Puedes reintentar o quitar la captura.';
   }
-  const c=new AbortController(),timer=setTimeout(()=>c.abort(),65000);
+  const c=new AbortController(),timer=setTimeout(()=>c.abort(),100000);
   try{
     const r=await fetch('/api/chat',{
       method:'POST',
