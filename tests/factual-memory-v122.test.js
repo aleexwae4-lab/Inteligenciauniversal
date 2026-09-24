@@ -42,8 +42,9 @@ test('edge preparation uses only factual memories before building system prompt 
   assert.match(edge,/mem=factualMemoriesV122\(memr\.data\|\|\[\],q\)/);
   assert.match(edge,/memoryCount:ctx\.mem\.length/);
   assert.match(edge,/memory_count:ctx\.mem\.length/);
-  assert.match(edge,/p_query:q,p_limit:12/);
-  assert.doesNotMatch(edge,/p_query:q,p_limit:6/);
+  assert.match(edge,/iu_search_memories'\,\{p_session_id:sid,p_query:q,p_limit:12\}/);
+  assert.doesNotMatch(edge,/iu_search_memories'\,\{p_session_id:sid,p_query:q,p_limit:6\}/);
+  assert.match(edge,/wae_live_web_search_internal_v2'\,\{p_query:q,p_limit:6\}/);
   assert.equal(FACTUAL_MEMORY_VERSION,'wae-factual-memory/v122');
 });
 
