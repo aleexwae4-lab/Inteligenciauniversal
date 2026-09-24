@@ -22,7 +22,7 @@ test('Render chooses entrypoint per profile while sharing intelligence handlers'
   const s = await read('server.js');
   assert.match(s, /process\.env\.WAE_UI_PROFILE/);
   assert.match(s, /const UI_ENTRY = UI_PROFILE === 'premium'/);
-  assert.match(s, /staticPathPolicy\\(pathname, UI_ENTRY\\)/);
+  assert.match(s, /staticPathPolicy\(pathname, UI_ENTRY\)/);
   assert.equal(staticPathPolicy('/', 'index.html').path, 'index.html');
   assert.equal(staticPathPolicy('/', 'ui/enterprise/index.html').path, 'ui/enterprise/index.html');
   assert.equal(staticPathPolicy('/index.html', 'ui/enterprise/index.html').path, 'ui/enterprise/index.html');
