@@ -285,7 +285,7 @@
     return '';
   };
   const chatWithSessionRepair=async(payload,signal)=>{
-    try{return await edge(payload,signal,16000)}
+    try{return await edge(payload,signal,39000)}
     catch(error){
       if(signal?.aborted)throw error;
       const kind=recoverableChatFailure(error);
@@ -295,7 +295,7 @@
       window.WAENavigation?.remoteInvalidated?.(payload.conversation_id);
       if(kind==='session')await refreshBootstrap(signal);
       else localStorage.removeItem(CONVERSATION_ID);
-      return edge({...payload,...sessionPayload(),conversation_id:null},signal,16000);
+      return edge({...payload,...sessionPayload(),conversation_id:null},signal,39000);
     }
   };
   // Native WAEWEB routing only when the first-party Render backend reports
