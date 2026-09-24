@@ -26,12 +26,22 @@ test('Render v121 refuses a recoverable or failed HTTP 200 instead of presenting
     {success:true,reply:'La IA no respondió',degraded:true},
     {reply:'Consulta guardada',recoverable:true},
     {reply:'Una respuesta recuperable',answer_assurance:{finalSafeFallback:true}},
+    {success:true,reply:'## Respuesta con evidencia recuperada',provider:'web_recovery',degraded:true},
+    {success:true,reply:'Fragmentos no relacionados',resilience:{automatic_evidence_rescue:true},degraded:true},
   ]){
     assert.equal(await chat(answer(data))('consulta'),null);
   }
 });
 test('Render v121 still delivers a useful generated reply',async()=>{
   assert.equal(await chat(answer({success:true,reply:'Respuesta verificada y útil.'}))('consulta'),'Respuesta verificada y útil.');
+});
+test('Render v121 intercept rejects HTTP 200 non-generative rescue before advancing conversation',()=>{
+  const runtimeClient=read('runtime-client.js');
+  assert.match(runtimeClient,/data\.provider==='web_recovery'/);
+  assert.match(runtimeClient,/data\.resilience\?\.automatic_evidence_rescue===true/);
+  const guard=runtimeClient.indexOf("data.provider==='web_recovery'");
+  const advance=runtimeClient.indexOf('localStorage.setItem(CONVERSATION_ID,data.conversation_id)');
+  assert.ok(guard>=0&&advance>guard,'reject before conversation pointer changes');
 });
 test('Render v121 preserves advanced factory and navigation UI while making status honest',()=>{
   for(const marker of ['canvas-render-factory-v1.js','factory-agent-render-v3.js','navigation-premium-v1.js','workspace-premium-v1.js']){
