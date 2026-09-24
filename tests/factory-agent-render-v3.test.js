@@ -38,8 +38,8 @@ test('agent prioritizes conversation and preview, with code optional; never gran
 });
 test('mobile PWA refreshes chat factory assets and does not cache API responses',()=>{
  const sw=read('sw.js');
- assert.match(sw,/wae-universal-render-waeweb-public-v45/);
- assert.match(sw,/factory-agent-render-v3\.js\?v=6/);
+ assert.match(sw,/wae-universal-render-factory-mobile-v46/);
+ assert.match(sw,/factory-agent-render-v3\.js\?v=7/);
  assert.match(sw,/factory-agent-render-v3\.css\?v=5/);
  assert.match(sw,/url\.pathname\.startsWith\('\/api\/'\)/);
 });
@@ -78,6 +78,6 @@ test('Product Builder v4 has native Canvas transfers and asynchronous project co
  assert.match(factory,/function importProject[\s\S]*?announceProjectChange\(\)/);
  assert.match(factory,/function importCanvas[\s\S]*?announceProjectChange\(\)/);
  assert.match(html,/factory-projects-render-v2\.js\?v=5/);
- assert.match(html,/factory-agent-render-v3\.js\?v=6/);
- assert.match(sw,/wae-universal-render-waeweb-public-v45/);
+ assert.match(html,/factory-agent-render-v3\.js\?v=7/);
+ assert.match(sw,/wae-universal-render-factory-mobile-v46/);
 });
