@@ -1,0 +1,26 @@
+name: Universal Core Mobile Factory v131
+on:
+  push:
+    branches:
+      - fix/universal-core-mobile-factory-ux-v131
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  mobile-factory-regression:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Check real factory and PWA entrypoints
+        run: |
+          node --check factory-agent-render-v3.js
+          node --check factory-projects-render-v2.js
+          node --check canvas-premium-v2.js
+          node --check sw.js
+      - name: Run factory mobile and existing workspace regressions
+        run: |
+          node --test tests/factory-mobile-premium-v131.test.js tests/factory-agent-render-v3.test.js tests/factory-projects-render-v2.test.js tests/canvas-premium.test.js

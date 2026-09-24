@@ -1,0 +1,60 @@
+/* Universal Core v131 — mobile-first factory, scoped to the existing Render workspace.
+   The product and the editor are separate, native views on phones; no second app or iframe permissions. */
+#panel-factory .wf-mobile-nav{display:none}
+#panel-factory .wf-agent-more{flex:1 1 100%;min-width:0}
+#panel-factory .wf-agent-more summary{list-style:none;cursor:pointer;padding:9px 12px;border:1px solid #355143;border-radius:11px;color:#bde7d3;background:#14231c;font-size:12px;font-weight:650}
+#panel-factory .wf-agent-more summary::-webkit-details-marker{display:none}
+#panel-factory .wf-agent-more summary::after{content:'⌄';float:right;color:#8bdcba}
+#panel-factory .wf-agent-more[open] summary::after{content:'⌃'}
+#panel-factory .wf-agent-more-items{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px;padding-top:7px}
+#panel-factory .wf-agent-more-items button{min-width:0;white-space:normal;min-height:40px}
+#panel-factory .wf-agent-see{border-color:#36795d!important;color:#bcffe0!important;background:#183b2c!important;font-weight:700!important}
+#panel-factory .wf-agent-message.assistant{border-color:#294537;background:#12251c}
+#panel-factory .wf-agent-message p{line-height:1.48}
+@media(max-width:899px){
+  #panel-factory.wf-agent-mode.active{grid-template-rows:auto minmax(0,1fr)!important}
+  #panel-factory .wf-head{padding:8px 10px!important;gap:6px!important}
+  #panel-factory .wf-head>div{flex-basis:100%;min-width:0}
+  #panel-factory .wf-head strong{font-size:13px}
+  #panel-factory .wf-head small{display:none}
+  #panel-factory .wf-head select{min-height:38px!important;flex:1 1 150px!important}
+  #panel-factory .wf-head #wfNewProject{min-height:38px!important;flex:0 0 auto}
+  #panel-factory .wf-stage{
+    display:flex!important;flex-direction:column!important;min-height:0!important;
+    height:100%!important;overflow:hidden!important;background:#0e1b15;
+  }
+  #panel-factory .wf-mobile-nav{
+    display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:5px;
+    flex:0 0 auto;padding:7px 9px;background:#101e18;border-bottom:1px solid #2c4939;
+  }
+  #panel-factory .wf-mobile-nav button{
+    min-width:0;min-height:40px;padding:8px 10px!important;
+    border:1px solid #314d3d;border-radius:11px;
+    background:#14231c;color:#b9d4c4;font-size:12px;font-weight:700;
+  }
+  #panel-factory .wf-mobile-nav button.active{background:#1c4b36;border-color:#4dcf99;color:#e9fff5;box-shadow:inset 0 0 0 1px #337c59}
+  #panel-factory .wf-mobile-nav button:focus-visible,#panel-factory .wf-agent-more summary:focus-visible{outline:2px solid #6deab1;outline-offset:2px}
+  #panel-factory .wf-agent{flex:1 1 auto!important;min-height:0!important;overflow:hidden!important}
+  #panel-factory .wf-agent-feed{flex:1 1 auto!important;max-height:none!important;min-height:0!important;overflow-y:auto!important;padding:9px!important}
+  #panel-factory .wf-agent-top{padding:8px 10px!important}
+  #panel-factory .wf-agent-prompts{padding:5px 9px!important}
+  #panel-factory .wf-agent-form{padding:9px!important;gap:7px!important}
+  #panel-factory #wfAgentText{min-height:60px!important;max-height:22dvh!important;resize:vertical!important;font-size:14px!important;line-height:1.45!important}
+  #panel-factory .wf-agent-actions{display:grid!important;grid-template-columns:minmax(0,1fr) minmax(0,1fr)!important;gap:7px!important;overflow:visible!important}
+  #panel-factory .wf-agent-actions>.wf-agent-primary,#panel-factory .wf-agent-actions>.wf-agent-see{width:100%;min-height:42px!important;padding:9px 7px!important;white-space:normal!important;font-size:12px!important}
+  #panel-factory .wf-agent-more{grid-column:1/-1!important}
+  #panel-factory .wf-agent-more summary{min-height:38px;padding:9px 11px}
+  #panel-factory .wf-agent-more-items{grid-template-columns:repeat(2,minmax(0,1fr));max-height:min(20dvh,165px);overflow-y:auto}
+  #panel-factory .wf-agent-more-items button{min-height:38px;font-size:12px!important}
+  #panel-factory .wf-agent-status{font-size:11px!important;min-height:0!important;line-height:1.35!important}
+  #panel-factory.wf-agent-mode .wf-body{flex:1 1 auto!important;height:100%!important;min-height:0!important;width:100%!important;overflow:hidden!important;display:grid!important;grid-template-columns:minmax(0,1fr)!important;grid-template-rows:minmax(0,1fr)!important}
+  #panel-factory.wf-agent-mode .wf-preview{height:100%!important;min-height:0!important;overflow:hidden!important}
+  #panel-factory.wf-agent-mode #wfPreview{height:100%!important;min-height:0!important;flex:1 1 auto!important}
+  #panel-factory .wf-stage[data-wf-view="build"] .wf-body{display:none!important}
+  #panel-factory .wf-stage[data-wf-view="preview"] .wf-agent{display:none!important}
+  #panel-factory.wf-agent-mode.wf-code-visible .wf-body{flex:1 1 auto!important;height:100%!important;min-height:0!important;overflow:hidden!important;grid-template-rows:auto minmax(125px,.9fr) minmax(0,1fr)!important}
+  #panel-factory.wf-agent-mode.wf-code-visible .wf-code{min-height:0!important}
+  #panel-factory.wf-agent-mode.wf-code-visible #wfEditor{font-size:12px!important;line-height:1.5!important}
+  #panel-html[data-iu-view="code"] #htmlEditor{font-size:12.5px!important;line-height:1.5!important;overflow-wrap:anywhere;tab-size:2}
+}
+@media(prefers-reduced-motion:reduce){#panel-factory .wf-mobile-nav button{transition:none!important}}
