@@ -74,7 +74,9 @@ test('mobile clip: live browser capability questions resolve via observed web co
   try{
     for(const name of names)delete process.env[name];
     const {toolRegistry}=await import('../lib/tools.js');
-    assert.equal(toolRegistry().find(item=>item.id==='web_search')?.configured,true);
+    assert.equal(toolRegistry().find(item=>item.id==='web_search')?.configured,false);
+    const tools=await read('lib/tools.js');
+    assert.match(tools,/!meta\.configured && id !== 'web_search'/);
     const partial=buildSelfAwarenessReplyV99({kind:'web'});
     assert.match(partial,/no tiene configurado un motor de b[uú]squeda general/i);
     assert.match(partial,/DuckDuckGo/i);
@@ -99,5 +101,5 @@ test('native-first mobile chat and runtime web tool cannot bypass the capability
   assert.ok(native.indexOf('webAwareness.eligible')<native.indexOf('const mission=planNativeMission'));
   assert.match(runtime,/payload\.web_enabled===true\|\|cognitivePolicy\.autoResearch/);
   assert.match(runtime,/requestedTools:toolsForMission/);
-  assert.match(runtime,/cacheEligible=payload\.web_enabled!==true&&!cognitivePolicy\.autoResearch/);
+  assert.match(runtime,/cacheEligible=!contextualFollowup&&!userContextState\.affectsGeneration&&payload\.web_enabled!==true&&!cognitivePolicy\.autoResearch/);
 });
