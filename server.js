@@ -99,15 +99,16 @@ async function runApi(req, res, handler) {
       : status === 413 && error?.message === 'request_body_too_large'
       ? 'request_body_too_large'
       : 'internal_error';
-    if (!res.headersSent) {
-      res.statusCode = publicError === 'internal_error' ? 500 : status;
-      res.setHeader('Content-Type', 'application/json; charset=utf-8');
-      res.setHeader('Cache-Control', 'no-store');
+    // Once a streamed response has started, a JSON error would corrupt it.
+    if (res.headersSent) {
+      if (!res.writableEnded) res.destroy();
+      return;
     }
+    res.statusCode = publicError === 'internal_error' ? 500 : status;
+    res.setHeader('Content-Type', 'application/json; charset=utf-8');
+    res.setHeader('Cache-Control', 'no-store');
     // Never expose raw upstream errors, environment details, or file paths on HTTP 5xx.
-    if (!res.writableEnded) {
-      res.end(JSON.stringify({ error: publicError }));
-    }
+    if (!res.writableEnded) res.end(JSON.stringify({ error: publicError }));
   }
 }
 
