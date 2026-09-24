@@ -20,7 +20,7 @@ const result={
 };
 async function withEnv(changes,fn){
  const keys=['WAEWEB_CONNECT_ENABLED','WAEWEB_CONNECT_BASE_URL','WAEWEB_CONNECT_CLIENT_ID',
- 'WAEWEB_CONNECT_TOKEN','TAVILY_API_KEY'];
+ 'WAEWEB_CONNECT_TOKEN','WAEWEB_PUBLIC_SEARCH_ENABLED','TAVILY_API_KEY'];
  const before=Object.fromEntries(keys.map(k=>[k,process.env[k]])),previous=globalThis.fetch;
  for(const k of keys)delete process.env[k];
  Object.assign(process.env,changes);
