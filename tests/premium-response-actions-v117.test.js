@@ -10,7 +10,7 @@ test('premium action layer is loaded after current shell without replacing the i
   const html=read('index.html');
   assert.match(html,/premium-v5\.js\?v=43/);
   assert.match(html,/productivity-v59\.js\?v=59/);
-  assert.match(html,/premium-v117\.css\?v=117/);
+  assert.match(html,/premium-v117\.css\?v=121/);
   assert.match(html,/premium-v117\.js\?v=117/);
   assert.ok(html.indexOf('premium-v117.js?v=117')>html.indexOf('premium-v5.js?v=43'));
 });

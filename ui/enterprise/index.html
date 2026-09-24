@@ -11,7 +11,7 @@
   <link rel="stylesheet" href="./polish-v2.css" />
   <link rel="stylesheet" href="./mobile-safe-composer.css" />
   <link rel="stylesheet" href="./premium-v5.css?v=43" />
-  <link rel="stylesheet" href="./premium-v117.css?v=117" />
+  <link rel="stylesheet" href="./premium-v117.css?v=121" />
   <link rel="stylesheet" href="./productivity-v59.css?v=59" />
   <style>
     html,body{max-width:100%;overflow-x:hidden}
@@ -51,10 +51,10 @@
     <header class="topbar">
       <button class="icon-btn" id="menuBtn" aria-label="Abrir menú">☰</button>
       <div class="brand"><img src="./assets/logo.svg" alt="WAE" /><div><strong>WAE OS Enterprise</strong><span>Universal Core</span></div></div>
-      <div class="top-actions"><button class="chip" id="newChatBtn">＋ Nueva</button><button class="icon-btn" id="workspaceBtn" title="Workspace">◇</button><button class="avatar" aria-label="Perfil">AW</button></div>
+      <div class="top-actions"><button class="chip" id="newChatBtn">＋ Nueva</button><button class="icon-btn" id="workspaceBtn" title="Abrir Workspace: documento y Canvas HTML" aria-label="Abrir Workspace: documento y Canvas HTML">◇ <span class="workspace-btn-label">Workspace</span></button><button class="avatar" id="profileBtn" type="button" aria-label="Abrir configuración" title="Abrir configuración">AW</button></div>
     </header>
 
-    <div class="status-strip"><span class="status-dot"></span><span>Universal Core · online</span><span class="status-meta">4 capacidades activas</span></div>
+    <div class="status-strip"><span class="status-dot"></span><span id="coreStatusLabel">Universal Core · comprobando</span><span class="status-meta" id="coreStatusMeta">Verificando generación</span></div>
 
     <main class="chat-layout">
       <section class="chat-column">
@@ -75,7 +75,7 @@
       <div class="composer-actions"><div><button type="button" class="mini-btn" id="attachBtn" title="Adjuntar">＋</button><button type="button" class="mini-btn" id="voiceBtn" title="Voz" aria-pressed="true">◉</button></div><button class="send-btn" type="submit" aria-label="Enviar">➜</button></div>
     </form>
 
-    <footer class="runtime-bar"><div><span class="pulse"></span><strong>Universal Core</strong><small> · operativo</small></div><strong class="health">LIVE</strong></footer>
+    <footer class="runtime-bar"><div><span class="pulse"></span><strong>Universal Core</strong><small> · comprobando</small></div><strong class="health">CORE</strong></footer>
 
     <aside class="drawer" id="drawer" aria-hidden="true">
       <div class="drawer-head"><div class="brand compact"><img src="./assets/logo.svg" alt="WAE" /><div><strong>WAE OS Enterprise</strong><span>Universal Core</span></div></div><button class="icon-btn" id="closeDrawerBtn">×</button></div>
@@ -85,7 +85,7 @@
       <nav class="nav-list">
         <button data-view="control">◫ <span>Centro de Control</span></button><button data-view="comms">◌ <span>Comunicaciones</span></button><button data-view="projects">◇ <span>Proyectos</span></button><button data-view="agents">✣ <span>Agentes</span><em>4</em></button><button data-view="automations">↻ <span>Automatizaciones</span></button><button data-view="memory">◈ <span>Memoria</span></button><button data-view="knowledge">▤ <span>Base de Conocimiento</span></button><button data-view="ai">✦ <span>Universal Core</span></button><button data-view="market">▧ <span>Marketplace</span><em class="new-badge">NEW</em></button><button id="settingsBtn">⚙ <span>Configuración</span></button>
       </nav>
-      <div class="drawer-foot"><small>MEMORIA UNIVERSAL</small><div class="memory-meter"><span style="width:18%"></span></div><small>18% utilizada</small></div>
+      <div class="drawer-foot"><small>MEMORIA UNIVERSAL</small><small id="memoryStatus">Comprobando conexión…</small></div>
     </aside>
     <div class="scrim" id="scrim"></div>
 
@@ -127,7 +127,7 @@
   <script src="./runtime-client.js" defer></script>
   <script src="./fast-lane-v23.js" defer></script>
   <script src="./streaming-v2.js" defer></script>
-  <script src="./app.js" defer></script>
+  <script src="./app.js?v=121" defer></script>
   <script src="./voice-bridge-v23.js" defer></script>
   <script src="./mobile-safe-composer.js" defer></script>
   <script src="./progressive-boot-v23.js" defer></script>
