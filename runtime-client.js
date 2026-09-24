@@ -371,11 +371,19 @@
         if(init.signal?.aborted)throw Object.assign(new Error('chat_cancelled'),{name:'AbortError'});
         const fallback=await nativeFetch(input,init);
         const copy=document.querySelector('.v2-runtime-copy');
-        if(copy&&fallback.ok)copy.innerHTML='<strong>WAE Gateway · fallback activo</strong><small>Render → Supabase capability router</small>';
+        if(copy&&fallback.ok){
+          // Only show the provider actually reported by the Render response.
+          const report=await fallback.clone().json().catch(()=>null);
+          const provider=typeof report?.provider==='string'?report.provider.replace(/[^a-z0-9_.-]/gi,'').slice(0,48):'';
+          const title=document.createElement('strong'),detail=document.createElement('small');
+          title.textContent='WAE Gateway · recuperación activa';
+          detail.textContent=provider?'Render · '+provider:'Render · proveedor no identificado';
+          copy.replaceChildren(title,detail);
+        }
         return fallback;
       }catch(fallbackError){
         const status=Number(err?.status)||503;
-        return new Response(JSON.stringify({error:'universal_runtime_unavailable',primary:err?.message||'supabase_runtime_unavailable',fallback:fallbackError?.message||'render_runtime_unavailable'}),{status,headers:{'content-type':'application/json','cache-control':'no-store'}});
+        return new Response(JSON.stringify({error:'universal_runtime_unavailable',primary:'supabase_runtime_unavailable',fallback:'render_runtime_unavailable'}),{status,headers:{'content-type':'application/json','cache-control':'no-store'}});
       }
     }
   };
