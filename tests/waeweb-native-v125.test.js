@@ -135,7 +135,7 @@ test('release gate includes connector tests, refuses invented LIVE assertion and
  const pkg=JSON.parse(read('package.json')),sw=read('sw.js'),html=read('index.html');
  assert.match(pkg.scripts.check,/tests\/waeweb-native-v125\.test\.js/);
  assert.match(pkg.scripts.check,/node --check lib\/waeweb-connect\.js/);
- assert.match(sw,/wae-universal-render-waeweb-v44/);
+ assert.match(sw,/wae-universal-render-waeweb-public-v45/);
  assert.match(html,/waeweb=v125/);
  assert.match(sw,/waeweb=v125/);
 });
