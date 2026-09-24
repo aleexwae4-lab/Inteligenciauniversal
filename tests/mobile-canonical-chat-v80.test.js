@@ -71,8 +71,8 @@ test('v80 converts the canonical JSON answer into SSE for the real mobile stream
   assert.match(body, /event: response\.complete/);
   assert.match(body, /dispersi/);
   assert.equal(calls.length, 1);
-  assert.equal(document.documentElement.dataset.mobileChatRoute, 'same-origin-v80');
-  assert.equal(window.__iuLastRuntime.canonical_route, 'same-origin-v80');
+  assert.equal(document.documentElement.dataset.mobileChatRoute, 'same-origin-v103');
+  assert.equal(window.__iuLastRuntime.canonical_route, 'same-origin-v103');
   assert.ok(window.__iuLastRuntime.reply_length > 20);
 });
 
@@ -109,7 +109,7 @@ test('v80 rejects continuity_pass_through and recovers through Edge only as fall
   assert.match(body, /Respuesta recuperada/);
   assert.doesNotMatch(body, /continuity_pass_through/);
   assert.deepEqual(calls, ['/api/chat', EDGE]);
-  assert.equal(document.documentElement.dataset.mobileChatRoute, 'edge-fallback');
+  assert.equal(document.documentElement.dataset.mobileChatRoute, 'edge-fallback-v103');
 });
 
 test('v80 never exposes weak continuity output as a successful non-stream answer', async () => {
