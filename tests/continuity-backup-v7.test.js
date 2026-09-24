@@ -81,7 +81,7 @@ test('browser restores only a checked archive and warns that the file is plainte
  assert.match(ui,/location\.reload\(\)/);
  assert.match(html,/continuity-backup-v7\.js\?v=2/);
  assert.match(html,/continuity-backup-v7\.css\?v=1/);
- assert.match(sw,/wae-universal-render-density-v43/);
+ assert.match(sw,/wae-universal-render-waeweb-v44/);
  assert.match(sw,/continuity-archive-core-v7\.js/);
  assert.match(sw,/navigation-premium-v1\.js\?v=10/);
  assert.match(nav,/snapshotLocal:/);
