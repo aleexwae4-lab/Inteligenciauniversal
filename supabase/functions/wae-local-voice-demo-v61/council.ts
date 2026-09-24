@@ -1,4 +1,6 @@
-import {s} from './common.ts';
+import {s,cleanOutput} from './common.ts';
+import {validateJsonAnswerV121,requiresJsonObjectV121} from './structured-answer-v121.js';
+import {assessCandidateV127} from './candidate-quality-v127.js';
 import {actualModel,invoke,markFailure,markSuccess} from './router.ts';
 
 export const EDGE_COUNCIL_VERSION='edge-council/v41';
@@ -65,8 +67,12 @@ export async function runEdgeCouncil(db:any,ctx:any,body:any={}){
   if(models.length<2)return null;
   const msgs=candidateMessages(ctx),settled=await Promise.allSettled(models.map(async(model:any)=>{
     const g=await invoke(model,msgs,{stream:false});
+    const quality=assessCandidateV127(ctx.q,g.text,cleanOutput,validateJsonAnswerV121,requiresJsonObjectV121(ctx.q));
+    if(!quality.ok)throw Object.assign(new Error(quality.reason),{code:'ANSWER_QUALITY'});
+    const score=blindAnswerScore(quality.text,ctx.q);
+    if(score.hardFailure)throw Object.assign(new Error('council_candidate_quality_failed'),{code:'ANSWER_QUALITY'});
     await markSuccess(db,model,g.latency_ms,g.ttft_ms,false);
-    return{...g,provider:model.provider,model:actualModel(model),modelRow:model,score:blindAnswerScore(g.text,ctx.q)};
+    return{...g,text:quality.text,provider:model.provider,model:actualModel(model),modelRow:model,score};
   }));
   const failures:any[]=[],candidates:any[]=[];
   for(let i=0;i<settled.length;i++){
@@ -80,9 +86,13 @@ export async function runEdgeCouncil(db:any,ctx:any,body:any={}){
   const synthModel=models.find((m:any)=>`${m.provider}::${actualModel(m)}`!==`${winner.provider}::${winner.model}`)||models[0];
   try{
     const g=await invoke(synthModel,synthesisMessages(ctx,valid.slice(0,3)),{stream:false});
+    synthesisUsed=true;
+    const quality=assessCandidateV127(ctx.q,g.text,cleanOutput,validateJsonAnswerV121,requiresJsonObjectV121(ctx.q));
+    if(!quality.ok)throw Object.assign(new Error(quality.reason),{code:'ANSWER_QUALITY'});
+    synthesisScore=blindAnswerScore(quality.text,ctx.q);
+    if(synthesisScore.hardFailure)throw Object.assign(new Error('council_synthesis_quality_failed'),{code:'ANSWER_QUALITY'});
     await markSuccess(db,synthModel,g.latency_ms,g.ttft_ms,false);
-    synthesisUsed=true;synthesisScore=blindAnswerScore(g.text,ctx.q);
-    if(!synthesisScore.hardFailure&&synthesisScore.score>=winner.score.score-0.02){final={...g,provider:synthModel.provider,model:actualModel(synthModel),modelRow:synthModel,score:synthesisScore};synthesisAccepted=true}
+    if(synthesisScore.score>=winner.score.score-0.02){final={...g,text:quality.text,provider:synthModel.provider,model:actualModel(synthModel),modelRow:synthModel,score:synthesisScore};synthesisAccepted=true}
   }catch(e:any){const cls=await markFailure(db,synthModel,e);failures.push({provider:synthModel.provider,model:synthModel.model_name,class:cls,error:s(e?.message||e,160),stage:'synthesis'})}
   return{
     generated:final,
