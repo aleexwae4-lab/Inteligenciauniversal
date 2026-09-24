@@ -37,7 +37,7 @@ function browserHarness({failBootstrap=false}={}){
   };
   window.fetch=nativeFetch;
   window.addEventListener=()=>{};window.dispatchEvent=()=>{};
-  const context={window,document:{querySelector:()=>null,addEventListener:()=>{}},location:{href:'https://universal.test/',origin:'https://universal.test'},localStorage:storage,Response,URL,crypto:webcrypto,console:{warn:()=>{}},AbortController,performance,queueMicrotask:()=>{},setInterval:()=>{},setTimeout,clearTimeout};
+  const context={window,document:{querySelector:()=>null,addEventListener:()=>{},documentElement:{dataset:{}}},location:{href:'https://universal.test/',origin:'https://universal.test'},localStorage:storage,Response,URL,crypto:webcrypto,console:{warn:()=>{}},AbortController,performance,queueMicrotask:()=>{},setInterval:()=>{},setTimeout,clearTimeout};
   runInNewContext(runtime,context,{timeout:3000});
   return{fetch:window.fetch,calls,get renderCalls(){return renderCalls},get edgeChats(){return edgeChats}};
 }
