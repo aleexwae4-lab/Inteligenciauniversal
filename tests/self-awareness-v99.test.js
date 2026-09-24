@@ -76,7 +76,7 @@ test('mobile clip: live browser capability questions resolve via observed web co
     const {toolRegistry}=await import('../lib/tools.js');
     assert.equal(toolRegistry().find(item=>item.id==='web_search')?.configured,false);
     const tools=await read('lib/tools.js');
-    assert.match(tools,/!meta\.configured && id !== 'web_search'/);
+    assert.match(tools,/allowKeylessWeb!==true/);
     const partial=buildSelfAwarenessReplyV99({kind:'web'});
     assert.match(partial,/no tiene configurado un motor de b[uú]squeda general/i);
     assert.match(partial,/DuckDuckGo/i);
