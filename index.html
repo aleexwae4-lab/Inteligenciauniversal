@@ -12,6 +12,7 @@
   <link rel="stylesheet" href="./mobile-safe-composer.css" />
   <link rel="stylesheet" href="./premium-v5.css?v=43" />
   <link rel="stylesheet" href="./premium-v117.css?v=117" />
+  <link rel="stylesheet" href="./workspace-mobile-v131.css?v=131" />
   <link rel="stylesheet" href="./productivity-v59.css?v=59" />
   <style>
     html,body{max-width:100%;overflow-x:hidden}
@@ -24,6 +25,22 @@
       .workspace-actions{min-width:0!important;flex:0 0 auto!important;gap:4px!important}.workspace-actions .chip,.workspace-actions .save-btn{padding:7px 9px!important;font-size:.66rem!important;white-space:nowrap}
       .workspace-tabs{min-width:0!important;max-width:100%!important;overflow-x:auto!important;overscroll-behavior-x:contain;scrollbar-width:none}.workspace-tabs::-webkit-scrollbar{display:none}
       .workspace-body{width:100%!important;max-width:100%!important;min-width:0!important;min-height:0!important;height:100%!important;overflow:hidden!important}
+      .workspace-topbar{position:relative;z-index:6;background:rgba(8,10,13,.96);backdrop-filter:blur(18px)}
+      .workspace-tabs{position:relative;z-index:5;background:rgba(8,10,13,.94)}
+      #panel-html.active{display:grid!important;grid-template-rows:auto minmax(0,1fr)!important;height:100%!important;min-height:0!important;overflow:hidden!important}
+      #panel-html .html-mobile-toolbar{display:flex!important;gap:8px!important;padding:10px 12px!important;border-bottom:1px solid rgba(94,234,212,.16);background:rgba(8,18,16,.96);overflow-x:auto;scrollbar-width:none}
+      #panel-html .html-mobile-toolbar::-webkit-scrollbar{display:none}
+      #panel-html .html-mobile-toolbar button{min-height:38px;padding:8px 13px;border:1px solid rgba(94,234,212,.24);border-radius:13px;background:#111a18;color:#b9cbc6;font:inherit;white-space:nowrap}
+      #panel-html .html-mobile-toolbar button.active{background:#173f34;color:#72f1d0;border-color:#39d6ad}
+      #panel-html .code-pane,#panel-html .preview-pane{grid-row:2;grid-column:1;min-width:0!important;min-height:0!important;height:100%!important;overflow:hidden!important}
+      #panel-html .code-pane{display:none!important}
+      #panel-html[data-mobile-view="code"] .code-pane{display:flex!important;flex-direction:column}
+      #panel-html[data-mobile-view="code"] .preview-pane{display:none!important}
+      #panel-html[data-mobile-view="preview"] .preview-pane{display:flex!important;flex-direction:column;background:#fff}
+      #htmlEditor{flex:1 1 auto!important;min-height:0!important;height:100%!important;padding:16px!important;font-size:13px!important;line-height:1.55!important}
+      #htmlPreview{display:block!important;flex:1 1 auto!important;height:100%!important;min-height:0!important;border:0!important;background:#fff}
+      #panel-html .pane-label{flex:0 0 auto!important;padding:9px 14px!important}
+      .workspace-actions .chip:first-child{display:none!important}
       .tab-panel{min-width:0!important;max-width:100%!important;min-height:0!important;height:100%!important}
       #panel-document.active{display:grid!important;grid-template-rows:auto minmax(0,1fr)!important;overflow:hidden!important}
       .toolbar{min-width:0!important;max-width:100%!important;overflow-x:auto!important;scrollbar-width:none}.toolbar::-webkit-scrollbar{display:none}
@@ -101,7 +118,8 @@
           <div class="toolbar" aria-label="Formato"><button data-format="bold"><b>B</b></button><button data-format="italic"><i>I</i></button><button data-format="underline"><u>U</u></button><button data-format="insertUnorderedList">• Lista</button><button data-format="formatBlock" data-value="h2">H2</button><button data-format="formatBlock" data-value="blockquote">❝</button></div>
           <div class="document-sheet" id="documentEditor" contenteditable="true"><p class="placeholder-line">Comienza a escribir o pega el texto de una respuesta para editarlo…</p></div>
         </section>
-        <section class="tab-panel split-panel" id="panel-html">
+        <section class="tab-panel split-panel" id="panel-html" data-mobile-view="preview">
+          <div class="html-mobile-toolbar" aria-label="Vista de Canvas HTML"><button type="button" data-html-view="preview" class="active">◉ Vista previa</button><button type="button" data-html-view="code">⌘ Código</button><button type="button" id="refreshHtmlPreview">↻ Actualizar</button></div>
           <div class="code-pane"><div class="pane-label">HTML</div><textarea id="htmlEditor" spellcheck="false">&lt;!doctype html&gt;
 &lt;html lang="es"&gt;
 &lt;head&gt;&lt;meta charset="utf-8"&gt;&lt;style&gt;body{font-family:Inter,system-ui;padding:32px;color:#101316}h1{margin-bottom:8px}&lt;/style&gt;&lt;/head&gt;

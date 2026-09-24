@@ -1,0 +1,18 @@
+/* Universal Core v131 — mobile workspace ergonomics observed in device recording. */
+@media(max-width:899px){
+  .workspace{background:#080b0d!important}
+  .workspace-topbar{min-height:62px}
+  .workspace-title strong{font-size:.92rem}.workspace-title small{font-size:.68rem}
+  .workspace-tabs{padding:7px 9px!important;gap:5px!important;border-bottom:1px solid rgba(255,255,255,.07)}
+  .workspace-tabs button{min-height:40px!important;padding:8px 12px!important;border-radius:12px!important;white-space:nowrap}
+  .workspace-tabs button.active{background:rgba(34,211,166,.11)!important;color:#67e8c3!important}
+  .workspace-body{background:#080b0d}
+  .tab-panel{overscroll-behavior:contain}
+  .split-panel{gap:0!important}
+  .preview-pane,.code-pane{border:0!important;border-radius:0!important}
+  #panel-html .preview-pane .pane-label,#panel-html .code-pane .pane-label{font-size:.69rem;letter-spacing:.12em;color:#91a39e;background:#080b0d}
+}
+@media(max-width:430px){
+  .workspace-actions .save-btn{min-width:72px}
+  .workspace-title{max-width:98px}
+}
