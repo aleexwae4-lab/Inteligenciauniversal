@@ -66,13 +66,16 @@ function renderMessage(m){
   e.innerHTML=`<div class="message-meta"><strong>${safeText(n)}</strong><span>${safeText(m.at||nowLabel())}</span></div><p>${safeText(m.text)}</p>`;
   $('#messages').appendChild(e);
 }
+let typingTimer=null;
 function showTyping(){
   if($('#typingMessage'))return;
   const e=document.createElement('article');e.className='message assistant';e.id='typingMessage';
-  e.innerHTML=`<div class="message-meta"><strong>${safeText(state.coreName)}</strong><span>procesando</span></div><span class="typing"><i></i><i></i><i></i></span>`;
+  e.innerHTML=`<div class="message-meta"><strong>${safeText(state.coreName)}</strong><span id="typingElapsed" role="status">Procesando · 0 s</span></div><span class="typing"><i></i><i></i><i></i></span>`;
   $('#messages').appendChild(e);scrollChat();
+  const started=Date.now();if(typingTimer)clearInterval(typingTimer);
+  typingTimer=setInterval(()=>{const t=$('#typingElapsed');if(!t){clearInterval(typingTimer);typingTimer=null;return}t.textContent=`Procesando · ${Math.floor((Date.now()-started)/1000)} s`;},1000);
 }
-function hideTyping(){$('#typingMessage')?.remove()}
+function hideTyping(){if(typingTimer){clearInterval(typingTimer);typingTimer=null}$('#typingMessage')?.remove()}
 function scrollChat(){requestAnimationFrame(()=>{const s=$('.chat-layout');if(s)s.scrollTop=s.scrollHeight})}
 function addMessage(role,text){
   text=role==='assistant'?sanitizeAssistantText(text):String(text??'').trim();
@@ -102,9 +105,10 @@ async function getAIReply(message){
       signal:c.signal
     });
     const d=await r.json().catch(()=>({}));
-    if(!r.ok||!d||typeof d.reply!=='string')throw new Error(d?.error||`runtime_${r.status}`);
+    if(!r.ok||!d||d.success===false||typeof d.reply!=='string')throw new Error(d?.error||`runtime_${r.status}`);
     const clean=sanitizeAssistantText(d.reply);
-    if(!clean)throw new Error('unsafe_or_empty_output');
+    const terminal=/la ia no respondió|ninguna ruta alcanzó el umbral|tu solicitud quedó preservada|no obtuvo una respuesta suficientemente confiable|reconectando el núcleo de inteligencia/i.test(clean);
+    if(!clean||d.recoverable===true||d.answer_assurance?.finalSafeFallback===true||(d.degraded===true&&terminal))throw new Error('no_generative_answer');
     return clean;
   }catch(e){
     console.warn('[WAE IU] runtime unavailable',e?.message||e);
@@ -222,11 +226,19 @@ function autosizeInput(){
   i.style.height='auto';i.style.height=`${Math.min(i.scrollHeight,120)}px`;
 }
 
+function showRetryTurn(message){
+  $('#waeRetryTurn')?.remove();
+  const e=document.createElement('div');e.id='waeRetryTurn';e.className='wae-retry-turn';e.setAttribute('role','alert');
+  const label=document.createElement('span');label.textContent='La generación no se completó. Tu consulta está conservada.';
+  const retry=document.createElement('button');retry.type='button';retry.textContent='↻ Reintentar';
+  retry.addEventListener('click',()=>{if(state.busy)return;const i=$('#messageInput');if(!i)return;i.value=message;autosizeInput();$('#composer').requestSubmit()});
+  e.append(label,retry);$('#messages').append(e);scrollChat();
+}
 async function submitMessage(ev){
   ev.preventDefault();
   const i=$('#messageInput'),m=i.value.trim()||(window.WAECoreTools?.defaultQuestion?.()||'');
   if(!m||state.busy)return;
-  state.busy=true;
+  state.busy=true;$('#waeRetryTurn')?.remove();
   const send=$('.send-btn');if(send){send.disabled=true;send.setAttribute('aria-busy','true')}
   i.value='';autosizeInput();
   // Retrying after a transport error should not duplicate an unanswered user
@@ -239,7 +251,7 @@ async function submitMessage(ev){
     if(typeof r==='string'&&r.trim())addMessage('assistant',r);
     else{
       if(!i.value.trim()){i.value=m;autosizeInput();}
-      toast('La IA no respondió. Conservé tu pregunta para reintentar.');
+      showRetryTurn(m);
       return;
     }
     // A failed multimodal request never discards the user's question or evidence.
@@ -279,6 +291,7 @@ function initDocument(){
  }).catch(error=>console.warn('[WAE] Workspace archive recovery unavailable',error))}
 }
 function initInteractions(){
+  $('#profileBtn')?.addEventListener('click',openSettings);
   $('#menuBtn').addEventListener('click',openDrawer);
   $('#closeDrawerBtn').addEventListener('click',closeDrawer);
   $('#scrim').addEventListener('click',closeDrawer);
@@ -309,4 +322,23 @@ function registerSW(){if('serviceWorker'in navigator&&location.protocol!=='file:
 
 window.WAEModes={select:setMode,current:()=>state.mode};
 window.WAEChatState={snapshot:()=>state.messages.map(m=>({...m})),restore:(messages,mode)=>{state.messages=Array.isArray(messages)?messages.map(m=>({...m})):[];persistMessages();renderMessages();if(mode)setMode(mode)},busy:()=>state.busy,mode:()=>state.mode};
-renderMessages();initDocument();initInteractions();setMode(state.mode);registerSW();
+async function refreshCoreReadiness(){
+  const label=$('#coreStatusLabel'),meta=$('#coreStatusMeta'),memory=$('#memoryStatus');
+  if(!label||!meta)return;
+  const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),6000);
+  try{
+    const r=await fetch('/api/health',{cache:'no-store',signal:controller.signal});
+    const health=await r.json();
+    const configured=health.generativeReady===true||health.ready===true;
+    const verified=health.providerInferenceVerified===true;
+    label.textContent=verified?'Universal Core · generación verificada':configured?'Universal Core · proveedores configurados':'Universal Core · generación no disponible';
+    meta.textContent=verified?'Generación comprobada':configured?'Generación sin verificar':'Revisar proveedor';
+    if(memory)memory.textContent=health.memory?.configured?'Memoria configurada':'Memoria no configurada';
+  }catch{
+    label.textContent='Universal Core · estado no verificado';meta.textContent='Revisar conexión';
+    if(memory)memory.textContent='Memoria sin verificar';
+  }finally{clearTimeout(timer)}
+}
+renderMessages();initDocument();initInteractions();setMode(state.mode);registerSW();void refreshCoreReadiness();
+window.addEventListener('online',refreshCoreReadiness);
+window.addEventListener('pageshow',refreshCoreReadiness);
