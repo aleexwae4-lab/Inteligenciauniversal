@@ -25,10 +25,10 @@ test('capability questions use the modern self-awareness path',()=>{
   assert.equal(route('¿Qué tan inteligente eres?'),'capabilities');
 });
 
-test('real factual questions remain on the full premium knowledge stack',()=>{
-  assert.equal(route('¿Qué es la fotosíntesis?'),'legacy');
-  assert.equal(route('¿Quién fue Marie Curie?'),'legacy');
-  assert.equal(route('¿Sabes qué es un termostato?'),'legacy');
+test('stable facts use premium generation; current research retains governed evidence stack',()=>{
+  assert.equal(route('¿Qué es la fotosíntesis?'),'premium');
+  assert.equal(route('¿Quién fue Marie Curie?'),'premium');
+  assert.equal(route('¿Sabes qué es un termostato?'),'premium');
   assert.equal(route('Investiga las novedades de Node.js'),'legacy');
 });
 
