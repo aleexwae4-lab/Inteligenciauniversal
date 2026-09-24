@@ -8,6 +8,8 @@
   const notify=text=>window.toast?.(text);
   const legacyGreeting='**Sistema listo.** Investiga, programa, analiza, diseña o escribe directamente lo que necesitas.';
   let activeVoiceNode=null;
+  let voiceActionVersion=0;
+  let temporaryVoiceSession=false;
   let scheduled=false;
   const assistantSelector='.message.assistant:not(#typingMessage):not(#iuLiveStream),.turn.assistant';
 
@@ -100,6 +102,8 @@
     const main=$('#voiceBtn');if(main)main.setAttribute('aria-pressed',String(enabled));
   }
   async function toggleAutoVoice(){
+    voiceActionVersion++;
+    temporaryVoiceSession=false;
     const voice=window.__waeVoice||window.__waeMobileVoice;
     if(voice?.setEnabled){
       try{const enabled=await voice.setEnabled(!voice.enabled);if(!enabled)activeVoiceNode=null;renderVoiceLabels();notify(enabled?'Voz automática activada':'Voz automática desactivada');return}
@@ -112,32 +116,42 @@
     notify(enabled?'Voz automática activada':'Voz automática desactivada');
   }
   async function listen(node,raw){
+    const operation=++voiceActionVersion;
     const voice=window.__waeVoice||window.__waeMobileVoice;
     if(activeVoiceNode===node){
       activeVoiceNode=null;
       voice?.stop?.();
       if(!voice&&'speechSynthesis'in window)speechSynthesis.cancel();
+      if(temporaryVoiceSession&&voice?.setEnabled){
+        temporaryVoiceSession=false;
+        try{await voice.setEnabled(false)}catch{notify('No se pudo restaurar la preferencia de voz')}
+      }
       renderVoiceLabels();return;
     }
     if(activeVoiceNode)voice?.stop?.();
     activeVoiceNode=node;renderVoiceLabels();
-    let temporarilyEnabled=false;
     try{
       if(voice?.speak){
         if(!voice.enabled&&voice===window.__waeMobileVoice){
-          await voice.setEnabled(true);temporarilyEnabled=true;
-          activeVoiceNode=node;renderVoiceLabels();
+          temporaryVoiceSession=true;
+          await voice.setEnabled(true);
+          if(operation!==voiceActionVersion)return;
         }
         const playback=voice.speak(raw,{force:true});
-        // The underlying engine emits "ready" when cancelling previous playback.
-        // Assign the active node after this synchronous reset so Stop stays usable.
+        // Mobile voice returns a completion promise, not a fire-and-forget call.
+        if(operation!==voiceActionVersion)return;
         activeVoiceNode=node;renderVoiceLabels();
         await playback;
       }else if(typeof window.speakAnswer==='function')window.speakAnswer(raw);
       else throw new Error('voice_unavailable');
-    }catch{notify('La voz no está disponible en este dispositivo')}
+    }catch{if(operation===voiceActionVersion)notify('La voz no está disponible en este dispositivo')}
     finally{
-      if(temporarilyEnabled)await voice.setEnabled(false);
+      // An older request must never silence a newer answer.
+      if(operation!==voiceActionVersion)return;
+      if(temporaryVoiceSession&&voice?.setEnabled){
+        temporaryVoiceSession=false;
+        try{await voice.setEnabled(false)}catch{notify('No se pudo restaurar la preferencia de voz')}
+      }
       if(activeVoiceNode===node){activeVoiceNode=null;renderVoiceLabels()}
     }
   }
