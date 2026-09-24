@@ -90,10 +90,6 @@
       if(streamError)throw Object.assign(new Error(streamError.error||'stream_failed'),{serverStarted,recoverable:streamError.recoverable!==false,hasPartial:!!partial.trim()});
       throw Object.assign(new Error('stream_ended_without_completion'),{serverStarted,hasPartial:!!partial.trim()});
     }catch(err){
-      if(controller.signal.aborted&&partial.trim()){
-        const data={success:true,reply:partial.trim(),response:{schema:'assistant-response/v1',content:partial.trim(),components:[],actions:[],sources:[],speechText:partial.trim(),metadata:{cancelled:true}},speech_text:partial.trim(),components:[],actions:[],web_sources:[],conversation_id:localStorage.getItem(CONVERSATION_ID)||null,message_id:null,request_id:currentStream?.requestId||null,provider:null,model:null,memory_count:0,web_used:false,latency_ms:Math.round(performance.now()-startedPerf),ttft_ms:firstClientTtft,runtime:runtimeCaps?.version||null,response_schema:'assistant-response/v1',cancelled:true,client_partial:true};
-        emit('response.complete',data);return data;
-      }
       err.serverStarted=err.serverStarted||serverStarted;err.hasPartial=err.hasPartial||!!partial.trim();throw err;
     }finally{currentStream=null}
   }
@@ -111,11 +107,17 @@
   window.fetch=async(input,init={})=>{
     if(!isLocalRuntime(input)||String(init.method||'GET').toUpperCase()!=='POST')return nativeFetch(input,init);
     const incoming=typeof init.body==='string'?JSON.parse(init.body):{};
+    const candidateKey=incoming.client_request_id;
+    const clientRequestId=typeof candidateKey==='string'&&/^[A-Za-z0-9_-]{16,128}$/.test(candidateKey)
+      ?candidateKey:'wae_'+crypto.randomUUID().replaceAll('-','');
+    const fallbackInit={...init,body:JSON.stringify({...incoming,client_request_id:clientRequestId})};
+    let chatAttempted=false;
     setThinking(true,String(incoming.mode||'')==='research'?'Investigando':'Procesando');
     try{
       await Promise.all([bootstrap(),loadPerformanceGate()]);
-      const payload={action:'chat',...sessionPayload(),conversation_id:localStorage.getItem(CONVERSATION_ID)||null,message:String(incoming.message||''),mode:String(incoming.mode||localStorage.getItem('wae.mode')||'general'),web_enabled:incoming.web_enabled===true||String(incoming.mode||'')==='research',attachments:window.__waeRuntimeAttachments||[],routing_variant:routingVariant()};
+      const payload={action:'chat',...sessionPayload(),conversation_id:localStorage.getItem(CONVERSATION_ID)||null,message:String(incoming.message||''),mode:String(incoming.mode||localStorage.getItem('wae.mode')||'general'),web_enabled:incoming.web_enabled===true||String(incoming.mode||'')==='research',attachments:Array.isArray(incoming.attachments)?incoming.attachments:window.__waeRuntimeAttachments||[],routing_variant:routingVariant(),client_request_id:clientRequestId};
       let data;
+      chatAttempted=true;
       if(await streamingAllowed())data=await streamChat(payload,init.signal);
       else data=await edge(payload,{signal:init.signal});
       const clean=sanitizeReply(data.reply);if(!clean)throw Object.assign(new Error('unsafe_or_empty_output'),{status:502,serverStarted:true,hasPartial:false});
@@ -125,11 +127,15 @@
       return new Response(JSON.stringify({...data,reply:clean}),{status:200,headers:{'content-type':'application/json','cache-control':'no-store','x-wae-runtime':'universal-core'}});
     }catch(err){
       console.warn('[Universal Core] primary runtime unavailable',err?.message||err);
-      if(err?.serverStarted&&err?.hasPartial){
-        return new Response(JSON.stringify({error:'primary_stream_interrupted',recoverable:true}),{status:503,headers:{'content-type':'application/json','cache-control':'no-store'}});
+      if(chatAttempted){
+        if(err?.status===401){
+          bootPromise=null;
+          localStorage.removeItem(SESSION_ID);localStorage.removeItem(SESSION_SECRET);
+        }
+        return new Response(JSON.stringify({error:err?.status===409?'request_in_progress':'primary_result_uncertain',recoverable:true,retry_requires_same_key:true,client_request_id:clientRequestId}),{status:err?.status===409?409:503,headers:{'content-type':'application/json','cache-control':'no-store'}});
       }
       try{
-        const fallback=await nativeFetch(input,init);
+        const fallback=await nativeFetch(input,fallbackInit);
         if(fallback.ok){const copy=document.querySelector('.v2-runtime-copy');if(copy)copy.innerHTML='<strong>Universal Core · continuidad</strong><small>redundancia activa · continuidad automática</small>'}
         return fallback;
       }catch{

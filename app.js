@@ -35,7 +35,7 @@ function speakAnswer(text){if(!('speechSynthesis'in window))return toast('La voz
 
 function readStoredMessages(){let list=[];try{list=JSON.parse(localStorage.getItem('wae.messages')||'[]')}catch{}if(!Array.isArray(list))return[];return list.map(m=>{if(!m||!['user','assistant'].includes(m.role))return null;let text=String(m.text??'');if(m.role==='assistant'&&text.trim()==='**Sistema listo.** Investiga, programa, analiza, diseña o escribe directamente lo que necesitas.')return null;if(m.role==='assistant'){if(/No pude usar el endpoint configurado|configura tu endpoint IA|sustituir este motor local por inferencia real/i.test(text))return null;text=sanitizeAssistantText(text);if(!text)return null}return{role:m.role,text,at:String(m.at||'')};}).filter(Boolean).slice(-60)}
 localStorage.setItem('wae.endpoint','/api/chat');
-const state={mode:localStorage.getItem('wae.mode')||'general',endpoint:'/api/chat',coreName:localStorage.getItem('wae.coreName')||'Universal Core',document:localStorage.getItem('wae.document')||'',html:localStorage.getItem('wae.html')||'',messages:readStoredMessages(),busy:false,autoVoice:localStorage.getItem('wae.autoVoice')!=='false'};
+const state={mode:localStorage.getItem('wae.mode')||'general',endpoint:'/api/chat',coreName:localStorage.getItem('wae.coreName')||'Universal Core',document:localStorage.getItem('wae.document')||'',html:localStorage.getItem('wae.html')||'',messages:readStoredMessages(),pendingTurn:null,busy:false,autoVoice:localStorage.getItem('wae.autoVoice')!=='false'};
 const modeLabels={general:'General',research:'Investigar',code:'Programar',analysis:'Analizar',design:'Diseñar',executive:'Ejecutivo'};
 function persistMessages(){localStorage.setItem('wae.messages',JSON.stringify(state.messages.slice(-60)))}
 function renderMessages(){const t=$('#messages');t.innerHTML='';state.messages.forEach(renderMessage);scrollChat()}
@@ -43,9 +43,9 @@ function renderMessage(m){const e=document.createElement('article');e.className=
 function showTyping(){if($('#typingMessage'))return;const e=document.createElement('article');e.className='message assistant';e.id='typingMessage';e.innerHTML=`<div class="message-meta"><strong>${safeText(state.coreName)}</strong><span>procesando</span></div><span class="typing"><i></i><i></i><i></i></span>`;$('#messages').appendChild(e);scrollChat()}
 function hideTyping(){$('#typingMessage')?.remove()}function scrollChat(){requestAnimationFrame(()=>{const s=$('.chat-layout');if(s)s.scrollTop=s.scrollHeight})}
 function addMessage(role,text){text=role==='assistant'?sanitizeAssistantText(text):String(text??'').trim();if(!text)return;const i={role,text,at:nowLabel()};state.messages.push(i);persistMessages();renderMessage(i);scrollChat();if(role==='assistant'&&state.autoVoice&&!window.__waeVoice)speakAnswer(text)}
-async function getAIReply(message){const c=new AbortController(),timer=setTimeout(()=>c.abort(),65000);try{const r=await fetch('/api/chat',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({message,mode:state.mode,preferences:{responseStyle:'premium-rich',voiceNatural:true}}),signal:c.signal});const d=await r.json().catch(()=>({}));if(!r.ok||!d||typeof d.reply!=='string')throw new Error(d?.error||`runtime_${r.status}`);const clean=sanitizeAssistantText(d.reply);if(!clean)throw new Error('unsafe_or_empty_output');return clean}catch(e){console.warn('[WAE IU] runtime unavailable',e?.message||e);return '**Reconectando el núcleo de inteligencia.** Tu conversación sigue segura. Vuelve a enviar el mensaje en unos segundos.'}finally{clearTimeout(timer)}}
+async function getAIReply(turn){const c=new AbortController(),timer=setTimeout(()=>c.abort(),65000);try{const r=await fetch('/api/chat',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({message:turn.message,mode:turn.mode,attachments:turn.attachments,client_request_id:turn.clientRequestId,preferences:{responseStyle:'premium-rich',voiceNatural:true}}),signal:c.signal});const d=await r.json().catch(()=>({}));if(!r.ok||!d||typeof d.reply!=='string')throw Object.assign(new Error(d?.error||`runtime_${r.status}`),{status:r.status,recoverable:d?.recoverable===true});const clean=sanitizeAssistantText(d.reply);if(!clean)throw new Error('unsafe_or_empty_output');return clean}catch(e){console.warn('[WAE IU] runtime unavailable',e?.message||e);throw e}finally{clearTimeout(timer)}}
 function setMode(mode){state.mode=mode;localStorage.setItem('wae.mode',mode);$('#modePill').textContent=modeLabels[mode]||'General';$$('.capability-card').forEach(b=>b.classList.toggle('active',b.dataset.mode===mode));$('#messageInput')?.focus()}
-function resetConversation(){state.messages=[];persistMessages();renderMessages();toast('Nueva conversación creada')}function openDrawer(){$('#drawer').classList.add('open');$('#drawer').setAttribute('aria-hidden','false');$('#scrim').classList.add('visible')}function closeDrawer(){$('#drawer').classList.remove('open');$('#drawer').setAttribute('aria-hidden','true');$('#scrim').classList.remove('visible')}function openWorkspace(){$('#workspace').classList.add('open');$('#workspace').setAttribute('aria-hidden','false');closeDrawer()}function closeWorkspace(){$('#workspace').classList.remove('open');$('#workspace').setAttribute('aria-hidden','true')}
+function resetConversation(){state.pendingTurn=null;clearRetryAction();state.messages=[];persistMessages();renderMessages();toast('Nueva conversación creada')}function openDrawer(){$('#drawer').classList.add('open');$('#drawer').setAttribute('aria-hidden','false');$('#scrim').classList.add('visible')}function closeDrawer(){$('#drawer').classList.remove('open');$('#drawer').setAttribute('aria-hidden','true');$('#scrim').classList.remove('visible')}function openWorkspace(){$('#workspace').classList.add('open');$('#workspace').setAttribute('aria-hidden','false');closeDrawer()}function closeWorkspace(){$('#workspace').classList.remove('open');$('#workspace').setAttribute('aria-hidden','true')}
 function switchWorkspaceTab(tab){$$('.workspace-tabs button').forEach(b=>b.classList.toggle('active',b.dataset.tab===tab));$$('.tab-panel').forEach(p=>p.classList.toggle('active',p.id===`panel-${tab}`));if(tab==='html')updatePreview()}function markDirty(){$('#saveState').textContent='Cambios sin guardar'}function saveWorkspace(){state.document=$('#documentEditor').innerHTML;state.html=$('#htmlEditor').value;localStorage.setItem('wae.document',state.document);localStorage.setItem('wae.html',state.html);$('#saveState').textContent='Guardado';toast('Workspace guardado')}function updatePreview(){$('#htmlPreview').srcdoc=$('#htmlEditor').value}
 function downloadText(filename,content,type='text/plain'){const b=new Blob([content],{type}),u=URL.createObjectURL(b),a=document.createElement('a');a.href=u;a.download=filename;a.click();setTimeout(()=>URL.revokeObjectURL(u),1000)}function exportWorkspace(){const a=$('.workspace-tabs button.active')?.dataset.tab;if(a==='html')downloadText('wae-canvas.html',$('#htmlEditor').value,'text/html');else downloadText('wae-workspace.html',`<!doctype html><meta charset="utf-8"><title>WAE Workspace</title><body>${$('#documentEditor').innerHTML}</body>`,'text/html');toast('Archivo exportado')}
 let toastTimer;function toast(message){let e=$('.toast');if(!e){e=document.createElement('div');e.className='toast';$('.app-shell').appendChild(e)}e.textContent=message;e.classList.add('show');clearTimeout(toastTimer);toastTimer=setTimeout(()=>e.classList.remove('show'),1800)}window.toast=toast;function autosizeInput(){const i=$('#messageInput');if(!i)return;i.style.height='auto';i.style.height=`${Math.min(i.scrollHeight,120)}px`}
@@ -53,7 +53,33 @@ const TURN_LIFECYCLE_VERSION='turn-lifecycle/v113';
 function visibleComposerInput(){return matchMedia('(max-width:899px)').matches&&$('#mobileSafeInput')?$('#mobileSafeInput'):$('#messageInput')}
 function setTurnBusy(active){state.busy=!!active;document.documentElement.dataset.aiBusy=String(!!active);for(const send of [$('.send-btn'),$('#mobileSafeSend')]){if(!send)continue;send.disabled=!!active;if(active)send.setAttribute('aria-busy','true');else send.removeAttribute('aria-busy')}document.documentElement.dataset.turnLifecycle=TURN_LIFECYCLE_VERSION}
 function releaseTurnUI({focus=true}={}){hideTyping();setTurnBusy(false);const native=$('#messageInput');if(native){native.disabled=false;native.readOnly=false;native.removeAttribute('disabled');native.removeAttribute('readonly');native.removeAttribute('inert')}window.__waeMobileSafeComposer?.repair?.();if(focus){const target=visibleComposerInput();try{target?.focus({preventScroll:true})}catch{target?.focus()}}}
-async function submitMessage(ev){ev.preventDefault();const i=$('#messageInput'),m=i.value.trim();if(!m||state.busy)return;setTurnBusy(true);i.value='';autosizeInput();addMessage('user',m);showTyping();try{const r=await getAIReply(m);hideTyping();addMessage('assistant',r)}finally{releaseTurnUI()}}
+function clearRetryAction(){$('#iuRetryTurn')?.remove()}
+function showRetryAction(error){
+  clearRetryAction();
+  const button=document.createElement('button');
+  button.type='button';button.id='iuRetryTurn';button.className='mini-btn';
+  button.textContent=error?.status===409?'Consulta en curso · Reintentar':'Respuesta interrumpida · Reintentar';
+  button.title='Reutiliza la misma solicitud sin duplicar tu mensaje';
+  button.addEventListener('click',()=>{void runPendingTurn()});
+  $('#messages').appendChild(button);scrollChat();
+}
+async function runPendingTurn(){
+  const turn=state.pendingTurn;
+  if(!turn||state.busy)return;
+  clearRetryAction();setTurnBusy(true);showTyping();
+  try{const reply=await getAIReply(turn);hideTyping();if(state.pendingTurn===turn){state.pendingTurn=null;addMessage('assistant',reply)}}
+  catch(error){hideTyping();if(state.pendingTurn===turn)showRetryAction(error)}
+  finally{releaseTurnUI()}
+}
+async function submitMessage(ev){
+  ev.preventDefault();
+  const i=$('#messageInput'),message=i.value.trim();
+  if(!message||state.busy)return;
+  i.value='';autosizeInput();clearRetryAction();
+  state.pendingTurn={message,mode:state.mode,attachments:[...(window.__waeRuntimeAttachments||[])],clientRequestId:'wae_'+crypto.randomUUID().replaceAll('-','')};
+  addMessage('user',message);
+  await runPendingTurn();
+}
 window.__waeTurnLifecycle={version:TURN_LIFECYCLE_VERSION,release:releaseTurnUI,get busy(){return state.busy}};
 window.addEventListener('pageshow',()=>{if(!$('#typingMessage'))releaseTurnUI({focus:false})});
 document.addEventListener('visibilitychange',()=>{if(!document.hidden&&!$('#typingMessage'))releaseTurnUI({focus:false})});

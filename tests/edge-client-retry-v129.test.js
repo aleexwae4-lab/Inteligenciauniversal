@@ -55,7 +55,7 @@ test('Render Edge adapter reuses one key through 401 session refresh, not across
 });
 
 test('adapter uses v128 client_request_id field in both retry attempts',()=>{
-  assert.match(source,/const clientRequestId='wae_'\+crypto\.randomUUID\(\)\.replaceAll\('-',\s*''\)/);
+  assert.match(source,/const clientRequestId=typeof requestKey==='string'/);
   assert.match(source,/client_request_id:clientRequestId/);
   assert.equal((source.match(/internalContext,clientRequestId\}\)/g)||[]).length,2);
 });
