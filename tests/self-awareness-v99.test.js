@@ -68,6 +68,9 @@ test('v99 capability contract preserves strict benchmark-scoped claim discipline
 test('mobile clip: live browser capability questions resolve via observed web configuration',async()=>{
   assert.equal(classifySelfAwarenessV99({message:'¿Tienes navegador en tiempo real?'}).kind,'web');
   assert.equal(classifySelfAwarenessV99({message:'¿Tienes acceso a internet?'}).kind,'web');
+  assert.equal(classifySelfAwarenessV99({message:'¿Puedes buscar en internet las noticias de hoy?'}).eligible,false);
+  assert.equal(classifySelfAwarenessV99({message:'¿Puedes buscar en internet?'}).kind,'web');
+  assert.equal(classifySelfAwarenessV99({message:'¿Tienes navegador en tiempo real?',mode:'research'}).eligible,false);
   assert.equal(classifySelfAwarenessV99({message:'Busca los repositorios actuales de GitHub'}).eligible,false);
   const names=['TAVILY_API_KEY','BRAVE_SEARCH_API_KEY','GOOGLE_CUSTOM_SEARCH_API_KEY','GOOGLE_CUSTOM_SEARCH_ENGINE_ID'];
   const before=Object.fromEntries(names.map(name=>[name,process.env[name]]));
