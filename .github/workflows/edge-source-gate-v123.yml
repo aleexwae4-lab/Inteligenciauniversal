@@ -36,4 +36,5 @@ jobs:
             supabase/functions/wae-local-voice-demo-v61/answer-integrity-v124.js \
             supabase/functions/wae-local-voice-demo-v61/response-verifier-v125.js \
             supabase/functions/wae-local-voice-demo-v61/verified-delivery-v126.js \
-            supabase/functions/wae-local-voice-demo-v61/candidate-quality-v127.js
+            supabase/functions/wae-local-voice-demo-v61/candidate-quality-v127.js \
+            supabase/functions/wae-local-voice-demo-v61/request-idempotency-v128.js
