@@ -73,3 +73,16 @@ test('v132 capabilities API exposes the same capability matrix source of truth',
   assert.match(runtime,/coreSelfResponse\(\{question:message,history\}\)/);
   assert.match(runtime,/runtime_capabilities\/v132/);
 });
+
+test('v132 injected capability registries stay deterministic even when Render web env exists',()=>{
+  const beforeUrl=process.env.WAEWEB_BASE_URL,beforeKey=process.env.WAEWEB_CONNECT_KEY;
+  process.env.WAEWEB_BASE_URL='https://example.invalid';
+  process.env.WAEWEB_CONNECT_KEY='render-test-key';
+  try{
+    const answer=coreSelfResponse({providers:[{id:'wae_edge',configured:true}],tools:[{id:'web_search',configured:false},{id:'waeweb_search',configured:false},{id:'github_search',configured:false}],memory:{configured:false}});
+    assert.match(answer,/No hay búsqueda web/i);
+  }finally{
+    if(beforeUrl===undefined)delete process.env.WAEWEB_BASE_URL;else process.env.WAEWEB_BASE_URL=beforeUrl;
+    if(beforeKey===undefined)delete process.env.WAEWEB_CONNECT_KEY;else process.env.WAEWEB_CONNECT_KEY=beforeKey;
+  }
+});
