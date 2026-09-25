@@ -39,3 +39,15 @@ test('identity release reaches Android while all factory and workspace assets re
  assert.match(sw,/brand-v125/);
  for(const asset of ['canvas-render-factory-v1.js','factory-agent-render-v3.js','workspace-premium-v1.js'])assert.ok(html.includes(asset));
 });
+
+
+test('v127 capability follow-up is native and Render fallback keeps user message clean',()=>{
+ const core=read('lib/core-self-description.js');
+ const client=read('runtime-client.js');
+ const providers=read('lib/providers.js');
+ assert.match(core,/que \(\?:mas \|otras cosas \)\?\(\?:puedes\|sabes\) hacer/);
+ assert.match(client,/que \(\?:mas \|otras cosas \)\?\(\?:puedes\|sabes\) hacer/);
+ assert.match(providers,/message:String\(message\|\|''\)\.slice\(0,24000\)/);
+ assert.match(providers,/internal_context:internalContext/);
+ assert.doesNotMatch(providers,/message:enrichedMessage/);
+});
