@@ -9,6 +9,7 @@ import {
   LOGIC_SCHEMA
 } from '../lib/game-studio-v9.js';
 import {inspectFoundryProject,buildDigitalProduct} from '../lib/product-foundry-v5.js';
+import {GAME_STUDIO_VERSION as ACTIVE_GAME_STUDIO_VERSION,inspectGameStudioProject as inspectActiveGameStudioProject} from '../lib/game-studio-v10.js';
 
 const read=path=>readFileSync(new URL('../'+path,import.meta.url),'utf8');
 
@@ -55,7 +56,7 @@ test('Game Studio v9 builds a portable visual gameplay logic package',()=>{
   }
 });
 
-test('Game Studio v9 native recovery survives total model/provider failure',async()=>{
+test('legacy v9 Logic Builder remains compatible while active recovery upgrades to v10',async()=>{
   const fail=async()=>{
     const error=new Error('Todos los proveedores configurados fallaron');
     error.code='all_providers_failed';
@@ -67,12 +68,12 @@ test('Game Studio v9 native recovery survives total model/provider failure',asyn
     generate:fail
   });
   assert.equal(result.provider,'wae_native_game_studio');
-  assert.equal(result.model,GAME_STUDIO_VERSION);
-  assert.equal(result.studio.version,GAME_STUDIO_VERSION);
+  assert.equal(result.model,ACTIVE_GAME_STUDIO_VERSION);
+  assert.equal(result.studio.version,ACTIVE_GAME_STUDIO_VERSION);
   assert.equal(result.studio.qa,'passed');
   assert.equal(result.recovery.mode,'native_game_studio');
   assert.equal(result.project.files.some(file=>file.name==='logic.json'),true);
-  assert.equal(inspectGameStudioProject(result.project.files).pass,true);
+  assert.equal(inspectActiveGameStudioProject(result.project.files).pass,true);
 });
 
 test('Logic Builder v9 persistence validates source iframe and rule contracts',()=>{
