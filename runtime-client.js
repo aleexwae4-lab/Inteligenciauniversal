@@ -343,6 +343,7 @@
     // Research queries use the native Render source router when WAEWEB is
     // configured. Ordinary chat stays on its proven Supabase-first path.
     if(request.canvas!==true&&needsFreshWeb(request.message,String(request.mode||localStorage.getItem('wae.mode')||'general'))&&await waewebResearchReady(init.signal))return nativeFetch(input,init);
+    // v130: one authoritative E2E chat path. Ordinary turns now traverse Render's\n    // router -> tools -> memory -> provider fallback -> source relevance -> telemetry.\n    // This removes the previous split-brain path where the browser could complete\n    // an Edge inference without the server observing, measuring or recovering it.\n    // Emergency opt-out is intentionally session-only and not persisted.\n    if(window.__WAE_AUTHORITATIVE_CHAT__!==false)return nativeFetch(input,init);
     try{
       await bootstrap(init.signal);
       if(init.signal?.aborted)throw Object.assign(new Error('chat_cancelled'),{name:'AbortError'});
