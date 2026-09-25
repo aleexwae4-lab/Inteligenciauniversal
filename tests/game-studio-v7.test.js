@@ -4,6 +4,7 @@ import vm from 'node:vm';
 import {readFileSync} from 'node:fs';
 import {createNativeGameStudioProject,inspectGameStudioProject,GAME_STUDIO_VERSION} from '../lib/game-studio-v7.js';
 import {inspectFoundryProject,buildDigitalProduct} from '../lib/product-foundry-v5.js';
+import {GAME_STUDIO_VERSION as ACTIVE_GAME_STUDIO_VERSION,inspectGameStudioProject as inspectActiveGameStudioProject} from '../lib/game-studio-v8.js';
 
 const read=path=>readFileSync(new URL('../'+path,import.meta.url),'utf8');
 
@@ -36,7 +37,7 @@ test('Game Studio v7 scaffold includes visual editor, hierarchy, inspector and p
   }
 });
 
-test('Game Studio v7 native recovery survives total provider failure on first build',async()=>{
+test('legacy v7 editor remains compatible while active recovery upgrades first build to v8',async()=>{
   const fail=async()=>{const e=new Error('Todos los proveedores configurados fallaron');e.code='all_providers_failed';throw e};
   const result=await buildDigitalProduct({
     request:'Construye un juego 3D con editor visual y físicas.',
@@ -45,11 +46,11 @@ test('Game Studio v7 native recovery survives total provider failure on first bu
   });
   assert.equal(result.quality.structural,'passed');
   assert.equal(result.provider,'wae_native_game_studio');
-  assert.equal(result.model,GAME_STUDIO_VERSION);
-  assert.equal(result.studio.version,GAME_STUDIO_VERSION);
+  assert.equal(result.model,ACTIVE_GAME_STUDIO_VERSION);
+  assert.equal(result.studio.version,ACTIVE_GAME_STUDIO_VERSION);
   assert.equal(result.studio.qa,'passed');
   assert.equal(result.recovery.mode,'native_game_studio');
-  assert.equal(inspectGameStudioProject(result.project.files).pass,true);
+  assert.equal(inspectActiveGameStudioProject(result.project.files).pass,true);
 });
 
 test('Factory persists only validated v7 scene messages without weakening preview sandbox',()=>{
