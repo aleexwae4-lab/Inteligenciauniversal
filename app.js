@@ -248,6 +248,8 @@ async function submitMessage(ev){
   showTyping();
   try{
     const r=await getAIReply(m);hideTyping();
+    // v129: reflect the result of this real turn in the status strip without a second inference.
+    void refreshCoreReadiness();
     if(typeof r==='string'&&r.trim())addMessage('assistant',r);
     else{
       if(!i.value.trim()){i.value=m;autosizeInput();}
@@ -331,8 +333,12 @@ async function refreshCoreReadiness(){
     const health=await r.json();
     const configured=health.generativeReady===true||health.ready===true;
     const verified=health.providerInferenceVerified===true;
+    const operations=health.operations||{};
+    const latency=Number(operations.lastLatencyMs);
+    const latencyText=Number.isFinite(latency)&&latency>=0?' · '+Math.round(latency)+' ms':'';
+    const fresh=operations.inferenceFresh===true;
     label.textContent=verified?'Universal Core · generación verificada':configured?'Universal Core · proveedores configurados':'Universal Core · generación no disponible';
-    meta.textContent=verified?'Generación comprobada':configured?'Generación sin verificar':'Revisar proveedor';
+    meta.textContent=verified?(fresh?'Inferencia real'+latencyText:'Inferencia verificada anteriormente'+latencyText):configured?'Esperando una inferencia generativa real':'Revisar proveedor';
     if(memory)memory.textContent=health.memory?.configured?'Memoria configurada':'Memoria no configurada';
   }catch{
     label.textContent='Universal Core · estado no verificado';meta.textContent='Revisar conexión';
