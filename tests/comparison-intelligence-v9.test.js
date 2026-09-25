@@ -70,5 +70,7 @@ test('tables contain safe data labels for a readable 320px viewport without JS e
  assert.ok(premiumAsset,'index must version premium-render-v1.js');
  assert.ok(sw.includes(premiumAsset),'service worker must cache the exact current premium-render asset');
  assert.match(sw,/wae-universal-render-waeweb-public-v45/);
- assert.match(sw,/runtime-client\.js\?v=24/);
+ const runtimeAsset=html.match(/\.\/runtime-client\.js\?[^"']+/)?.[0];
+ assert.ok(runtimeAsset,'index must version runtime-client.js');
+ assert.ok(sw.includes(runtimeAsset),'service worker must cache the exact current runtime-client asset');
 });
