@@ -51,7 +51,7 @@ test('v132 derives capability claims from runtime catalogs and configuration',()
 test('v132 deterministic capability turns now use assistant-response/v2 and preserve conversation context',async()=>{
   const first=await executeMission({message:'Cuáles son tus capacidades?',history:[]});
   assert.equal(first.provider,'wae_core');
-  assert.equal(first.model,'runtime_capabilities/v132');
+  assert.equal(first.model,'runtime_capabilities/v153');
   assert.equal(first.response.schema,'assistant-response/v2');
   assert.equal(first.speech_text,first.response.speechText);
   assert.deepEqual(first.actions.map(x=>x.id),['listen','copy','workspace']);
@@ -68,10 +68,10 @@ test('v132 deterministic capability turns now use assistant-response/v2 and pres
 test('v132 capabilities API exposes the same capability matrix source of truth',()=>{
   const api=readFileSync(new URL('../api/capabilities.js',import.meta.url),'utf8');
   const runtime=readFileSync(new URL('../lib/runtime.js',import.meta.url),'utf8');
-  assert.match(api,/capabilityMatrix:capabilitySnapshot\(\)/);
+  assert.match(api,/const capabilityMatrix=capabilitySnapshot\(\)/);
   assert.match(runtime,/deterministicTurn/);
   assert.match(runtime,/coreSelfResponse\(\{question:message,history\}\)/);
-  assert.match(runtime,/runtime_capabilities\/v132/);
+  assert.match(runtime,/runtime_capabilities\/v153/);
 });
 
 test('v132 injected capability registries stay deterministic even when Render web env exists',()=>{
