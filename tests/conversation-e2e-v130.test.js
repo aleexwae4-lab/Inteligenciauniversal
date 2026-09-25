@@ -60,12 +60,16 @@ test('v130 UI and voice close the E2E loop with bounded native TTS recovery',()=
   assert.match(premium,/fallback\?'recovered':'(?:playing|completed)'/);
 });
 
-test('v130 PWA cache and shell reference the same E2E assets',()=>{
+test('v130 PWA cache and shell reference the same current E2E assets',()=>{
   const html=read('index.html'),sw=read('sw.js');
-  for(const asset of ['./app.js?v=130&e2e=v130','./premium-render-v1.js?v=13&e2e=v130']){
-    assert.ok(html.includes(asset),asset);
-    assert.ok(sw.includes(asset),asset);
-  }
+  const appAsset=html.match(/\.\/app\.js\?[^"'<>\s]+/)?.[0];
+  const premiumAsset=html.match(/\.\/premium-render-v1\.js\?[^"'<>\s]+/)?.[0];
+  assert.ok(appAsset,'current app asset missing');
+  assert.ok(premiumAsset,'current premium renderer asset missing');
+  assert.match(appAsset,/e2e=v130/);
+  assert.match(premiumAsset,/e2e=v130/);
+  assert.ok(sw.includes(appAsset),appAsset);
+  assert.ok(sw.includes(premiumAsset),premiumAsset);
   assert.match(html,/capabilities=v127&e2e=v130/);
   assert.match(sw,/healthui-v129-e2e-v130/);
 });
