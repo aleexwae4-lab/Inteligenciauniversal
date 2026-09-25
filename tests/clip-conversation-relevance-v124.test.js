@@ -18,7 +18,10 @@ test('17:44 clip: operating-system and identity prompts answer about Universal C
  assert.doesNotMatch(who,/aeronaves|fuente de alimentación|inversiones y finanzas/i);
  const training=coreSelfResponse({question:'Quién te entrenó'});
  assert.match(training,/WAE OS Enterprise/);
- assert.match(training,/distintos proveedores/);
+ assert.match(training,/WAE Production/);
+ assert.match(training,/registros verificables/);
+ assert.doesNotMatch(training,/distintos proveedores|rutas de modelos/);
+ assert.doesNotMatch(who,/distintos modelos|un solo proveedor/);
 });
 
 test('17:44 clip: engineering conversation is interpreted as software capacity, not PC power supply',()=>{
