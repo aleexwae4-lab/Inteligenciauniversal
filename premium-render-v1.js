@@ -8,10 +8,23 @@ const notify=(s)=>window.toast&&window.toast(s);
 const AUTO_KEY='iu.premium.voice.auto.v1';
 let auto=localStorage.getItem(AUTO_KEY)!=='off';
 let allowAuto=false;
-const voice={token:0,active:null,paused:false,started:false,startTimer:null,utterances:[],fallbackAttempted:false,completedChunks:0};
+const voice={token:0,active:null,paused:false,started:false,startTimer:null,utterances:[],fallbackAttempted:false,completedChunks:0,route:null,source:null,cloudAbort:null};
 const synth=window.speechSynthesis;
-const supported=!!(synth&&window.SpeechSynthesisUtterance);
-window.WAEVoice={stop:()=>resetVoice(),available:()=>supported};
+const browserSupported=!!(synth&&window.SpeechSynthesisUtterance);
+const AudioContextCtor=window.AudioContext||window.webkitAudioContext;
+let sharedAudioContext=null;
+const cloudSupported=()=>!!(AudioContextCtor&&window.WAEVoiceRuntime?.synthesize);
+const supported=()=>browserSupported||cloudSupported();
+function audioContext(){
+  if(!AudioContextCtor)return null;
+  if(!sharedAudioContext||sharedAudioContext.state==='closed')sharedAudioContext=new AudioContextCtor();
+  return sharedAudioContext;
+}
+function unlockAudio(){
+  try{const ctx=audioContext();if(ctx?.state==='suspended')void ctx.resume();return ctx}catch(_){return null}
+}
+document.addEventListener('pointerdown',unlockAudio,{once:true,capture:true});
+window.WAEVoice={stop:()=>resetVoice(),available:()=>supported(),unlock:unlockAudio};
 function voiceEvent(status,details={}){
   try{window.dispatchEvent(new CustomEvent('wae:voice-e2e',{detail:{status,...details}}))}catch(_){}
 }
@@ -145,29 +158,28 @@ function sourceStrip(envelope){
   return wrap;
 }
 function resetVoice(){
-  voice.token++;voice.active=null;voice.paused=false;voice.started=false;if(voice.startTimer){clearTimeout(voice.startTimer);voice.startTimer=null}voice.utterances=[];voice.fallbackAttempted=false;voice.completedChunks=0;
-  if(supported)try{synth.cancel()}catch(_){}
+  voice.token++;
+  voice.active=null;voice.paused=false;voice.started=false;voice.route=null;
+  if(voice.startTimer){clearTimeout(voice.startTimer);voice.startTimer=null}
+  if(voice.cloudAbort){try{voice.cloudAbort.abort()}catch(_){}voice.cloudAbort=null}
+  if(voice.source){try{voice.source.onended=null;voice.source.stop(0)}catch(_){}try{voice.source.disconnect()}catch(_){}voice.source=null}
+  voice.utterances=[];voice.fallbackAttempted=false;voice.completedChunks=0;
+  if(browserSupported)try{synth.cancel()}catch(_){}
   QA('.iu-voice').forEach(b=>{b.textContent='▶';b.title='Escuchar respuesta';b.setAttribute('aria-label','Escuchar respuesta');b.setAttribute('aria-pressed','false')});
 }
-function speak(article,button){
-  if(!supported){voiceEvent('failed',{code:'unsupported'});notify('La voz no está disponible en este navegador');return}
-  if(voice.active===article&&!voice.started){resetVoice();return}
-  if(voice.active===article&&(synth.speaking||synth.pending)&&!voice.paused){
-    try{synth.pause();voice.paused=true;button.textContent='▶';button.title='Reanudar voz';button.setAttribute('aria-label','Reanudar voz');button.setAttribute('aria-pressed','false')}catch(_){}
-    return;
+function setPlaying(button,route,details={}){
+  voice.started=true;voice.route=route;voice.paused=false;
+  button.textContent='⏸';button.title='Pausar voz';button.setAttribute('aria-label','Pausar voz');button.setAttribute('aria-pressed','true');
+  voiceEvent('playing',{route,...details});
+}
+function browserPlayback(content,button,token,prefs,{recoveredFrom=null}={}){
+  if(!browserSupported){
+    voiceEvent('failed',{code:recoveredFrom||'browser_tts_unavailable',route:'browser'});
+    resetVoice();notify('No se pudo iniciar la voz');return;
   }
-  if(voice.active===article&&voice.paused){
-    try{synth.resume();voice.paused=false;button.textContent='⏸';button.title='Pausar voz';button.setAttribute('aria-label','Pausar voz');button.setAttribute('aria-pressed','true')}catch(_){}
-    return;
-  }
-  resetVoice();const content=speechText(text(article.dataset.iuSpeech||'').trim()||rawOf(article));if(!content)return;
-  const token=voice.token;voice.active=article;voice.paused=false;voice.started=false;voice.completedChunks=0;voice.fallbackAttempted=false;
-  button.textContent='◌';button.title='Preparando voz';button.setAttribute('aria-label','Preparando voz');button.setAttribute('aria-pressed','false');
-  const prefs=window.WAESettings?.get?.()||{};
   const allVoices=synth.getVoices();
   const selected=allVoices.find(v=>v.voiceURI===prefs.voiceURI);
   const spanish=allVoices.find(v=>/^es[-_]/i.test(v.lang)&&/mx/i.test(v.lang))||allVoices.find(v=>/^es/i.test(v.lang));
-
   const queue=(chunks,{fallback=false}={})=>{
     if(voice.startTimer){clearTimeout(voice.startTimer);voice.startTimer=null}
     const utterances=chunks.map((chunk,index)=>{
@@ -180,14 +192,13 @@ function speak(article,button){
       utter.onstart=()=>{
         if(token!==voice.token)return;
         if(voice.startTimer){clearTimeout(voice.startTimer);voice.startTimer=null}
-        voice.started=true;
-        button.textContent='⏸';button.title='Pausar voz';button.setAttribute('aria-label','Pausar voz');button.setAttribute('aria-pressed','true');
-        voiceEvent(fallback?'recovered':'playing',{fallback});
+        setPlaying(button,'browser',{fallback,recoveredFrom});
+        if(recoveredFrom)voiceEvent('recovered',{route:'browser',code:recoveredFrom});
       };
       utter.onend=()=>{
         if(token!==voice.token)return;
         voice.completedChunks++;
-        if(index===chunks.length-1){voiceEvent(fallback?'recovered':'completed',{fallback});resetVoice()}
+        if(index===chunks.length-1){voiceEvent('completed',{route:'browser',fallback,recoveredFrom});resetVoice()}
       };
       utter.onerror=(event)=>{
         if(token!==voice.token)return;
@@ -197,11 +208,11 @@ function speak(article,button){
           voice.fallbackAttempted=true;
           try{synth.cancel()}catch(_){}
           const smaller=window.WAESpeechChunks?window.WAESpeechChunks(content,700):[content];
-          voiceEvent('recovering',{code});
+          voiceEvent('recovering',{code,route:'browser'});
           setTimeout(()=>{if(token===voice.token)queue(smaller,{fallback:true})},0);
           return;
         }
-        voiceEvent('failed',{code,fallback});resetVoice();notify('No se pudo reproducir la voz');
+        voiceEvent('failed',{code,fallback,route:'browser'});resetVoice();notify('No se pudo reproducir la voz');
       };
       return utter;
     });
@@ -214,27 +225,93 @@ function speak(article,button){
         if(!fallback&&!voice.fallbackAttempted){
           voice.fallbackAttempted=true;
           const smaller=window.WAESpeechChunks?window.WAESpeechChunks(content,700):[content];
-          voiceEvent('recovering',{code:'start_timeout'});
+          voiceEvent('recovering',{code:'start_timeout',route:'browser'});
           queue(smaller,{fallback:true});
         }else{
-          voiceEvent('failed',{code:'start_timeout',fallback});resetVoice();notify('No se pudo iniciar la voz');
+          voiceEvent('failed',{code:'start_timeout',fallback,route:'browser'});resetVoice();notify('No se pudo iniciar la voz');
         }
       },2800);
-    }
-    catch(_){
+    }catch(_){
       if(!fallback&&!voice.fallbackAttempted){
         voice.fallbackAttempted=true;
         const smaller=window.WAESpeechChunks?window.WAESpeechChunks(content,700):[content];
-        voiceEvent('recovering',{code:'speak_throw'});
+        voiceEvent('recovering',{code:'speak_throw',route:'browser'});
         setTimeout(()=>{if(token===voice.token)queue(smaller,{fallback:true})},0);
-      }else{voiceEvent('failed',{code:'speak_throw',fallback});resetVoice();notify('No se pudo iniciar la voz')}
+      }else{voiceEvent('failed',{code:'speak_throw',fallback,route:'browser'});resetVoice();notify('No se pudo iniciar la voz')}
     }
   };
-
-  // Keep references alive on Android and queue ahead. Fallback retries only
-  // before any chunk has completed, preventing mid-answer duplication.
   const chunks=window.WAESpeechChunks?window.WAESpeechChunks(content,1350):[content];
-  queue(chunks);
+  queue(chunks,{fallback:!!recoveredFrom});
+}
+async function cloudPlayback(content,button,token,prefs){
+  const runtime=window.WAEVoiceRuntime;
+  const ctx=unlockAudio();
+  if(!runtime?.synthesize||!ctx)throw Object.assign(new Error('cloud_tts_unavailable'),{code:'cloud_tts_unavailable'});
+  if(ctx.state==='suspended')await ctx.resume();
+  const chunks=window.WAESpeechChunks?window.WAESpeechChunks(content,3400):[content];
+  if(!chunks.length)throw Object.assign(new Error('voice_text_empty'),{code:'voice_text_empty'});
+  const controller=new AbortController();voice.cloudAbort=controller;voice.route='cloud';
+  const request=index=>runtime.synthesize({text:chunks[index],voice:'Kore'},{signal:controller.signal});
+  let pending=request(0);
+  for(let index=0;index<chunks.length;index++){
+    const packet=await pending;
+    if(token!==voice.token||controller.signal.aborted)return;
+    if(index+1<chunks.length)pending=request(index+1);
+    const bytes=await packet.blob.arrayBuffer();
+    const buffer=await ctx.decodeAudioData(bytes.slice(0));
+    if(token!==voice.token||controller.signal.aborted)return;
+    await new Promise((resolve,reject)=>{
+      const source=ctx.createBufferSource();voice.source=source;source.buffer=buffer;source.connect(ctx.destination);
+      source.onended=()=>{try{source.disconnect()}catch(_){}if(voice.source===source)voice.source=null;resolve()};
+      try{
+        if(!voice.started)setPlaying(button,'cloud',{version:packet.version||null,voice:packet.voice||null,model:packet.model||null});
+        source.start(0);
+      }catch(error){reject(error)}
+    });
+  }
+  if(token===voice.token){voiceEvent('completed',{route:'cloud'});resetVoice()}
+}
+function speak(article,button){
+  if(!supported()){voiceEvent('failed',{code:'unsupported'});notify('La voz no está disponible en este navegador');return}
+  if(voice.active===article&&!voice.started){resetVoice();return}
+  if(voice.active===article&&voice.started&&!voice.paused){
+    if(voice.route==='cloud'&&sharedAudioContext){
+      void sharedAudioContext.suspend().then(()=>{if(voice.active===article){voice.paused=true;button.textContent='▶';button.title='Reanudar voz';button.setAttribute('aria-label','Reanudar voz');button.setAttribute('aria-pressed','false')}}).catch(()=>{});
+      return;
+    }
+    if(voice.route==='browser'&&(synth.speaking||synth.pending)){
+      try{synth.pause();voice.paused=true;button.textContent='▶';button.title='Reanudar voz';button.setAttribute('aria-label','Reanudar voz');button.setAttribute('aria-pressed','false')}catch(_){}
+      return;
+    }
+  }
+  if(voice.active===article&&voice.paused){
+    if(voice.route==='cloud'&&sharedAudioContext){
+      void sharedAudioContext.resume().then(()=>{if(voice.active===article){voice.paused=false;button.textContent='⏸';button.title='Pausar voz';button.setAttribute('aria-label','Pausar voz');button.setAttribute('aria-pressed','true')}}).catch(()=>{});
+      return;
+    }
+    if(voice.route==='browser'){
+      try{synth.resume();voice.paused=false;button.textContent='⏸';button.title='Pausar voz';button.setAttribute('aria-label','Pausar voz');button.setAttribute('aria-pressed','true')}catch(_){}
+      return;
+    }
+  }
+  unlockAudio();
+  resetVoice();
+  const content=speechText(text(article.dataset.iuSpeech||'').trim()||rawOf(article));if(!content)return;
+  const token=voice.token;voice.active=article;voice.paused=false;voice.started=false;voice.completedChunks=0;voice.fallbackAttempted=false;
+  button.textContent='◌';button.title='Generando voz natural';button.setAttribute('aria-label','Generando voz natural');button.setAttribute('aria-pressed','false');
+  const prefs=window.WAESettings?.get?.()||{};
+  if(cloudSupported()){
+    cloudPlayback(content,button,token,prefs).catch(error=>{
+      if(token!==voice.token)return;
+      const code=String(error?.code||error?.name||'cloud_tts_failed').slice(0,80);
+      if(code==='AbortError')return;
+      voice.fallbackAttempted=true;
+      voiceEvent('recovering',{code,route:'cloud_to_browser'});
+      browserPlayback(content,button,token,prefs,{recoveredFrom:code});
+    });
+    return;
+  }
+  browserPlayback(content,button,token,prefs);
 }
 async function copyValue(s){
   if(navigator.clipboard&&window.isSecureContext){await navigator.clipboard.writeText(s);return}
@@ -246,7 +323,7 @@ function toolbar(article,raw){
   const copy=document.createElement('button');copy.type='button';copy.className='iu-copy';copy.textContent='⧉';copy.title='Copiar respuesta';copy.setAttribute('aria-label','Copiar respuesta');
   copy.addEventListener('click',async()=>{try{await copyValue(raw);copy.textContent='✓';copy.setAttribute('aria-label','Respuesta copiada');setTimeout(()=>{if(copy.isConnected){copy.textContent='⧉';copy.setAttribute('aria-label','Copiar respuesta')}},1800)}catch(_){notify('No se pudo copiar la respuesta')}});
   const voiceButton=document.createElement('button');voiceButton.type='button';voiceButton.className='iu-voice';voiceButton.textContent='▶';voiceButton.title='Escuchar respuesta';voiceButton.setAttribute('aria-label','Escuchar respuesta');voiceButton.setAttribute('aria-pressed','false');
-  if(!supported){voiceButton.disabled=true;voiceButton.title='Voz no compatible con este navegador'}
+  if(!supported()){voiceButton.disabled=true;voiceButton.title='Voz no compatible con este navegador'}
   voiceButton.addEventListener('click',()=>speak(article,voiceButton));
   const stop=document.createElement('button');stop.type='button';stop.textContent='■';stop.title='Detener voz';stop.setAttribute('aria-label','Detener voz');stop.className='iu-stop';
   stop.addEventListener('click',resetVoice);
