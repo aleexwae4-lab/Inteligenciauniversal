@@ -84,6 +84,7 @@ function addMessage(role,text){
 }
 
 async function getAIReply(message){
+  window.__waePendingResponseEnvelope=null;
   // All native tools are dispatched by Universal Core, independent of the button used to provide evidence.
   try{
     const tool=await window.WAECoreTools?.runTurn({
@@ -106,12 +107,24 @@ async function getAIReply(message){
     });
     const d=await r.json().catch(()=>({}));
     if(d?.e2e&&typeof d.e2e==='object'){window.__waeLastTurnE2E=d.e2e;window.__waeLastTurnAt=Date.now();}
+    if(d&&typeof d==='object'){
+      const nativeEnvelope=d.response&&typeof d.response==='object'?d.response:{};
+      window.__waePendingResponseEnvelope={
+        schema:String(nativeEnvelope.schema||'assistant-response/v2'),
+        speechText:String(d.speech_text||nativeEnvelope.speechText||'').slice(0,12000),
+        sources:Array.isArray(d.sources)?d.sources:(Array.isArray(nativeEnvelope.sources)?nativeEnvelope.sources:[]),
+        components:Array.isArray(d.components)?d.components:(Array.isArray(nativeEnvelope.components)?nativeEnvelope.components:[]),
+        actions:Array.isArray(d.actions)?d.actions:(Array.isArray(nativeEnvelope.actions)?nativeEnvelope.actions:[]),
+        metadata:{...(nativeEnvelope.metadata||{}),requestId:d.request_id||nativeEnvelope.metadata?.requestId||null}
+      };
+    }
     if(!r.ok||!d||d.success===false||typeof d.reply!=='string')throw new Error(d?.error||`runtime_${r.status}`);
     const clean=sanitizeAssistantText(d.reply);
     const terminal=/la ia no respondió|ninguna ruta alcanzó el umbral|tu solicitud quedó preservada|no obtuvo una respuesta suficientemente confiable|reconectando el núcleo de inteligencia/i.test(clean);
     if(!clean||d.recoverable===true||d.provider==='web_recovery'||d.resilience?.automatic_evidence_rescue===true||d.answer_assurance?.finalSafeFallback===true||(d.degraded===true&&terminal))throw new Error('no_generative_answer');
     return clean;
   }catch(e){
+    window.__waePendingResponseEnvelope=null;
     console.warn('[WAE IU] runtime unavailable',e?.message||e);
     if(typeof applyTurnE2E==='function')applyTurnE2E(window.__waeLastTurnE2E);
     // A provider outage is a transport failure, not an assistant answer.
