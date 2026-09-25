@@ -6,7 +6,8 @@ const read=p=>readFileSync(new URL('../'+p,import.meta.url),'utf8');
 
 test('v129 refreshes visible runtime proof after every completed chat turn',()=>{
   const app=read('app.js');
-  assert.match(app,/const r=await getAIReply\(m\);hideTyping\(\);[\s\S]{0,260}void refreshCoreReadiness\(\);/);
+  assert.match(app,/const r=await getAIReply\(m\);hideTyping\(\);/);
+  assert.match(app,/refreshCoreReadiness\(\)\.then\(\(\)=>applyTurnE2E\(window\.__waeLastTurnE2E\)\)/);
   assert.match(app,/const operations=health\.operations\|\|\{\}/);
   assert.match(app,/operations\.lastLatencyMs/);
   assert.match(app,/operations\.inferenceFresh===true/);
