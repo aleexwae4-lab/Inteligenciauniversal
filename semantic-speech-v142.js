@@ -59,13 +59,13 @@ function semanticSpeech(input,{locale='es-MX'}={}){
   }
   let out=spoken.join('\n');
   out=out
-    .replace(/\bMXN\s*\$?\s*([\d][\d.,]*)/giu,'$1 pesos mexicanos')
-    .replace(/\$\s*([\d][\d.,]*)\s*MXN\b/giu,'$1 pesos mexicanos')
-    .replace(/\bUSD\s*\$?\s*([\d][\d.,]*)/giu,'$1 dólares estadounidenses')
-    .replace(/\$\s*([\d][\d.,]*)\s*USD\b/giu,'$1 dólares estadounidenses')
-    .replace(/€\s*([\d][\d.,]*)/gu,'$1 euros')
-    .replace(/£\s*([\d][\d.,]*)/gu,'$1 libras esterlinas')
-    .replace(/\$\s*([\d][\d.,]*)/gu,locale.toLowerCase()==='es-mx'?'$1 pesos':'$1 unidades monetarias')
+    .replace(/\bMXN\s*\$?\s*([\d](?:[\d.,]*[\d])?)/giu,'$1 pesos mexicanos')
+    .replace(/\$\s*([\d](?:[\d.,]*[\d])?)\s*MXN\b/giu,'$1 pesos mexicanos')
+    .replace(/\bUSD\s*\$?\s*([\d](?:[\d.,]*[\d])?)/giu,'$1 dólares estadounidenses')
+    .replace(/\$\s*([\d](?:[\d.,]*[\d])?)\s*USD\b/giu,'$1 dólares estadounidenses')
+    .replace(/€\s*([\d](?:[\d.,]*[\d])?)/gu,'$1 euros')
+    .replace(/£\s*([\d](?:[\d.,]*[\d])?)/gu,'$1 libras esterlinas')
+    .replace(/\$\s*([\d](?:[\d.,]*[\d])?)/gu,locale.toLowerCase()==='es-mx'?'$1 pesos':'$1 unidades monetarias')
     .replace(/\b(\d+(?:[.,]\d+)?)\s*%/gu,'$1 por ciento')
     .replace(/\b(\d{4})-(\d{2})-(\d{2})\b/gu,(_m,y,m,d)=>spokenDate(y,m,d))
     .replace(/\b(\d+(?:[.,]\d+)?)\s*km\/h\b/giu,'$1 kilómetros por hora')
