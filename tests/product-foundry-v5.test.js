@@ -10,8 +10,7 @@ function game3dFiles(){
   const html=`<!doctype html>
 <html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Juego 3D</title><link rel="stylesheet" href="styles.css"></head>
-<body><main><h1>Órbita 3D</h1><div id="hud">Score <span id="score">0</span></div><canvas id="game" aria-label="Escena 3D"></canvas>
-<button id="restart">Reiniciar</button><p>Usa WASD o toca la escena.</p></main><script src="main.js"></script></body></html>`;
+<body><main><header><p class="eyebrow">WAE GAME LAB · DEMOSTRACIÓN</p><h1>Órbita 3D</h1><p>Recorre una arena espacial procedural, suma puntos y prueba el pipeline WebGL sin recursos externos.</p></header><section id="hud" aria-live="polite"><strong>Score <span id="score">0</span></strong><span id="status">Motor 3D listo</span></section><canvas id="game" aria-label="Escena 3D interactiva"></canvas><section class="controls"><h2>Controles</h2><p>Usa W o flecha arriba para sumar impulso. En móvil toca la escena. El lienzo responde al tamaño y densidad de pantalla.</p><button id="restart">Reiniciar partida</button></section><footer><small>Demo local autocontenida · Sin CDN · Sin recursos remotos</small></footer></main><script src="main.js"></script></body></html>`;
   const css=`:root{font-family:system-ui;color-scheme:dark}*{box-sizing:border-box}body{margin:0;background:#050816;color:#eef;min-height:100vh}
 main{min-height:100vh;display:grid;grid-template-rows:auto auto 1fr auto;gap:12px;padding:16px}canvas{width:100%;height:70vh;border:1px solid #345;border-radius:16px;background:#02040a}
 button{padding:12px;border-radius:10px}@media(max-width:700px){main{padding:8px}canvas{height:62vh}}`;
