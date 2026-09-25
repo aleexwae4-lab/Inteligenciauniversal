@@ -4,7 +4,7 @@ import vm from 'node:vm';
 import {readFileSync} from 'node:fs';
 import {createNativeGameStudioProject,inspectGameStudioProject,GAME_STUDIO_VERSION,WORLD_SCHEMA} from '../lib/game-studio-v8.js';
 import {inspectFoundryProject,buildDigitalProduct} from '../lib/product-foundry-v5.js';
-import {GAME_STUDIO_VERSION as ACTIVE_GAME_STUDIO_VERSION,inspectGameStudioProject as inspectActiveGameStudioProject} from '../lib/game-studio-v11.js';
+import {GAME_STUDIO_VERSION as ACTIVE_GAME_STUDIO_VERSION,inspectGameStudioProject as inspectActiveGameStudioProject} from '../lib/game-studio-v12.js';
 
 const read=path=>readFileSync(new URL('../'+path,import.meta.url),'utf8');
 
@@ -34,7 +34,7 @@ test('Game Studio v8 creates a real multi-scene World Builder package',()=>{
   }
 });
 
-test('legacy v8 World Builder remains compatible while active recovery upgrades to v11',async()=>{
+test('legacy v8 World Builder remains compatible while active recovery upgrades to v12',async()=>{
   const fail=async()=>{const e=new Error('all providers failed');e.code='all_providers_failed';throw e};
   const result=await buildDigitalProduct({
     request:'Construye un videojuego 3D con mundo, mapas, prefabs, misiones y triggers.',
@@ -54,7 +54,7 @@ test('World Builder v8 persistence validates source iframe and portable world co
   const workspace=read('factory-projects-render-v2.js');
   assert.match(workspace,/event\.source!==frame\.contentWindow/);
   assert.match(workspace,/data\.type==='wae-game-studio-world-save'/);
-  assert.match(workspace,/\['wae-game-studio\/v8','wae-game-studio\/v9','wae-game-studio\/v10','wae-game-studio\/v11'\]\.includes\(data\.studio\)/);
+  assert.match(workspace,/\['wae-game-studio\/v8','wae-game-studio\/v9','wae-game-studio\/v10','wae-game-studio\/v11','wae-game-studio\/v12'\]\.includes\(data\.studio\)/);
   assert.match(workspace,/raw\.schema!=='wae-world\/v8'/);
   assert.match(workspace,/raw\.scenes/);
   assert.match(workspace,/scenes\.length>40/);
