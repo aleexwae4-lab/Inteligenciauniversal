@@ -18,9 +18,10 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
-          cache: yarn
-      - run: yarn install --frozen-lockfile --ignore-scripts
-      - run: npm run check:build
+      - name: Install dependencies without lifecycle scripts
+        run: yarn install --ignore-scripts --non-interactive
+      - name: Fast production build checks
+        run: npm run check:build
   regression:
     needs: build
     runs-on: ubuntu-latest
@@ -30,7 +31,7 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
-          cache: yarn
-      - run: yarn install --frozen-lockfile --ignore-scripts
-      - name: Full regression without paid inference
+      - name: Install dependencies without lifecycle scripts
+        run: yarn install --ignore-scripts --non-interactive
+      - name: Full regression gate
         run: npm run check:release
