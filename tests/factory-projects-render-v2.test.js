@@ -12,11 +12,13 @@ test('Render multi-file project factory parses without altering backend or provi
   assert.match(source,/WAECanvasCommit/);
   assert.doesNotMatch(source,/fetch\(|\/api\/chat|\/api\/canvas/);
 });
-test('Render shell retains premium Canvas before additive multi-file project tab',()=>{
+test('Render shell retains premium Canvas before additive multi-file Foundry tab',()=>{
   const html=read('index.html');
   const canvas=html.indexOf('canvas-render-factory-v1.js?v=1');
-  const project=html.indexOf('factory-projects-render-v2.js?v=5');
+  const project=html.indexOf('factory-projects-render-v2.js?');
   assert.ok(canvas>=0&&project>canvas);
+  const asset=html.match(/\.\/factory-projects-render-v2\.js\?[^"'<>\s]+/)?.[0];
+  assert.ok(asset&&/foundry=v5/.test(asset),asset);
   assert.match(html,/factory-projects-render-v2\.css\?v=2/);
   assert.match(html,/id="workspace"/);
   assert.match(html,/id="htmlEditor"/);
@@ -28,9 +30,11 @@ test('existing Canvas generated HTML and undo remain the single owner',()=>{
   assert.match(source,/setAttribute\('sandbox','allow-scripts'\)/);
   assert.doesNotMatch(source,/allow-same-origin|allow-top-navigation/);
 });
-test('PWA includes code workspace assets and never caches API responses',()=>{
-  const sw=read('sw.js');
-  assert.match(sw,/factory-projects-render-v2\.js\?v=5/);
+test('PWA includes exact current Foundry workspace assets and never caches API responses',()=>{
+  const html=read('index.html'),sw=read('sw.js');
+  const asset=html.match(/\.\/factory-projects-render-v2\.js\?[^"'<>\s]+/)?.[0];
+  assert.ok(asset&&/foundry=v5/.test(asset),asset);
+  assert.ok(sw.includes(asset));
   assert.match(sw,/factory-projects-render-v2\.css\?v=2/);
   assert.match(sw,/url\.pathname\.startsWith\('\/api\/'\)/);
 });
