@@ -40,3 +40,30 @@
  #messages .iu-rich .iu-table-scroll td{grid-template-columns:minmax(0,.72fr) minmax(0,1.28fr)!important;gap:5px!important;font-size:.72rem!important}
  #messages .iu-rich .iu-table-scroll td::before{font-size:.63rem}
 }
+
+
+/* v138 composition polish: mobile tables become compact semantic record cards. */
+@media(max-width:600px){
+ #messages .iu-rich .iu-table-scroll tbody{gap:10px!important}
+ #messages .iu-rich .iu-table-scroll tr{
+   padding:6px 12px!important;
+   box-shadow:0 8px 22px rgba(0,0,0,.12)!important;
+ }
+ #messages .iu-rich .iu-table-scroll td{
+   grid-template-columns:minmax(92px,.78fr) minmax(0,1.22fr)!important;
+   line-height:1.48!important;
+ }
+ #messages .iu-rich .iu-table-scroll td:first-child{
+   color:#d9f7e7!important;
+   font-weight:650!important;
+ }
+ #messages .iu-rich .iu-table-scroll td a{
+   overflow-wrap:anywhere!important;
+   word-break:break-word!important;
+ }
+ #messages .iu-rich .iu-table-scroll td br{display:block;content:"";margin-top:3px}
+}
+@media(max-width:380px){
+ #messages .iu-rich .iu-table-scroll tr{padding-inline:10px!important}
+ #messages .iu-rich .iu-table-scroll td{grid-template-columns:minmax(76px,.7fr) minmax(0,1.3fr)!important}
+}
