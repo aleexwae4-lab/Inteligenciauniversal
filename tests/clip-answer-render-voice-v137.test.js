@@ -70,17 +70,19 @@ test('v137 TTS normalization never speaks literal br markup',()=>{
   assert.equal(spoken.includes('Te presiona'),true);
 });
 
-test('v137 voice UI reports preparing until speechSynthesis confirms onstart',()=>{
+test('v141 voice UI stays preparing until a real audio route starts',()=>{
   const source=read('premium-render-v1.js');
-  assert.match(source,/button\.textContent='◌';button\.title='Preparando voz'/);
-  assert.match(source,/utter\.onstart=\(\)=>\{[\s\S]*?voice\.started=true;[\s\S]*?button\.textContent='⏸'/);
+  assert.match(source,/button\.textContent='◌';button\.title='Generando voz natural'/);
+  assert.match(source,/function setPlaying\(button,route/);
+  assert.match(source,/source\.start\(0\)/);
+  assert.match(source,/utter\.onstart=\(\)=>\{[\s\S]*?setPlaying\(button,'browser'/);
   assert.match(source,/utter\.volume=1/);
   assert.match(source,/code:'start_timeout'/);
   assert.match(source,/setTimeout\(\(\)=>\{[\s\S]*?2800\)/);
-  const beforeOnstart=source.indexOf("button.textContent='◌';button.title='Preparando voz'");
-  const onstart=source.indexOf("utter.onstart=()=>");
-  const pause=source.indexOf("button.textContent='⏸'",onstart);
-  assert.ok(beforeOnstart>=0&&onstart>beforeOnstart&&pause>onstart);
+  const preparing=source.indexOf("button.textContent='◌';button.title='Generando voz natural'");
+  const cloudStart=source.indexOf("source.start(0)");
+  const browserStart=source.indexOf("utter.onstart=()=>");
+  assert.ok(preparing>=0&&cloudStart>preparing&&browserStart>=0);
 });
 
 test('v137 voice fallback cannot duplicate an already-started response',()=>{
