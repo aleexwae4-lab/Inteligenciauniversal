@@ -18,7 +18,7 @@ test('17:44 clip: operating-system and identity prompts answer about Universal C
  assert.doesNotMatch(who,/aeronaves|fuente de alimentación|inversiones y finanzas/i);
  const training=coreSelfResponse({question:'Quién te entrenó'});
  assert.match(training,/WAE OS Enterprise/);
- assert.match(training,/distintos proveedores/);
+ assert.match(training,/WAE OS Enterprise/);\n assert.doesNotMatch(training,/distintos proveedores|OpenAI|Groq|Gemma/i);
 });
 
 test('17:44 clip: engineering conversation is interpreted as software capacity, not PC power supply',()=>{
@@ -40,4 +40,12 @@ test('local Render identity and Android cache agree on version',()=>{
  assert.match(sw,/waewebpublic=v126&recovery=v121&edgefix=v123&semantic=v124/);
  assert.match(sw,/semantic-v124/);
  for(const marker of ['canvas-render-factory-v1.js','factory-agent-render-v3.js','workspace-premium-v1.js'])assert.ok(html.includes(marker));
+});
+
+test('18:47 clip: ordinary product identity stays WAE-native and does not expose implementation vendors',()=>{
+ const who=coreSelfResponse({question:'Quién eres'});
+ assert.match(who,/inteligencia artificial de WAE OS Enterprise/i);
+ assert.doesNotMatch(who,/proveedor|modelo base|OpenAI|Groq|Gemma/i);
+ const capabilities=coreSelfResponse({providers:[{id:'internal_route',configured:true}],tools:[],memory:{configured:false},question:'Qué puedes hacer'});
+ assert.doesNotMatch(capabilities,/proveedores configurados|modelo base|OpenAI|Groq|Gemma/i);
 });
