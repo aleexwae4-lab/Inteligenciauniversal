@@ -23,8 +23,23 @@ function audioContext(){
 function unlockAudio(){
   try{const ctx=audioContext();if(ctx?.state==='suspended')void ctx.resume();return ctx}catch(_){return null}
 }
-document.addEventListener('pointerdown',unlockAudio,{once:true,capture:true});
-window.WAEVoice={stop:()=>resetVoice(),available:()=>supported(),unlock:unlockAudio};
+function primeAudio(){
+  const ctx=unlockAudio();if(!ctx)return null;
+  const arm=()=>{
+    if(ctx.state!=='running')return;
+    try{
+      const buffer=ctx.createBuffer(1,1,Math.max(8000,Number(ctx.sampleRate)||44100));
+      const source=ctx.createBufferSource(),gain=ctx.createGain();
+      gain.gain.value=0;source.buffer=buffer;source.connect(gain);gain.connect(ctx.destination);
+      source.onended=()=>{try{source.disconnect();gain.disconnect()}catch(_){}};
+      source.start(0);
+    }catch(_){}
+  };
+  if(ctx.state==='suspended')void ctx.resume().then(arm).catch(()=>{});else arm();
+  return ctx;
+}
+document.addEventListener('pointerdown',primeAudio,{once:true,capture:true});
+window.WAEVoice={stop:()=>resetVoice(),available:()=>supported(),unlock:primeAudio};
 function voiceEvent(status,details={}){
   try{window.dispatchEvent(new CustomEvent('wae:voice-e2e',{detail:{status,...details}}))}catch(_){}
 }
@@ -369,9 +384,23 @@ function enhance(article){
     const detail={schema:envelope.schema||null,sourceCount:sourceRows(envelope).length,componentCount:Array.isArray(envelope.components)?envelope.components.length:0,requestId:envelope.metadata?.requestId||null};
     try{window.dispatchEvent(new CustomEvent('wae:assistant-envelope',{detail}))}catch(_){}
   }
-  if(allowAuto&&auto&&!window.__waeHydratingHistory&&article===QA('#messages .message.assistant').at(-1)&&!/^El núcleo de inteligencia está reconectando/.test(raw)){
-    const b=article.querySelector('.iu-voice');if(b)speak(article,b);
-  }
+}
+function shouldAutoSpeak(article){
+  if(!article||!allowAuto||!auto||window.__waeHydratingHistory)return false;
+  if(article!==QA('#messages .message.assistant').at(-1))return false;
+  const raw=text(article.dataset.iuRaw||rawOf(article));
+  if(!raw.trim()||/^El núcleo de inteligencia está reconectando/.test(raw))return false;
+  return true;
+}
+function autoSpeakFinal(article,reason='assistant-final'){
+  if(!article||article.dataset.iuAutoVoice==='started')return;
+  enhance(article);
+  if(!shouldAutoSpeak(article))return;
+  const button=article.querySelector('.iu-voice');
+  if(!button||button.disabled)return;
+  article.dataset.iuAutoVoice='started';
+  voiceEvent('autostart',{reason});
+  speak(article,button);
 }
 function decorate(){
   QA('#messages .message.assistant').forEach(enhance);
@@ -384,6 +413,17 @@ function initialize(){
   // No leer respuestas históricas al cargar; solo respuestas nuevas.
   allowAuto=true;
   const obs=new MutationObserver(decorate);obs.observe(messages,{childList:true,subtree:false});
+  window.addEventListener('wae:voice-prime',event=>{
+    if(event.detail?.reason==='submit')resetVoice();
+    primeAudio();
+    voiceEvent('primed',{reason:event.detail?.reason||'unknown'});
+  });
+  window.addEventListener('wae:assistant-final',event=>{
+    const article=event.detail?.article||QA('#messages .message.assistant').at(-1);
+    if(!article)return;
+    enhance(article);
+    queueMicrotask(()=>autoSpeakFinal(article,'assistant-final'));
+  });
   const voiceControl=Q('#voiceBtn');
   if(voiceControl){
     voiceControl.title='Activar o desactivar lectura automática';
