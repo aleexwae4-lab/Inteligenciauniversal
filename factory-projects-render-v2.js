@@ -117,7 +117,7 @@ function normalizeWorldV8(raw){
 }
 function persistWorldStudioV8(sceneRaw,worldRaw){
  saveEditor();
- if(!sceneRaw||typeof sceneRaw!=='object'||!['wae-game-studio/v8','wae-game-studio/v9'].includes(sceneRaw.engine))throw Error('Escena Game Studio v8/v9 inválida');
+ if(!sceneRaw||typeof sceneRaw!=='object'||!['wae-game-studio/v8','wae-game-studio/v9','wae-game-studio/v10'].includes(sceneRaw.engine))throw Error('Escena Game Studio v8/v9/v10 inválida');
  const world=normalizeWorldV8(worldRaw),clean=JSON.parse(JSON.stringify(sceneRaw));
  if(!clean.materials||typeof clean.materials!=='object'||Object.keys(clean.materials).length>40)throw Error('Materiales inválidos');
  for(const [name,color] of Object.entries(clean.materials)){if(!/^[a-zA-Z0-9_-]{1,40}$/.test(name)||!Array.isArray(color)||color.length!==4||color.some(v=>!Number.isFinite(Number(v))||Number(v)<0||Number(v)>1))throw Error('Material inválido');clean.materials[name]=color.map(Number)}
@@ -185,13 +185,114 @@ function persistLogicStudioV9(raw){
  if(['logic.json','main.js'].includes(selected))$('#wfEditor').value=file()?.content||'';
  renderFiles();diagnostics();notify('Gameplay Logic v9 guardado en logic.json y main.js');return true;
 }
+function normalizeLogicV10(raw){
+ if(!raw||typeof raw!=='object'||raw.schema!=='wae-logic/v10'||!Array.isArray(raw.rules)||raw.rules.length<1||raw.rules.length>140)throw Error('Logic Builder v10 inválido');
+ const clean=JSON.parse(JSON.stringify(raw)),validId=value=>typeof value==='string'&&/^[a-zA-Z0-9_-]{1,60}$/.test(value);
+ const eventTypes=new Set(['scene_enter','trigger_enter','score_changed','mission_completed','timer','npc_interact','npc_state_changed','npc_goal_completed']);
+ const conditionTypes=new Set(['always','score_gte','visited_scenes_gte','mission_status','scene_is']);
+ const actionTypes=new Set(['message','scene','spawn_prefab','mission_complete','score_add','lighting','npc_set_state','npc_say']);
+ const npcStates=new Set(['idle','patrol','chase','interact']),ids=new Set();
+ for(const rule of clean.rules){
+  if(!rule||typeof rule!=='object'||!validId(rule.id)||ids.has(rule.id))throw Error('Regla lógica v10 inválida o duplicada');
+  ids.add(rule.id);rule.name=String(rule.name||rule.id).slice(0,80);rule.enabled=rule.enabled!==false;rule.once=Boolean(rule.once);
+  if(!rule.event||!eventTypes.has(rule.event.type))throw Error('Evento lógico v10 no permitido');
+  const event={type:rule.event.type};
+  if(event.type==='scene_enter')event.sceneId=String(rule.event.sceneId||'').slice(0,60);
+  if(event.type==='trigger_enter')event.triggerId=String(rule.event.triggerId||'').slice(0,60);
+  if(event.type==='mission_completed')event.missionId=String(rule.event.missionId||'').slice(0,60);
+  if(event.type==='timer')event.seconds=Math.max(.2,Math.min(3600,Number(rule.event.seconds)||1));
+  if(['npc_interact','npc_state_changed','npc_goal_completed'].includes(event.type)){event.npcId=String(rule.event.npcId||'').slice(0,60);if(event.type==='npc_state_changed'&&rule.event.state)event.state=npcStates.has(rule.event.state)?rule.event.state:'idle'}
+  rule.event=event;
+  if(!Array.isArray(rule.conditions)||rule.conditions.length<1||rule.conditions.length>8)throw Error('Condiciones lógicas v10 inválidas');
+  rule.conditions=rule.conditions.map(condition=>{
+   const type=conditionTypes.has(condition?.type)?condition.type:'always';
+   if(type==='always')return{type};
+   if(type==='score_gte'||type==='visited_scenes_gte')return{type,value:Math.max(0,Math.min(999999,Number(condition?.value)||0))};
+   if(type==='mission_status')return{type,status:String(condition?.status||'completed').slice(0,30)};
+   return{type,sceneId:String(condition?.sceneId||'').slice(0,60)};
+  });
+  if(!Array.isArray(rule.actions)||rule.actions.length<1||rule.actions.length>12)throw Error('Acciones lógicas v10 inválidas');
+  rule.actions=rule.actions.map(action=>{
+   const type=actionTypes.has(action?.type)?action.type:'message';
+   if(type==='message')return{type,text:String(action?.text||'').slice(0,160)};
+   if(type==='scene')return{type,target:String(action?.target||'').slice(0,60)};
+   if(type==='spawn_prefab')return{type,prefab:String(action?.prefab||'').slice(0,60)};
+   if(type==='mission_complete')return{type,missionId:String(action?.missionId||'').slice(0,60)};
+   if(type==='score_add')return{type,value:Math.max(-99999,Math.min(99999,Number(action?.value)||0))};
+   if(type==='lighting')return{type,ambient:Math.max(.2,Math.min(1.4,Number(action?.ambient)||.8))};
+   if(type==='npc_set_state')return{type,npcId:String(action?.npcId||'').slice(0,60),state:npcStates.has(action?.state)?action.state:'idle'};
+   return{type,npcId:String(action?.npcId||'').slice(0,60),text:String(action?.text||'').slice(0,160)};
+  });
+ }
+ clean.version=10;
+ if(JSON.stringify(clean).length>140000)throw Error('La lógica v10 supera el límite de 140 KB');
+ return clean;
+}
+function persistLogicStudioV10(raw){
+ saveEditor();
+ const logic=normalizeLogicV10(raw),logicJson=JSON.stringify(logic,null,2);
+ const mainFile=current.files.find(f=>f.name==='main.js');let logicFile=current.files.find(f=>f.name==='logic.json');
+ if(!mainFile)throw Error('El proyecto no contiene main.js');
+ if(!logicFile){if(current.files.length>=MAX_FILES)throw Error('No hay espacio para logic.json');logicFile={name:'logic.json',content:''};current.files.push(logicFile)}
+ if(!/^const LOGIC=.*;$/m.test(mainFile.content))throw Error('No se encontró el contrato LOGIC en main.js');
+ logicFile.content=logicJson;mainFile.content=mainFile.content.replace(/^const LOGIC=.*;$/m,'const LOGIC='+JSON.stringify(logic)+';');current.updatedAt=new Date().toISOString();
+ if(!persist())throw Error('No se pudo persistir la lógica v10');if(['logic.json','main.js'].includes(selected))$('#wfEditor').value=file()?.content||'';renderFiles();diagnostics();notify('Gameplay Logic v10 guardado en logic.json y main.js');return true;
+}
+function normalizeNpcV10(raw){
+ if(!raw||typeof raw!=='object'||raw.schema!=='wae-npc/v10'||!raw.factions||typeof raw.factions!=='object'||!Array.isArray(raw.characters)||raw.characters.length<1||raw.characters.length>120)throw Error('NPC Engine v10 inválido');
+ const clean=JSON.parse(JSON.stringify(raw)),validId=value=>typeof value==='string'&&/^[a-zA-Z0-9_-]{1,60}$/.test(value),finite3=value=>Array.isArray(value)&&value.length===3&&value.every(n=>Number.isFinite(Number(n)));
+ const states=new Set(['idle','patrol','chase','interact']),attitudes=new Set(['friendly','neutral','hostile']),factionIds=new Set();
+ const worldFile=current.files.find(f=>f.name==='world.json');let scenes=new Set();
+ try{const world=JSON.parse(worldFile?.content||'{}');scenes=new Set((world.scenes||[]).map(scene=>scene.id))}catch{}
+ for(const [id,faction] of Object.entries(clean.factions)){
+  if(!validId(id)||factionIds.has(id)||!faction||!attitudes.has(faction.attitude))throw Error('Facción NPC inválida');
+  factionIds.add(id);faction.label=String(faction.label||id).slice(0,60);faction.material=String(faction.material||'npcNeutral').slice(0,40);
+ }
+ if(factionIds.size<1||factionIds.size>20)throw Error('Cantidad de facciones inválida');
+ const ids=new Set();
+ for(const npc of clean.characters){
+  if(!npc||!validId(npc.id)||ids.has(npc.id)||!factionIds.has(npc.faction)||!states.has(npc.state))throw Error('NPC inválido o duplicado');
+  ids.add(npc.id);npc.name=String(npc.name||npc.id).slice(0,80);npc.sceneId=String(npc.sceneId||'').slice(0,60);if(scenes.size&&!scenes.has(npc.sceneId))throw Error('NPC apunta a escena inexistente');
+  if(!finite3(npc.position))throw Error('Posición NPC inválida');npc.position=npc.position.map(n=>Math.max(-100,Math.min(100,Number(n))));
+  npc.rotation=Math.max(-Math.PI*8,Math.min(Math.PI*8,Number(npc.rotation)||0));npc.patrolIndex=Math.max(0,Math.floor(Number(npc.patrolIndex)||0));
+  if(!npc.behavior||typeof npc.behavior!=='object'||!states.has(npc.behavior.defaultState))throw Error('Comportamiento NPC inválido');
+  npc.behavior.moveSpeed=Math.max(.1,Math.min(10,Number(npc.behavior.moveSpeed)||1));npc.behavior.chaseSpeed=Math.max(.1,Math.min(15,Number(npc.behavior.chaseSpeed)||2));npc.behavior.perceptionRadius=Math.max(.5,Math.min(30,Number(npc.behavior.perceptionRadius)||4));npc.behavior.interactionRadius=Math.max(.5,Math.min(10,Number(npc.behavior.interactionRadius)||2));
+  if(!Array.isArray(npc.patrol)||npc.patrol.length<1||npc.patrol.length>60||npc.patrol.some(point=>!finite3(point)))throw Error('Ruta de patrulla NPC inválida');npc.patrol=npc.patrol.map(point=>point.map(n=>Math.max(-100,Math.min(100,Number(n)))));
+  if(!Array.isArray(npc.dialogue)||npc.dialogue.length<1||npc.dialogue.length>20)throw Error('Diálogo NPC inválido');npc.dialogue=npc.dialogue.map((item,i)=>({id:validId(item?.id)?item.id:npc.id+'-dialogue-'+(i+1),text:String(item?.text||'').slice(0,240)}));
+  if(!Array.isArray(npc.goals)||npc.goals.length<1||npc.goals.length>20)throw Error('Objetivos NPC inválidos');npc.goals=npc.goals.map((goal,i)=>({id:validId(goal?.id)?goal.id:npc.id+'-goal-'+(i+1),type:['patrol','interact','guard'].includes(goal?.type)?goal.type:'interact',label:String(goal?.label||'Objetivo').slice(0,100),status:goal?.status==='completed'?'completed':'active'}));
+  npc.stats={health:Math.max(0,Math.min(100000,Number(npc.stats?.health)||100)),maxHealth:Math.max(1,Math.min(100000,Number(npc.stats?.maxHealth)||100))};
+  if(npc.stats.health>npc.stats.maxHealth)npc.stats.health=npc.stats.maxHealth;
+  npc.brain={type:'state_machine',states:['idle','patrol','chase','interact'],transitions:['perception','distance','interaction','goal']};
+ }
+ clean.version=10;
+ if(JSON.stringify(clean).length>160000)throw Error('NPC Engine supera el límite de 160 KB');
+ return clean;
+}
+function persistNpcStudioV10(raw){
+ saveEditor();
+ const npcs=normalizeNpcV10(raw),npcJson=JSON.stringify(npcs,null,2);
+ const mainFile=current.files.find(f=>f.name==='main.js');let npcFile=current.files.find(f=>f.name==='npc.json');
+ if(!mainFile)throw Error('El proyecto no contiene main.js');
+ if(!npcFile){if(current.files.length>=MAX_FILES)throw Error('No hay espacio para npc.json');npcFile={name:'npc.json',content:''};current.files.push(npcFile)}
+ if(!/^const NPCS=.*;$/m.test(mainFile.content))throw Error('No se encontró el contrato NPCS en main.js');
+ npcFile.content=npcJson;mainFile.content=mainFile.content.replace(/^const NPCS=.*;$/m,'const NPCS='+JSON.stringify(npcs)+';');current.updatedAt=new Date().toISOString();
+ if(!persist())throw Error('No se pudieron persistir los NPCs');if(['npc.json','main.js'].includes(selected))$('#wfEditor').value=file()?.content||'';renderFiles();diagnostics();notify('NPC Engine v10 guardado en npc.json y main.js');return true;
+}
 function onPreviewMessage(event){
  const frame=$('#wfPreview');if(!frame||event.source!==frame.contentWindow)return;const data=event.data;if(!data||typeof data!=='object')return;
+ if(data.type==='wae-game-studio-npc-save'&&data.studio==='wae-game-studio/v10'){
+  try{persistNpcStudioV10(data.npcs);frame.contentWindow?.postMessage({type:'wae-game-studio-npc-saved',ok:true,studio:'wae-game-studio/v10'},'*')}
+  catch(error){notify('No se pudieron guardar NPCs: '+String(error.message||error));frame.contentWindow?.postMessage({type:'wae-game-studio-npc-saved',ok:false,message:String(error.message||error).slice(0,160)},'*')}return;
+ }
+ if(data.type==='wae-game-studio-logic-save'&&data.studio==='wae-game-studio/v10'){
+  try{persistLogicStudioV10(data.logic);frame.contentWindow?.postMessage({type:'wae-game-studio-logic-saved',ok:true,studio:'wae-game-studio/v10'},'*')}
+  catch(error){notify('No se pudo guardar la lógica v10: '+String(error.message||error));frame.contentWindow?.postMessage({type:'wae-game-studio-logic-saved',ok:false,message:String(error.message||error).slice(0,160)},'*')}return;
+ }
  if(data.type==='wae-game-studio-logic-save'&&data.studio==='wae-game-studio/v9'){
   try{persistLogicStudioV9(data.logic);frame.contentWindow?.postMessage({type:'wae-game-studio-logic-saved',ok:true,studio:'wae-game-studio/v9'},'*')}
   catch(error){notify('No se pudo guardar la lógica: '+String(error.message||error));frame.contentWindow?.postMessage({type:'wae-game-studio-logic-saved',ok:false,message:String(error.message||error).slice(0,160)},'*')}return;
  }
- if(data.type==='wae-game-studio-world-save'&&['wae-game-studio/v8','wae-game-studio/v9'].includes(data.studio)){
+ if(data.type==='wae-game-studio-world-save'&&['wae-game-studio/v8','wae-game-studio/v9','wae-game-studio/v10'].includes(data.studio)){
   try{persistWorldStudioV8(data.scene,data.world);frame.contentWindow?.postMessage({type:'wae-game-studio-world-saved',ok:true,studio:data.studio},'*')}
   catch(error){notify('No se pudo guardar el mundo: '+String(error.message||error));frame.contentWindow?.postMessage({type:'wae-game-studio-world-saved',ok:false,message:String(error.message||error).slice(0,160)},'*')}return;
  }
