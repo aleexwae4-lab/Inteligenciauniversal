@@ -51,7 +51,7 @@ test('v132 derives capability claims from runtime catalogs and configuration',()
 test('v132 deterministic capability turns now use assistant-response/v2 and preserve conversation context',async()=>{
   const first=await executeMission({message:'Cuáles son tus capacidades?',history:[]});
   assert.equal(first.provider,'wae_core');
-  assert.equal(first.model,'runtime_capabilities/v132');
+  assert.equal(first.model,'runtime_capabilities/v153');
   assert.equal(first.response.schema,'assistant-response/v2');
   assert.equal(first.speech_text,first.response.speechText);
   assert.deepEqual(first.actions.map(x=>x.id),['listen','copy','workspace']);
