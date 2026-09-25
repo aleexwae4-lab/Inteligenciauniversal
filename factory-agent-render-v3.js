@@ -33,8 +33,9 @@ function renderMessages(){
   const p=project();if(!p)return;
   lastId=p.id;feed.replaceChildren();
   const t=thread(p.id);
+  const picker=$('#wfProductType');if(picker&&Array.from(picker.options).some(o=>o.value===(t.kind||'auto')))picker.value=t.kind||'auto';
   if(!t.messages.length){
-    bubble('assistant','Dime qué quieres construir. Crearé y modificaré los archivos reales del proyecto contigo, con vista previa y Deshacer. El modo HTML rápido sigue disponible; backend y publicación no se crean automáticamente.');
+    bubble('assistant','Dime qué quieres fabricar. Puedo construir juegos 3D/2D, simulaciones, apps web/PWA, herramientas, dashboards y paquetes fuente para móvil, escritorio, APIs o automatizaciones. La vista previa ejecuta targets web; los binarios nativos sólo se consideran construidos cuando exista un toolchain real.');
   }else t.messages.forEach(m=>bubble(m.role,m.text));
   state('Proyecto: '+p.name+' · Los cambios se guardan en este dispositivo.');
 }
