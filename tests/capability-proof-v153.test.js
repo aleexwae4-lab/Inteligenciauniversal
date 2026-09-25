@@ -69,7 +69,7 @@ test('v153 is wired into self-description, runtime, API and server routes',()=>{
   assert.match(core,/capabilityProofLine\(proof\)/);
   assert.match(runtime,/runtime_capabilities\/v153/);
   assert.match(runtime,/extras:\{capabilityMatrix,capabilityProof\}/);
-  assert.match(api,/capabilityProof:capabilityProof/);
+  assert.match(api,/\n\s*capabilityProof,/);
   assert.match(api,/\/api\/capabilities\/proof/);
   assert.match(server,/\['\/api\/capabilities\/proof', capabilitiesHandler\]/);
 });
