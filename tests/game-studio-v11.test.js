@@ -81,7 +81,7 @@ test('Combat Engine v11 persistence validates source iframe and bounded contract
   assert.match(workspace,/data\.studio==='wae-game-studio\/v11'/);
   assert.match(workspace,/raw\.schema!=='wae-combat\/v11'/);
   assert.match(workspace,/clean\.pickups\.length>300/);
-  assert.match(workspace,/inventoryCapacity-inventoryCount/);
+  assert.match(workspace,/p\.inventoryCapacity=Math\.max\(1,Math\.min\(200/);
   assert.match(workspace,/Combat Engine supera el límite de 220 KB/);
   assert.match(workspace,/combat\.json/);
   assert.match(workspace,/mainFile\.content\.replace\(\/\^const COMBAT=/);
