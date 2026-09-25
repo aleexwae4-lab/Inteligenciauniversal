@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <color name="uc_background">#0B0C0F</color>
-    <color name="uc_foreground">#F2F4F5</color>
+    <color name="uc_background">#05070D</color>
+    <color name="uc_foreground">#F7FAFF</color>
+    <color name="uc_accent">#55D9FF</color>
 </resources>
