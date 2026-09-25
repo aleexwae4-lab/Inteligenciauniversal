@@ -54,7 +54,7 @@ test('World Builder v8 persistence validates source iframe and portable world co
   const workspace=read('factory-projects-render-v2.js');
   assert.match(workspace,/event\.source!==frame\.contentWindow/);
   assert.match(workspace,/data\.type==='wae-game-studio-world-save'/);
-  assert.match(workspace,/\['wae-game-studio\/v8','wae-game-studio\/v9','wae-game-studio\/v10'\]\.includes\(data\.studio\)/);
+  assert.match(workspace,/\['wae-game-studio\/v8','wae-game-studio\/v9','wae-game-studio\/v10','wae-game-studio\/v11'\]\.includes\(data\.studio\)/);
   assert.match(workspace,/raw\.schema!=='wae-world\/v8'/);
   assert.match(workspace,/raw\.scenes/);
   assert.match(workspace,/scenes\.length>40/);
