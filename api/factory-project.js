@@ -1,5 +1,5 @@
 import { getClientIp, originAllowed, applyHeaders } from '../lib/security.js';
-import { buildProductProject, PROJECT_ENGINE_VERSION } from '../lib/product-builder-v4.js';
+import { buildDigitalProduct, PRODUCT_FOUNDRY_VERSION } from '../lib/product-foundry-v5.js';
 
 const buckets=new Map();
 function allow(req){
@@ -17,13 +17,13 @@ export default async function handler(req,res){
  const origin=String(req.headers?.origin||''),host=String(req.headers?.['x-forwarded-host']||req.headers?.host||'').split(',')[0].trim();
  if(origin&&host){try{if(new URL(origin).host!==host)return res.status(403).json({error:'origin_not_allowed'});}catch{return res.status(403).json({error:'invalid_origin'});}}
  const b=req.body||{};
- if(typeof b.request!=='string'||b.request.trim().length<8||b.request.length>3400)return res.status(400).json({error:'invalid_brief',message:'Describe el producto entre 8 y 3400 caracteres.'});
- if(b.files!=null&&(!Array.isArray(b.files)||b.files.length>12||JSON.stringify(b.files).length>100000))return res.status(413).json({error:'project_context_too_large',message:'El proyecto excede el límite de contexto de 75 KB.'});
+ if(typeof b.request!=='string'||b.request.trim().length<8||b.request.length>4200)return res.status(400).json({error:'invalid_brief',message:'Describe el producto entre 8 y 4200 caracteres.'});
+ if(b.files!=null&&(!Array.isArray(b.files)||b.files.length>20||JSON.stringify(b.files).length>180000))return res.status(413).json({error:'project_context_too_large',message:'El proyecto excede el límite de contexto de revisión de la Fábrica v5.'});
  if(!allow(req))return res.status(429).json({error:'rate_limited',message:'Se alcanzó el límite temporal de construcción. Tu proyecto anterior permanece intacto.'});
  try{
-  const result=await buildProductProject({request:b.request,files:b.files||[],kind:typeof b.kind==='string'?b.kind.slice(0,30):'app'});
+  const result=await buildDigitalProduct({request:b.request,files:b.files||[],kind:typeof b.kind==='string'?b.kind.slice(0,40):'auto'});
   return res.status(200).json(result);
  }catch(error){
-  return res.status(error.statusCode||502).json({error:error.code||'project_generation_failed',message:String(error.message||'No se pudo construir un proyecto válido.').slice(0,280),version:PROJECT_ENGINE_VERSION});
+  return res.status(error.statusCode||502).json({error:error.code||'project_generation_failed',message:String(error.message||'No se pudo construir un proyecto válido.').slice(0,280),version:PRODUCT_FOUNDRY_VERSION});
  }
 }
