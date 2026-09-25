@@ -24,8 +24,8 @@ import android.widget.Toast;
 import java.util.Arrays;
 
 public final class MainActivity extends Activity {
-    private static final String APP_URL = "https://inteligenciauniversal.onrender.com/?mobile=1&app=android&source=play";
-    private static final String APP_HOST = "inteligenciauniversal.onrender.com";
+    private static final String APP_URL = "https://wae-inteligencia-universal-vt3h.onrender.com/?native=android&source=app";
+    private static final String APP_HOST = "wae-inteligencia-universal-vt3h.onrender.com";
     private static final int FILE_CHOOSER_REQUEST = 4101;
     private static final int AUDIO_PERMISSION_REQUEST = 4102;
 
@@ -63,7 +63,7 @@ public final class MainActivity extends Activity {
         settings.setMediaPlaybackRequiresUserGesture(false);
         settings.setSupportMultipleWindows(false);
         settings.setSafeBrowsingEnabled(true);
-        settings.setUserAgentString(settings.getUserAgentString() + " WAEUniversalCoreAndroid/1.0");
+        settings.setUserAgentString(settings.getUserAgentString() + " UniversalCoreNative/1.0");
 
         CookieManager cookies = CookieManager.getInstance();
         cookies.setAcceptCookie(true);

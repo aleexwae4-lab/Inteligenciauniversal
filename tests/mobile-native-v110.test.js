@@ -32,7 +32,7 @@ test('Android shell targets the current Google Play API baseline and preserves c
   assert.match(manifest,/android\.permission\.INTERNET/);
   assert.match(manifest,/android\.permission\.RECORD_AUDIO/);
   assert.match(manifest,/android:usesCleartextTraffic="false"/);
-  assert.match(activity,/https:\/\/inteligenciauniversal\.onrender\.com\/\?mobile=1&app=android&source=play/);
+  assert.match(activity,/https:\/\/wae-inteligencia-universal-vt3h\.onrender\.com\/\?native=android&source=app/);
   assert.match(activity,/setMixedContentMode\(WebSettings\.MIXED_CONTENT_NEVER_ALLOW\)/);
   assert.match(activity,/setAllowFileAccess\(false\)/);
   assert.match(activity,/PermissionRequest\.RESOURCE_AUDIO_CAPTURE/);
