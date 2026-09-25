@@ -15,6 +15,8 @@ export default async function handler(req,res) {
     const body = req.body || {};
     // Never use a shared public IP or a caller-selected cross-user key as a memory identity.
     const result = await executeMission({ ...body, userKey:typeof body.sessionId==='string' ? body.sessionId : '' });
+    if(result?.response?.metadata&&typeof result.response.metadata==='object')result.response.metadata.requestId=requestId;
+    result.request_id=requestId;
     const latencyMs=Date.now()-started;
     recordChatSuccess(result,latencyMs);
     res.setHeader('Server-Timing',`wae;dur=${latencyMs}`);
