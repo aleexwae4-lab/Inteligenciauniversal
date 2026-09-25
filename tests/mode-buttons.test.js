@@ -70,5 +70,7 @@ test('active mode badge survives the existing mobile polish styling and cache sh
  assert.match(sw,/wae-universal-render-waeweb-public-v45/);
  assert.match(sw,/canvas-render-factory-v1\.js\?v=1/);
  assert.match(sw,/mode-feedback-v1\.css\?v=1/);
- assert.match(html,/premium-render-v1\.js\?v=12/);
+ const premiumAsset=html.match(/\.\/premium-render-v1\.js\?[^"']+/)?.[0];
+ assert.ok(premiumAsset,'index must version premium-render-v1.js');
+ assert.ok(sw.includes(premiumAsset),'service worker must cache the current premium-render asset');
 });
