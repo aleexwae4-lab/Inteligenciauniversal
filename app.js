@@ -67,10 +67,26 @@ function renderMessage(m){
   $('#messages').appendChild(e);
 }
 let typingTimer=null;
+const turnStageLabels={router:'Interpretando',memory:'Recuperando contexto',tools:'Ejecutando herramientas',provider:'Generando respuesta',sources:'Verificando evidencia',persistence:'Guardando continuidad'};
+const turnStageOrder=['router','memory','tools','provider','sources','persistence'];
+function stageStatusSymbol(status){return status==='ok'?'✓':status==='recovered'?'↻':status==='skipped'?'–':status==='failed'?'!':'•'}
+function updateTurnProgress(detail={}){
+  if(!detail||detail.type!=='stage'||!turnStageOrder.includes(detail.stage))return;
+  const current=$('#typingStage'),list=$('#typingStages');if(!current||!list)return;
+  const label=turnStageLabels[detail.stage]||detail.stage;
+  if(detail.phase==='begin')current.textContent=label;
+  let chip=list.querySelector(`[data-stage="${detail.stage}"]`);
+  if(!chip){chip=document.createElement('span');chip.dataset.stage=detail.stage;list.appendChild(chip)}
+  chip.className='wae-turn-stage '+String(detail.status||'running');
+  chip.textContent=stageStatusSymbol(detail.status)+' '+label;
+  chip.title=detail.phase==='end'&&Number.isFinite(Number(detail.latencyMs))?label+' · '+Math.round(Number(detail.latencyMs))+' ms':label;
+  if(detail.phase==='end'&&detail.stage==='persistence')current.textContent=detail.status==='failed'?'Respuesta lista · continuidad no guardada':'Respuesta verificada';
+}
+window.addEventListener('wae:turn-progress',event=>updateTurnProgress(event.detail));
 function showTyping(){
   if($('#typingMessage'))return;
   const e=document.createElement('article');e.className='message assistant';e.id='typingMessage';
-  e.innerHTML=`<div class="message-meta"><strong>${safeText(state.coreName)}</strong><span id="typingElapsed" role="status">Procesando · 0 s</span></div><span class="typing"><i></i><i></i><i></i></span>`;
+  e.innerHTML=`<div class="message-meta"><strong>${safeText(state.coreName)}</strong><span id="typingElapsed" role="status">Procesando · 0 s</span></div><div class="wae-turn-progress"><span id="typingStage">Conectando con Universal Core</span><div id="typingStages" class="wae-turn-stages" aria-label="Progreso real del turno"></div></div><span class="typing"><i></i><i></i><i></i></span>`;
   $('#messages').appendChild(e);scrollChat();
   const started=Date.now();if(typingTimer)clearInterval(typingTimer);
   typingTimer=setInterval(()=>{const t=$('#typingElapsed');if(!t){clearInterval(typingTimer);typingTimer=null;return}t.textContent=`Procesando · ${Math.floor((Date.now()-started)/1000)} s`;},1000);
@@ -83,9 +99,77 @@ function addMessage(role,text){
   const i={role,text,at:nowLabel()};state.messages.push(i);persistMessages();renderMessage(i);scrollChat();
 }
 
+function captureResponseEnvelope(d){
+  if(d?.e2e&&typeof d.e2e==='object'){window.__waeLastTurnE2E=d.e2e;window.__waeLastTurnAt=Date.now();}
+  if(!d||typeof d!=='object')return;
+  const nativeEnvelope=d.response&&typeof d.response==='object'?d.response:{};
+  window.__waePendingResponseEnvelope={
+    schema:String(nativeEnvelope.schema||'assistant-response/v2'),
+    speechText:String(d.speech_text||nativeEnvelope.speechText||'').slice(0,12000),
+    sources:Array.isArray(d.sources)?d.sources:(Array.isArray(nativeEnvelope.sources)?nativeEnvelope.sources:[]),
+    components:Array.isArray(d.components)?d.components:(Array.isArray(nativeEnvelope.components)?nativeEnvelope.components:[]),
+    actions:Array.isArray(d.actions)?d.actions:(Array.isArray(nativeEnvelope.actions)?nativeEnvelope.actions:[]),
+    metadata:{...(nativeEnvelope.metadata||{}),requestId:d.request_id||nativeEnvelope.metadata?.requestId||null,progressive:d.progressive?.version||null}
+  };
+}
+function parseSSEBlock(block){
+  let event='message',data='';
+  for(const line of String(block||'').split('\n')){
+    if(line.startsWith('event:'))event=line.slice(6).trim();
+    else if(line.startsWith('data:'))data+=(data?'\n':'')+line.slice(5).trim();
+  }
+  if(!data)return null;
+  try{return{event,data:JSON.parse(data)}}catch{return null}
+}
+async function progressiveChat(payload,signal){
+  const r=await fetch('/api/chat-stream',{
+    method:'POST',
+    headers:{'Content-Type':'application/json','Accept':'text/event-stream'},
+    body:JSON.stringify(payload),
+    signal
+  });
+  if(!r.ok||!r.body?.getReader)throw Object.assign(new Error(`stream_${r.status}`),{safeFallback:true});
+  const reader=r.body.getReader(),decoder=new TextDecoder();
+  let buffer='',ready=false,result=null;
+  try{
+    while(true){
+      const {done,value}=await reader.read();
+      buffer+=decoder.decode(value||new Uint8Array(),{stream:!done});
+      let cut;
+      while((cut=buffer.indexOf('\n\n'))>=0){
+        const parsed=parseSSEBlock(buffer.slice(0,cut));buffer=buffer.slice(cut+2);
+        if(!parsed)continue;
+        if(parsed.event==='ready'){ready=true;window.__waeProgressContract=parsed.data;continue}
+        if(parsed.event==='progress'){
+          window.dispatchEvent(new CustomEvent('wae:turn-progress',{detail:parsed.data}));
+          continue;
+        }
+        if(parsed.event==='result'){result=parsed.data;continue}
+        if(parsed.event==='error')throw Object.assign(new Error(parsed.data?.error||'stream_runtime_error'),{safeFallback:!ready,e2e:parsed.data?.e2e});
+      }
+      if(done)break;
+    }
+  }catch(error){
+    try{reader.cancel()}catch{}
+    if(error?.name==='AbortError')throw error;
+    if(error?.safeFallback===undefined)error.safeFallback=!ready;
+    throw error;
+  }
+  if(!result)throw Object.assign(new Error('stream_without_result'),{safeFallback:!ready});
+  return result;
+}
+async function jsonChat(payload,signal){
+  const r=await fetch('/api/chat',{
+    method:'POST',headers:{'Content-Type':'application/json'},
+    body:JSON.stringify(payload),signal
+  });
+  const data=await r.json().catch(()=>({}));
+  if(!r.ok)throw new Error(data?.error||`runtime_${r.status}`);
+  return data;
+}
+
 async function getAIReply(message){
   window.__waePendingResponseEnvelope=null;
-  // All native tools are dispatched by Universal Core, independent of the button used to provide evidence.
   try{
     const tool=await window.WAECoreTools?.runTurn({
       message,mode:state.mode,history:state.messages.slice(0,-1).slice(-8),
@@ -97,39 +181,37 @@ async function getAIReply(message){
     console.warn('[WAE Core Tool] real execution did not complete',error?.code||error?.message);
     return 'La evidencia visual sigue preparada. '+String(error?.message||'No se pudo completar el análisis.').slice(0,220)+' No afirmaré que analicé la imagen hasta recibir un resultado real. Puedes reintentar o quitar la captura.';
   }
-  const c=new AbortController(),timer=setTimeout(()=>c.abort(),100000);
+
+  const payload={
+    message,mode:state.mode,history:state.messages.slice(0,-1).slice(-12),
+    sessionId:localStorage.getItem('iu.sessionId')||'',
+    attachments:window.__waeRuntimeAttachments||[],
+    preferences:window.WAESettings?.getPromptSettings?.()||{},
+    project:window.WAENavigation?.getProjectContext?.()||{}
+  };
+  const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),100000);
   try{
-    const r=await fetch('/api/chat',{
-      method:'POST',
-      headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({message,mode:state.mode,history:state.messages.slice(0,-1).slice(-12),sessionId:localStorage.getItem('iu.sessionId')||'',attachments:window.__waeRuntimeAttachments||[],preferences:window.WAESettings?.getPromptSettings?.()||{},project:window.WAENavigation?.getProjectContext?.()||{}}),
-      signal:c.signal
-    });
-    const d=await r.json().catch(()=>({}));
-    if(d?.e2e&&typeof d.e2e==='object'){window.__waeLastTurnE2E=d.e2e;window.__waeLastTurnAt=Date.now();}
-    if(d&&typeof d==='object'){
-      const nativeEnvelope=d.response&&typeof d.response==='object'?d.response:{};
-      window.__waePendingResponseEnvelope={
-        schema:String(nativeEnvelope.schema||'assistant-response/v2'),
-        speechText:String(d.speech_text||nativeEnvelope.speechText||'').slice(0,12000),
-        sources:Array.isArray(d.sources)?d.sources:(Array.isArray(nativeEnvelope.sources)?nativeEnvelope.sources:[]),
-        components:Array.isArray(d.components)?d.components:(Array.isArray(nativeEnvelope.components)?nativeEnvelope.components:[]),
-        actions:Array.isArray(d.actions)?d.actions:(Array.isArray(nativeEnvelope.actions)?nativeEnvelope.actions:[]),
-        metadata:{...(nativeEnvelope.metadata||{}),requestId:d.request_id||nativeEnvelope.metadata?.requestId||null}
-      };
+    let d;
+    try{
+      d=await progressiveChat(payload,controller.signal);
+    }catch(streamError){
+      if(streamError?.name==='AbortError')throw streamError;
+      if(streamError?.safeFallback===true){
+        console.warn('[WAE Progressive] SSE unavailable before turn start; using compatibility transport');
+        d=await jsonChat(payload,controller.signal);
+      }else throw streamError;
     }
-    if(!r.ok||!d||d.success===false||typeof d.reply!=='string')throw new Error(d?.error||`runtime_${r.status}`);
+    captureResponseEnvelope(d);
+    if(!d||d.success===false||typeof d.reply!=='string')throw new Error(d?.error||'runtime_invalid_response');
     const clean=sanitizeAssistantText(d.reply);
     const terminal=/la ia no respondió|ninguna ruta alcanzó el umbral|tu solicitud quedó preservada|no obtuvo una respuesta suficientemente confiable|reconectando el núcleo de inteligencia/i.test(clean);
     if(!clean||d.recoverable===true||d.provider==='web_recovery'||d.resilience?.automatic_evidence_rescue===true||d.answer_assurance?.finalSafeFallback===true||(d.degraded===true&&terminal))throw new Error('no_generative_answer');
     return clean;
-  }catch(e){
+  }catch(error){
     window.__waePendingResponseEnvelope=null;
-    console.warn('[WAE IU] runtime unavailable',e?.message||e);
+    console.warn('[WAE IU] runtime unavailable',error?.message||error);
+    if(error?.e2e&&typeof error.e2e==='object'){window.__waeLastTurnE2E=error.e2e;window.__waeLastTurnAt=Date.now();}
     if(typeof applyTurnE2E==='function')applyTurnE2E(window.__waeLastTurnE2E);
-    // A provider outage is a transport failure, not an assistant answer.
-    // Keep the user's submitted question in the transcript and restore the
-    // draft for one-touch retry instead of persisting a fake assistant turn.
     return null;
   }finally{clearTimeout(timer)}
 }
