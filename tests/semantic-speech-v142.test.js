@@ -68,10 +68,8 @@ const x=1;
   assert.match(rebuilt,/Tabla\. Columnas: Área, Estado\./);
   assert.match(rebuilt,/Fila 1\. Área: Voz; Estado: Activa\./);
   assert.match(rebuilt,/Bloque de código ts omitido/);
-  for(let i=0;i<output.length-1;i++){
-    assert.doesNotMatch(output[i],/[\p{L}\p{N}]$/u);
-    assert.doesNotMatch(output[i+1],/^[\p{L}\p{N}]/u);
-  }
+  assert.ok(output.every(v=>v===v.trim()),'chunks must not carry boundary whitespace');
+  assert.deepEqual(rebuilt.split(/\s+/u),spoken.replace(/\s+/g,' ').trim().split(/\s+/u));
 });
 
 test('v142 PWA loads semantic renderer before chunker and premium playback, with exact cache parity',()=>{
