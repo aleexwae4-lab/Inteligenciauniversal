@@ -110,6 +110,7 @@ function speechText(raw){
     .replace(/,\s*(?=\n|$)/g,'')
     .replace(/\s*\n+\s*/g,', ')
     .replace(/(?:,\s*){2,}/g,', ')
+    .replace(/^,\s*|,\s*$/g,'')
     .trim();
   return t.slice(0,9000);
 }
