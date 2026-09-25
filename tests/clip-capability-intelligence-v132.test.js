@@ -68,7 +68,7 @@ test('v132 deterministic capability turns now use assistant-response/v2 and pres
 test('v132 capabilities API exposes the same capability matrix source of truth',()=>{
   const api=readFileSync(new URL('../api/capabilities.js',import.meta.url),'utf8');
   const runtime=readFileSync(new URL('../lib/runtime.js',import.meta.url),'utf8');
-  assert.match(api,/capabilityMatrix:capabilitySnapshot\(\)/);
+  assert.match(api,/const capabilityMatrix=capabilitySnapshot\(\)/);
   assert.match(runtime,/deterministicTurn/);
   assert.match(runtime,/coreSelfResponse\(\{question:message,history\}\)/);
   assert.match(runtime,/runtime_capabilities\/v132/);
