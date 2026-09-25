@@ -8,7 +8,7 @@ const notify=(s)=>window.toast&&window.toast(s);
 const AUTO_KEY='iu.premium.voice.auto.v1';
 let auto=localStorage.getItem(AUTO_KEY)!=='off';
 let allowAuto=false;
-const voice={token:0,active:null,paused:false,utterances:[],fallbackAttempted:false,completedChunks:0};
+const voice={token:0,active:null,paused:false,started:false,startTimer:null,utterances:[],fallbackAttempted:false,completedChunks:0};
 const synth=window.speechSynthesis;
 const supported=!!(synth&&window.SpeechSynthesisUtterance);
 window.WAEVoice={stop:()=>resetVoice(),available:()=>supported};
@@ -17,7 +17,9 @@ function voiceEvent(status,details={}){
 }
 
 function inline(value){
-  let s=esc(value);
+  // Permit only explicit line-break tags from model output. Every other HTML token
+  // is still escaped, so rendering <br> cleanly does not weaken the XSS boundary.
+  let s=text(value).split(/<br\s*\/?>/gi).map(esc).join('<br>');
   s=s.replace(/\[([^\]\n]{1,150})\]\((https?:\/\/[^)\s]{1,1200})\)/gi,(_m,label,url)=>'<a href="'+url+'" target="_blank" rel="noopener noreferrer">'+label+'</a>');
   s=s.replace(/\x60([^\x60\n]+)\x60/g,(_m,code)=>'<code>'+code+'</code>');
   s=s.replace(/\*\*([^*\n]+)\*\*/g,'<strong>$1</strong>');
@@ -29,7 +31,7 @@ function cells(line){const a=text(line).trim().replace(/^\|/,'').replace(/\|$/,'
 function tableRule(line){return /^\s*\|?\s*:?-{3,}:?\s*(?:\|\s*:?-{3,}:?\s*)+\|?\s*$/.test(line)}
 function rich(raw){
   const lines=text(raw).replace(/\r\n?/g,'\n').split('\n');
-  const out=[];let paragraph=[],list=null,fence=false,code=[],blockType='';
+  const out=[];let paragraph=[],list=null,fence=false,code=[],blockType='',orderedCounter=0;
   function closePara(){if(paragraph.length){out.push('<p>'+paragraph.map(inline).join('<br>')+'</p>');paragraph=[]}}
   function closeList(){if(list){out.push('</'+list+'>');list=null}}
   function block(s){closePara();closeList();out.push(s)}
@@ -39,7 +41,7 @@ function rich(raw){
     if(fence){code.push(line);continue}
     if(!t){closePara();closeList();continue}
     if(i+1<lines.length&&line.includes('|')&&tableRule(lines[i+1])){
-      closePara();closeList();
+      closePara();closeList();orderedCounter=0;
       const heads=cells(line); i+=1;
       let html='<div class="iu-table-scroll" role="region" tabindex="0" aria-label="Tabla de respuesta"><table><thead><tr>'+heads.map(c=>'<th>'+inline(c)+'</th>').join('')+'</tr></thead><tbody>';
       while(i+1<lines.length&&lines[i+1].includes('|')&&lines[i+1].trim()){
@@ -48,18 +50,31 @@ function rich(raw){
       html+='</tbody></table></div>';out.push(html);continue;
     }
     const heading=t.match(/^(#{1,4})\s+(.+)$/);
-    if(heading){block('<h'+Math.min(heading[1].length+1,5)+'>'+inline(heading[2])+'</h'+Math.min(heading[1].length+1,5)+'>');continue}
-    if(/^[-*_]{3,}$/.test(t)){block('<hr>');continue}
-    const quote=t.match(/^>\s?(.+)$/);if(quote){block('<blockquote>'+inline(quote[1])+'</blockquote>');continue}
-    const bullet=t.match(/^[-*+]\s+(.+)$/),number=t.match(/^\d+[.)]\s+(.+)$/);
-    if(bullet||number){closePara();const type=bullet?'ul':'ol';if(list!==type){closeList();out.push('<'+type+'>');list=type}out.push('<li>'+inline((bullet||number)[1])+'</li>');continue}
-    closeList();paragraph.push(line.trim());
+    if(heading){orderedCounter=0;block('<h'+Math.min(heading[1].length+1,5)+'>'+inline(heading[2])+'</h'+Math.min(heading[1].length+1,5)+'>');continue}
+    if(/^[-*_]{3,}$/.test(t)){orderedCounter=0;block('<hr>');continue}
+    const quote=t.match(/^>\s?(.+)$/);if(quote){orderedCounter=0;block('<blockquote>'+inline(quote[1])+'</blockquote>');continue}
+    const bullet=t.match(/^[-*+]\s+(.+)$/),number=t.match(/^(\d+)[.)]\s+(.+)$/);
+    if(bullet||number){
+      closePara();
+      const type=bullet?'ul':'ol';
+      if(number){
+        const sourceNumber=Math.max(1,Number(number[1])||1);
+        const start=sourceNumber===1&&orderedCounter>0?orderedCounter+1:sourceNumber;
+        if(list!==type){closeList();out.push('<ol'+(start!==1?' start="'+start+'"':'')+'>');list=type}
+        out.push('<li>'+inline(number[2])+'</li>');orderedCounter=start;
+      }else{
+        if(list!==type){closeList();out.push('<ul>');list=type}
+        out.push('<li>'+inline(bullet[1])+'</li>');
+      }
+      continue;
+    }
+    closeList();orderedCounter=0;paragraph.push(line.trim());
   }
   closePara();closeList();if(fence)out.push('<pre'+(blockType?' data-wae-block="'+blockType+'"':'')+'><code>'+esc(code.join('\n'))+'</code></pre>');
   return out.join('')||'<p>'+esc(raw)+'</p>';
 }
 function rawOf(article){return article.dataset.iuRaw||article.querySelector('p')?.textContent||''}
-function speechText(raw){return text(raw).replace(/(?:\x60{3}|~{3})wae-(?:card|chart)[\s\S]*?(?:\x60{3}|~{3})/gi,' ').replace(/\[([^\]]+)\]\(https?:\/\/[^)]+\)/g,'$1').replace(/https?:\/\/\S+/g,'').replace(/[\x60*_#>|~]/g,'').replace(/\s+/g,' ').trim().slice(0,9000)}
+function speechText(raw){return text(raw).replace(/<br\s*\/?>/gi,'. ').replace(/(?:\x60{3}|~{3})wae-(?:card|chart)[\s\S]*?(?:\x60{3}|~{3})/gi,' ').replace(/\[([^\]]+)\]\(https?:\/\/[^)]+\)/g,'$1').replace(/https?:\/\/\S+/g,'').replace(/[\x60*_#>|~]/g,'').replace(/\s+/g,' ').trim().slice(0,9000)}
 function takeEnvelope(article){
   const envelope=window.__waePendingResponseEnvelope;
   if(!envelope||article!==QA('#messages .message.assistant').at(-1))return null;
@@ -91,12 +106,13 @@ function sourceStrip(envelope){
   return wrap;
 }
 function resetVoice(){
-  voice.token++;voice.active=null;voice.paused=false;voice.utterances=[];voice.fallbackAttempted=false;voice.completedChunks=0;
+  voice.token++;voice.active=null;voice.paused=false;voice.started=false;if(voice.startTimer){clearTimeout(voice.startTimer);voice.startTimer=null}voice.utterances=[];voice.fallbackAttempted=false;voice.completedChunks=0;
   if(supported)try{synth.cancel()}catch(_){}
   QA('.iu-voice').forEach(b=>{b.textContent='▶';b.title='Escuchar respuesta';b.setAttribute('aria-label','Escuchar respuesta');b.setAttribute('aria-pressed','false')});
 }
 function speak(article,button){
   if(!supported){voiceEvent('failed',{code:'unsupported'});notify('La voz no está disponible en este navegador');return}
+  if(voice.active===article&&!voice.started){resetVoice();return}
   if(voice.active===article&&(synth.speaking||synth.pending)&&!voice.paused){
     try{synth.pause();voice.paused=true;button.textContent='▶';button.title='Reanudar voz';button.setAttribute('aria-label','Reanudar voz');button.setAttribute('aria-pressed','false')}catch(_){}
     return;
@@ -106,21 +122,29 @@ function speak(article,button){
     return;
   }
   resetVoice();const content=text(article.dataset.iuSpeech||'').trim()||speechText(rawOf(article));if(!content)return;
-  const token=voice.token;voice.active=article;voice.paused=false;voice.completedChunks=0;voice.fallbackAttempted=false;
-  button.textContent='⏸';button.title='Pausar voz';button.setAttribute('aria-label','Pausar voz');button.setAttribute('aria-pressed','true');
+  const token=voice.token;voice.active=article;voice.paused=false;voice.started=false;voice.completedChunks=0;voice.fallbackAttempted=false;
+  button.textContent='◌';button.title='Preparando voz';button.setAttribute('aria-label','Preparando voz');button.setAttribute('aria-pressed','false');
   const prefs=window.WAESettings?.get?.()||{};
   const allVoices=synth.getVoices();
   const selected=allVoices.find(v=>v.voiceURI===prefs.voiceURI);
   const spanish=allVoices.find(v=>/^es[-_]/i.test(v.lang)&&/mx/i.test(v.lang))||allVoices.find(v=>/^es/i.test(v.lang));
 
   const queue=(chunks,{fallback=false}={})=>{
+    if(voice.startTimer){clearTimeout(voice.startTimer);voice.startTimer=null}
     const utterances=chunks.map((chunk,index)=>{
       const utter=new SpeechSynthesisUtterance(chunk);
       utter.lang='es-MX';
       utter.rate=fallback?Math.min(Number(prefs.rate)||1,1):Number(prefs.rate)||1;
       utter.pitch=fallback?1:Number(prefs.pitch)||1;
+      utter.volume=1;
       if(!fallback){if(selected)utter.voice=selected;else if(spanish)utter.voice=spanish}
-      utter.onstart=()=>{if(token===voice.token)voiceEvent(fallback?'recovered':'playing',{fallback})};
+      utter.onstart=()=>{
+        if(token!==voice.token)return;
+        if(voice.startTimer){clearTimeout(voice.startTimer);voice.startTimer=null}
+        voice.started=true;
+        button.textContent='⏸';button.title='Pausar voz';button.setAttribute('aria-label','Pausar voz');button.setAttribute('aria-pressed','true');
+        voiceEvent(fallback?'recovered':'playing',{fallback});
+      };
       utter.onend=()=>{
         if(token!==voice.token)return;
         voice.completedChunks++;
@@ -143,7 +167,21 @@ function speak(article,button){
       return utter;
     });
     voice.utterances=utterances;
-    try{utterances.forEach(utter=>synth.speak(utter))}
+    try{
+      utterances.forEach(utter=>synth.speak(utter));
+      voice.startTimer=setTimeout(()=>{
+        if(token!==voice.token||voice.started)return;
+        try{synth.cancel()}catch(_){}
+        if(!fallback&&!voice.fallbackAttempted){
+          voice.fallbackAttempted=true;
+          const smaller=window.WAESpeechChunks?window.WAESpeechChunks(content,700):[content];
+          voiceEvent('recovering',{code:'start_timeout'});
+          queue(smaller,{fallback:true});
+        }else{
+          voiceEvent('failed',{code:'start_timeout',fallback});resetVoice();notify('No se pudo iniciar la voz');
+        }
+      },2800);
+    }
     catch(_){
       if(!fallback&&!voice.fallbackAttempted){
         voice.fallbackAttempted=true;
