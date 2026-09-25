@@ -246,6 +246,11 @@ function applyTurnE2E(meta=window.__waeLastTurnE2E){
     status.textContent='Turno no completado'+latencyText;
     return;
   }
+  if(meta.status==='degraded'){
+    label.textContent='Universal Core · E2E parcial';
+    status.textContent='Respuesta disponible · revisar voz'+latencyText;
+    return;
+  }
   if(meta.recovered||meta.status==='recovered'){
     label.textContent='Universal Core · E2E recuperado';
     status.textContent=(Number(meta.recoveryCount)||1)+' recuperación'+((Number(meta.recoveryCount)||1)===1?'':'es')+latencyText;
@@ -262,6 +267,22 @@ function markUIStage(meta){
   return next;
 }
 
+function markVoiceStage(detail={}){
+  const meta=window.__waeLastTurnE2E;
+  if(!meta||!Array.isArray(meta.stages))return;
+  const status=String(detail.status||'');
+  const stageStatus=status==='recovered'?'recovered':status==='failed'?'failed':status==='completed'||status==='playing'?'ok':'unobserved';
+  let recoveryCount=Number(meta.recoveryCount)||0,recovered=!!meta.recovered,nextStatus=meta.status;
+  if(stageStatus==='recovered'){
+    const wasRecovered=meta.stages.some(stage=>stage?.id==='voice'&&stage.status==='recovered');
+    if(!wasRecovered)recoveryCount++;
+    recovered=true;nextStatus='recovered';
+  }else if(stageStatus==='failed'&&nextStatus!=='failed'){
+    nextStatus='degraded';
+  }
+  const next={...meta,status:nextStatus,recovered,recoveryCount,stages:meta.stages.map(stage=>stage?.id==='voice'?{...stage,status:stageStatus,code:detail.code||undefined,fallback:!!detail.fallback}:stage)};
+  window.__waeLastTurnE2E=next;applyTurnE2E(next);
+}
 async function submitMessage(ev){
   ev.preventDefault();
   const i=$('#messageInput'),m=i.value.trim()||(window.WAECoreTools?.defaultQuestion?.()||'');
@@ -376,3 +397,4 @@ async function refreshCoreReadiness(){
 renderMessages();initDocument();initInteractions();setMode(state.mode);registerSW();void refreshCoreReadiness();
 window.addEventListener('online',refreshCoreReadiness);
 window.addEventListener('pageshow',refreshCoreReadiness);
+window.addEventListener('wae:voice-e2e',event=>markVoiceStage(event.detail||{}));
