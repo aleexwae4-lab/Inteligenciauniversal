@@ -8,10 +8,13 @@ const notify=(s)=>window.toast&&window.toast(s);
 const AUTO_KEY='iu.premium.voice.auto.v1';
 let auto=localStorage.getItem(AUTO_KEY)!=='off';
 let allowAuto=false;
-const voice={token:0,active:null,paused:false,utterances:[]};
+const voice={token:0,active:null,paused:false,utterances:[],fallbackAttempted:false,completedChunks:0};
 const synth=window.speechSynthesis;
 const supported=!!(synth&&window.SpeechSynthesisUtterance);
 window.WAEVoice={stop:()=>resetVoice(),available:()=>supported};
+function voiceEvent(status,details={}){
+  try{window.dispatchEvent(new CustomEvent('wae:voice-e2e',{detail:{status,...details}}))}catch(_){}
+}
 
 function inline(value){
   let s=esc(value);
@@ -58,12 +61,12 @@ function rich(raw){
 function rawOf(article){return article.dataset.iuRaw||article.querySelector('p')?.textContent||''}
 function speechText(raw){return text(raw).replace(/(?:\x60{3}|~{3})wae-(?:card|chart)[\s\S]*?(?:\x60{3}|~{3})/gi,' ').replace(/\[([^\]]+)\]\(https?:\/\/[^)]+\)/g,'$1').replace(/https?:\/\/\S+/g,'').replace(/[\x60*_#>|~]/g,'').replace(/\s+/g,' ').trim().slice(0,9000)}
 function resetVoice(){
-  voice.token++;voice.active=null;voice.paused=false;voice.utterances=[];
+  voice.token++;voice.active=null;voice.paused=false;voice.utterances=[];voice.fallbackAttempted=false;voice.completedChunks=0;
   if(supported)try{synth.cancel()}catch(_){}
   QA('.iu-voice').forEach(b=>{b.textContent='▶';b.title='Escuchar respuesta';b.setAttribute('aria-label','Escuchar respuesta');b.setAttribute('aria-pressed','false')});
 }
 function speak(article,button){
-  if(!supported){notify('La voz no está disponible en este navegador');return}
+  if(!supported){voiceEvent('failed',{code:'unsupported'});notify('La voz no está disponible en este navegador');return}
   if(voice.active===article&&(synth.speaking||synth.pending)&&!voice.paused){
     try{synth.pause();voice.paused=true;button.textContent='▶';button.title='Reanudar voz';button.setAttribute('aria-label','Reanudar voz');button.setAttribute('aria-pressed','false')}catch(_){}
     return;
@@ -73,34 +76,58 @@ function speak(article,button){
     return;
   }
   resetVoice();const content=speechText(rawOf(article));if(!content)return;
-  const token=voice.token;voice.active=article;voice.paused=false;
+  const token=voice.token;voice.active=article;voice.paused=false;voice.completedChunks=0;voice.fallbackAttempted=false;
   button.textContent='⏸';button.title='Pausar voz';button.setAttribute('aria-label','Pausar voz');button.setAttribute('aria-pressed','true');
-  // Avoid browser TTS restarts after every 280 characters. Most answers now use one utterance.
-  const chunks=window.WAESpeechChunks?window.WAESpeechChunks(content,1350):[content];
   const prefs=window.WAESettings?.get?.()||{};
   const allVoices=synth.getVoices();
   const selected=allVoices.find(v=>v.voiceURI===prefs.voiceURI);
   const spanish=allVoices.find(v=>/^es[-_]/i.test(v.lang)&&/mx/i.test(v.lang))||allVoices.find(v=>/^es/i.test(v.lang));
-  const utterances=chunks.map((chunk,index)=>{
-    const utter=new SpeechSynthesisUtterance(chunk);
-    utter.lang='es-MX';
-    utter.rate=Number(prefs.rate)||1;
-    utter.pitch=Number(prefs.pitch)||1;
-    if(selected)utter.voice=selected;else if(spanish)utter.voice=spanish;
-    utter.onend=()=>{
-      if(token!==voice.token)return;
-      if(index===chunks.length-1)resetVoice();
-    };
-    utter.onerror=()=>{
-      if(token!==voice.token)return;
-      resetVoice();notify('No se pudo reproducir la voz');
-    };
-    return utter;
-  });
-  // Keep references alive on Android and queue ahead instead of waiting for each onend.
-  voice.utterances=utterances;
-  try{utterances.forEach(utter=>synth.speak(utter))}
-  catch(_){resetVoice();notify('No se pudo iniciar la voz')}
+
+  const queue=(chunks,{fallback=false}={})=>{
+    const utterances=chunks.map((chunk,index)=>{
+      const utter=new SpeechSynthesisUtterance(chunk);
+      utter.lang='es-MX';
+      utter.rate=fallback?Math.min(Number(prefs.rate)||1,1):Number(prefs.rate)||1;
+      utter.pitch=fallback?1:Number(prefs.pitch)||1;
+      if(!fallback){if(selected)utter.voice=selected;else if(spanish)utter.voice=spanish}
+      utter.onstart=()=>{if(token===voice.token)voiceEvent(fallback?'recovered':'playing',{fallback})};
+      utter.onend=()=>{
+        if(token!==voice.token)return;
+        voice.completedChunks++;
+        if(index===chunks.length-1){voiceEvent(fallback?'recovered':'completed',{fallback});resetVoice()}
+      };
+      utter.onerror=(event)=>{
+        if(token!==voice.token)return;
+        const code=String(event?.error||'speech_error');
+        const recoverable=/^(?:voice-unavailable|language-unavailable|synthesis-unavailable|synthesis-failed|text-too-long|network)$/i.test(code);
+        if(!fallback&&recoverable&&voice.completedChunks===0&&!voice.fallbackAttempted){
+          voice.fallbackAttempted=true;
+          try{synth.cancel()}catch(_){}
+          const smaller=window.WAESpeechChunks?window.WAESpeechChunks(content,700):[content];
+          voiceEvent('recovering',{code});
+          setTimeout(()=>{if(token===voice.token)queue(smaller,{fallback:true})},0);
+          return;
+        }
+        voiceEvent('failed',{code,fallback});resetVoice();notify('No se pudo reproducir la voz');
+      };
+      return utter;
+    });
+    voice.utterances=utterances;
+    try{utterances.forEach(utter=>synth.speak(utter))}
+    catch(_){
+      if(!fallback&&!voice.fallbackAttempted){
+        voice.fallbackAttempted=true;
+        const smaller=window.WAESpeechChunks?window.WAESpeechChunks(content,700):[content];
+        voiceEvent('recovering',{code:'speak_throw'});
+        setTimeout(()=>{if(token===voice.token)queue(smaller,{fallback:true})},0);
+      }else{voiceEvent('failed',{code:'speak_throw',fallback});resetVoice();notify('No se pudo iniciar la voz')}
+    }
+  };
+
+  // Keep references alive on Android and queue ahead. Fallback retries only
+  // before any chunk has completed, preventing mid-answer duplication.
+  const chunks=window.WAESpeechChunks?window.WAESpeechChunks(content,1350):[content];
+  queue(chunks);
 }
 async function copyValue(s){
   if(navigator.clipboard&&window.isSecureContext){await navigator.clipboard.writeText(s);return}

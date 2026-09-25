@@ -18,7 +18,7 @@ export default async function handler(req,res) {
     const latencyMs=Date.now()-started;
     recordChatSuccess(result,latencyMs);
     res.setHeader('Server-Timing',`wae;dur=${latencyMs}`);
-    console.info('[WAE Chat]',JSON.stringify({requestId,outcome:'ok',provider:String(result.provider||'unknown').slice(0,55),grounded:!!result.grounded,latencyMs,fallbackCount:result.fallbackFailures?.length||0}));
+    console.info('[WAE Chat]',JSON.stringify({requestId,outcome:'ok',provider:String(result.provider||'unknown').slice(0,55),grounded:!!result.grounded,latencyMs,fallbackCount:result.fallbackFailures?.length||0,e2eStatus:result.e2e?.status||null,recoveryCount:result.e2e?.recoveryCount||0}));
     return res.status(200).json(result);
   } catch (error) {
     const latencyMs=Date.now()-started;
@@ -27,7 +27,7 @@ export default async function handler(req,res) {
     const code=String(error.code||'runtime_error').slice(0,80);
     recordChatFailure(code,latencyMs);
     res.setHeader('Server-Timing',`wae;dur=${latencyMs}`);
-    console.warn('[WAE Chat]',JSON.stringify({requestId,outcome:'error',code,latencyMs,attempts:error.failures?.map(x=>({provider:x.provider,error:String(x.error||'failed').slice(0,60)}))||[]}));
-    return res.status(status).json({error:code,requestId});
+    console.warn('[WAE Chat]',JSON.stringify({requestId,outcome:'error',code,latencyMs,e2eStatus:error.e2e?.status||null,failedStageCount:error.e2e?.failedStageCount||0,attempts:error.failures?.map(x=>({provider:x.provider,error:String(x.error||'failed').slice(0,60)}))||[]}));
+    return res.status(status).json({error:code,requestId,...(error.e2e?{e2e:error.e2e}:{})});
   }
 }

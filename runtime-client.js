@@ -34,6 +34,26 @@
     }
     return lines.length?answer+'\n\n### Fuentes relacionadas\n'+lines.join('\n'):answer;
   }
+  const E2E_VERSION='conversation-e2e/v130';
+  const browserE2E=(data,{route='supabase-primary',recovered=false,recoveryCode=null}={})=>({
+    version:E2E_VERSION,
+    route,
+    status:recovered?'recovered':'ok',
+    recovered:!!recovered,
+    recoveryCount:recovered?1:0,
+    failedStageCount:0,
+    latencyMs:Number.isFinite(Number(data?.latency_ms||data?.latencyMs))?Math.max(0,Math.round(Number(data.latency_ms||data.latencyMs))):null,
+    stages:[
+      {id:'router',status:'ok',latencyMs:0},
+      {id:'memory',status:'unobserved',latencyMs:0},
+      {id:'tools',status:'unobserved',latencyMs:0},
+      {id:'provider',status:recovered?'recovered':'ok',latencyMs:0,provider:String(data?.provider||'wae_edge').slice(0,80),model:String(data?.model||'').slice(0,120)||null,...(recoveryCode?{code:recoveryCode}:{})},
+      {id:'sources',status:'ok',latencyMs:0,count:Array.isArray(data?.web_sources)?data.web_sources.length:0},
+      {id:'persistence',status:'unobserved',latencyMs:0},
+      {id:'ui',status:'unobserved',latencyMs:0},
+      {id:'voice',status:'unobserved',latencyMs:0}
+    ]
+  });
   const SESSION_ID='iu.sessionId',SESSION_SECRET='iu.sessionSecret',CONVERSATION_ID='iu.conversationId';
   if(!localStorage.getItem('wae.endpoint')||localStorage.getItem('wae.endpoint')==='/api/chat')localStorage.setItem('wae.endpoint','/api/chat');
   window.__waeRuntimeAttachments=[];
@@ -305,7 +325,8 @@
       window.WAENavigation?.remoteInvalidated?.(payload.conversation_id);
       if(kind==='session')await refreshBootstrap(signal);
       else localStorage.removeItem(CONVERSATION_ID);
-      return edge({...payload,...sessionPayload(),conversation_id:null},signal,39000);
+      const repaired=await edge({...payload,...sessionPayload(),conversation_id:null},signal,39000);
+      return {...repaired,__waeRecovery:kind};
     }
   };
   // Native WAEWEB routing only when the first-party Render backend reports
@@ -375,7 +396,8 @@
       window.__iuLastRuntime=data;
       if(!incoming.canvas)queueMicrotask(()=>{updateRuntimeCard(data);loadConversations().catch(()=>{})});
       const reply=incoming.canvas?String(data.reply):tidyAnswer(withRetrievedSources(data.reply,topicSources,incoming.message),incoming.message,runtimeMode,window.__waeRuntimeAttachments||[]);
-      return new Response(JSON.stringify({reply,runtime:data.runtime,provider:data.provider,model:data.model,web_sources:data.web_sources||[]}),{status:200,headers:{'content-type':'application/json','cache-control':'no-store','x-wae-runtime':'supabase-primary'}});
+      const e2e=browserE2E(data,{route:'supabase-primary',recovered:!!data.__waeRecovery,recoveryCode:data.__waeRecovery||null});
+      return new Response(JSON.stringify({reply,runtime:data.runtime,provider:data.provider,model:data.model,web_sources:data.web_sources||[],e2e}),{status:200,headers:{'content-type':'application/json','cache-control':'no-store','x-wae-runtime':'supabase-primary'}});
     }catch(err){
       // An aborted chat must not launch an invisible second provider request.
       if(init.signal?.aborted)throw err;
@@ -384,19 +406,27 @@
         if(init.signal?.aborted)throw Object.assign(new Error('chat_cancelled'),{name:'AbortError'});
         const fallback=await nativeFetch(input,init);
         const copy=document.querySelector('.v2-runtime-copy');
+        let report=null;
+        if(fallback.ok)report=await fallback.clone().json().catch(()=>null);
         if(copy&&fallback.ok){
           // Only show the provider actually reported by the Render response.
-          const report=await fallback.clone().json().catch(()=>null);
           const provider=typeof report?.provider==='string'?report.provider.replace(/[^a-z0-9_.-]/gi,'').slice(0,48):'';
           const title=document.createElement('strong'),detail=document.createElement('small');
           title.textContent='WAE Gateway · recuperación activa';
           detail.textContent=provider?'Render · '+provider:'Render · proveedor no identificado';
           copy.replaceChildren(title,detail);
         }
+        if(fallback.ok&&report&&typeof report==='object'){
+          const base=report.e2e&&typeof report.e2e==='object'?report.e2e:browserE2E(report,{route:'render'});
+          const e2e={...base,route:'browser-fallback/render',status:'recovered',recovered:true,recoveryCount:Math.max(1,Number(base.recoveryCount||0)+1),browserRecovery:'supabase_primary_rejected'};
+          const headers=new Headers(fallback.headers);headers.set('content-type','application/json; charset=utf-8');headers.set('cache-control','no-store');headers.set('x-wae-runtime','render-recovery');
+          return new Response(JSON.stringify({...report,e2e}),{status:fallback.status,statusText:fallback.statusText,headers});
+        }
         return fallback;
       }catch(fallbackError){
         const status=Number(err?.status)||503;
-        return new Response(JSON.stringify({error:'universal_runtime_unavailable',primary:'supabase_runtime_unavailable',fallback:'render_runtime_unavailable'}),{status,headers:{'content-type':'application/json','cache-control':'no-store'}});
+        const e2e={version:E2E_VERSION,route:'browser-fallback/render',status:'failed',recovered:false,recoveryCount:0,failedStageCount:1,latencyMs:null,stages:[{id:'router',status:'ok',latencyMs:0},{id:'memory',status:'unobserved',latencyMs:0},{id:'tools',status:'unobserved',latencyMs:0},{id:'provider',status:'failed',latencyMs:0,code:'all_routes_unavailable'},{id:'sources',status:'unobserved',latencyMs:0},{id:'persistence',status:'unobserved',latencyMs:0},{id:'ui',status:'unobserved',latencyMs:0},{id:'voice',status:'unobserved',latencyMs:0}]};
+        return new Response(JSON.stringify({error:'universal_runtime_unavailable',primary:'supabase_runtime_unavailable',fallback:'render_runtime_unavailable',e2e}),{status,headers:{'content-type':'application/json','cache-control':'no-store'}});
       }
     }
   };

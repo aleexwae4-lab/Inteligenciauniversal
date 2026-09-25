@@ -63,7 +63,9 @@ test('tables contain safe data labels for a readable 320px viewport without JS e
  assert.match(css,/content:attr\(data-label\)/);
  assert.match(css,/overflow-wrap:anywhere/);
  assert.match(html,/wae-mobile-tables-v9\.css\?v=1/);
- assert.match(html,/premium-render-v1\.js\?v=12/);
+ const premiumAsset=html.match(/\.\/premium-render-v1\.js\?[^"']+/)?.[0];
+ assert.ok(premiumAsset,'index must version premium-render-v1.js');
+ assert.ok(sw.includes(premiumAsset),'service worker must cache the exact current premium-render asset');
  assert.match(sw,/wae-universal-render-waeweb-public-v45/);
  assert.match(sw,/runtime-client\.js\?v=24/);
 });

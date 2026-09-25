@@ -105,6 +105,7 @@ async function getAIReply(message){
       signal:c.signal
     });
     const d=await r.json().catch(()=>({}));
+    if(d?.e2e&&typeof d.e2e==='object'){window.__waeLastTurnE2E=d.e2e;window.__waeLastTurnAt=Date.now();}
     if(!r.ok||!d||d.success===false||typeof d.reply!=='string')throw new Error(d?.error||`runtime_${r.status}`);
     const clean=sanitizeAssistantText(d.reply);
     const terminal=/la ia no respondió|ninguna ruta alcanzó el umbral|tu solicitud quedó preservada|no obtuvo una respuesta suficientemente confiable|reconectando el núcleo de inteligencia/i.test(clean);
@@ -112,6 +113,7 @@ async function getAIReply(message){
     return clean;
   }catch(e){
     console.warn('[WAE IU] runtime unavailable',e?.message||e);
+    if(typeof applyTurnE2E==='function')applyTurnE2E(window.__waeLastTurnE2E);
     // A provider outage is a transport failure, not an assistant answer.
     // Keep the user's submitted question in the transcript and restore the
     // draft for one-touch retry instead of persisting a fake assistant turn.
@@ -234,6 +236,53 @@ function showRetryTurn(message){
   retry.addEventListener('click',()=>{if(state.busy)return;const i=$('#messageInput');if(!i)return;i.value=message;autosizeInput();$('#composer').requestSubmit()});
   e.append(label,retry);$('#messages').append(e);scrollChat();
 }
+function applyTurnE2E(meta=window.__waeLastTurnE2E){
+  if(!meta||typeof meta!=='object')return;
+  const label=$('#coreStatusLabel'),status=$('#coreStatusMeta');
+  if(!label||!status)return;
+  const latency=Number(meta.latencyMs),latencyText=Number.isFinite(latency)&&latency>=0?' · '+Math.round(latency)+' ms':'';
+  if(meta.status==='failed'){
+    label.textContent='Universal Core · E2E degradado';
+    status.textContent='Turno no completado'+latencyText;
+    return;
+  }
+  if(meta.status==='degraded'){
+    label.textContent='Universal Core · E2E parcial';
+    status.textContent='Respuesta disponible · revisar voz'+latencyText;
+    return;
+  }
+  if(meta.recovered||meta.status==='recovered'){
+    label.textContent='Universal Core · E2E recuperado';
+    status.textContent=(Number(meta.recoveryCount)||1)+' recuperación'+((Number(meta.recoveryCount)||1)===1?'':'es')+latencyText;
+    return;
+  }
+  label.textContent='Universal Core · E2E operativo';
+  status.textContent='Turno verificado'+latencyText;
+}
+function markUIStage(meta){
+  if(!meta||!Array.isArray(meta.stages))return meta;
+  const next={...meta,stages:meta.stages.map(stage=>stage?.id==='ui'?{...stage,status:'ok'}:stage)};
+  window.__waeLastTurnE2E=next;
+  window.dispatchEvent(new CustomEvent('wae:turn-e2e',{detail:next}));
+  return next;
+}
+
+function markVoiceStage(detail={}){
+  const meta=window.__waeLastTurnE2E;
+  if(!meta||!Array.isArray(meta.stages))return;
+  const status=String(detail.status||'');
+  const stageStatus=status==='recovered'?'recovered':status==='failed'?'failed':status==='completed'||status==='playing'?'ok':'unobserved';
+  let recoveryCount=Number(meta.recoveryCount)||0,recovered=!!meta.recovered,nextStatus=meta.status;
+  if(stageStatus==='recovered'){
+    const wasRecovered=meta.stages.some(stage=>stage?.id==='voice'&&stage.status==='recovered');
+    if(!wasRecovered)recoveryCount++;
+    recovered=true;nextStatus='recovered';
+  }else if(stageStatus==='failed'&&nextStatus!=='failed'){
+    nextStatus='degraded';
+  }
+  const next={...meta,status:nextStatus,recovered,recoveryCount,stages:meta.stages.map(stage=>stage?.id==='voice'?{...stage,status:stageStatus,code:detail.code||undefined,fallback:!!detail.fallback}:stage)};
+  window.__waeLastTurnE2E=next;applyTurnE2E(next);
+}
 async function submitMessage(ev){
   ev.preventDefault();
   const i=$('#messageInput'),m=i.value.trim()||(window.WAECoreTools?.defaultQuestion?.()||'');
@@ -248,9 +297,9 @@ async function submitMessage(ev){
   showTyping();
   try{
     const r=await getAIReply(m);hideTyping();
-    // v129: reflect the result of this real turn in the status strip without a second inference.
-    void refreshCoreReadiness();
-    if(typeof r==='string'&&r.trim())addMessage('assistant',r);
+    // v130: health remains global, while the last completed turn exposes its own E2E contract.
+    void refreshCoreReadiness().then(()=>applyTurnE2E(window.__waeLastTurnE2E));
+    if(typeof r==='string'&&r.trim()){addMessage('assistant',r);applyTurnE2E(markUIStage(window.__waeLastTurnE2E));}
     else{
       if(!i.value.trim()){i.value=m;autosizeInput();}
       showRetryTurn(m);
@@ -348,3 +397,4 @@ async function refreshCoreReadiness(){
 renderMessages();initDocument();initInteractions();setMode(state.mode);registerSW();void refreshCoreReadiness();
 window.addEventListener('online',refreshCoreReadiness);
 window.addEventListener('pageshow',refreshCoreReadiness);
+window.addEventListener('wae:voice-e2e',event=>markVoiceStage(event.detail||{}));
