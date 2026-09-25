@@ -134,7 +134,7 @@
       };
     }finally{linked.cleanup()}
   }
-  window.WAEVoiceRuntime=Object.freeze({
+  if(typeof window!=='undefined')window.WAEVoiceRuntime=Object.freeze({
     synthesize:(input,options)=>naturalVoiceRequest(input,options),
     available:()=>!!(localStorage.getItem(SESSION_ID)&&localStorage.getItem(SESSION_SECRET)),
     transport:'wae-natural-voice-v60'
