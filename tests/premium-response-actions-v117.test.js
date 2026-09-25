@@ -44,7 +44,7 @@ test('badge and rich table layout remain compact and responsive',()=>{
 
 test('new assets ship in service-worker shell update',()=>{
   const sw=read('sw.js');
-  assert.match(sw,/wae-universal-v36-premium-actions-v117/);
+  assert.match(sw,/wae-universal-v37-native-app-brand/);
   assert.match(sw,/'\.\/premium-v117\.css','\.\/premium-v117\.js'/);
 });
 
