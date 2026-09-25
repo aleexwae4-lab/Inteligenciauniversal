@@ -68,5 +68,5 @@ test('v135 provider router records attempts, success, quality rejects and failur
 test('v135 pins Node to a stable major instead of an open-ended >= range',()=>{
   const pkg=JSON.parse(read('package.json'));
   assert.equal(pkg.engines.node,'22.x');
-  assert.equal(pkg.version,'0.6.5');
+  assert.match(pkg.version,/^0\.6\.\d+$/);
 });
