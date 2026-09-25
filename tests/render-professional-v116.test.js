@@ -103,8 +103,11 @@ test('unprofitable, zero-price and incomplete inputs cannot pretend business ret
 });
 test('Premium web asset is refreshed without modifying original visual and PWA cache contracts',()=>{
   const html=read('index.html'),sw=read('sw.js'),client=read('runtime-client.js');
-  assert.match(html,/runtime-client\.js\?v=24&industrial=v115&professional=v116/);
-  assert.match(sw,/runtime-client\.js\?v=24&industrial=v115&professional=v116/);
+  const runtimeAsset=html.match(/\.\/runtime-client\.js\?[^"'<>\s]+/)?.[0];
+  assert.ok(runtimeAsset,'current runtime-client asset missing');
+  assert.match(runtimeAsset,/industrial=v115/);
+  assert.match(runtimeAsset,/professional=v116/);
+  assert.ok(sw.includes(runtimeAsset),'service worker must publish the exact current runtime-client asset');
   assert.match(sw,/wae-universal-render-waeweb-public-v45/);
   assert.match(client,/request\.canvas_direct===true\|\|request\.canvas_blueprint===true/);
 });
