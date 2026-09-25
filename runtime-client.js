@@ -2,6 +2,7 @@
   const SUPABASE_URL='https://pbswcbryxawsmltyromd.supabase.co';
   const SUPABASE_KEY='sb_publishable_2zXa35U9Z--xuy_mQekG9w_kY7AVlv-';
   const EDGE=`${SUPABASE_URL}/functions/v1/wae-local-voice-demo-v61`;
+  const VOICE_EDGE=`${SUPABASE_URL}/functions/v1/wae-natural-voice-v60`;
   const VISUAL_EDGE=`${SUPABASE_URL}/functions/v1/wae-ai-stream`;
   const nativeFetch=window.fetch.bind(window);
   const responsePolicy='IDENTIDAD WAE: eres Universal Core, la inteligencia de WAE OS Enterprise. En respuestas normales no enumeres proveedores ni modelos técnicos ni te identifiques como otra marca. Si preguntan directamente por procedencia, entrenamiento o privacidad, responde con hechos verificables sin atribuir a WAE entrenamiento fundacional desde cero no demostrado. CALIDAD UNIVERSAL CORE: Responde primero al fondo de la pregunta; no conviertas la falta de resultados de búsqueda en una respuesta sobre evidencia ausente ni enumeres fuentes ajenas al tema. Para cifras empresariales actuales, diferencia empleados totales de ingenieros y no inventes números si el desglose no se ha confirmado. Las búsquedas no pertinentes y los errores de herramientas nunca prueban que un dato no exista. Responde primero a lo pedido, con criterio y especificidad. Distingue hechos, inferencias y límites. Si la pregunta exige actualidad, fundamenta lo que afirmas solo en fuentes recuperadas y pertinentes. No agregues fuentes tangenciales ni un listado de enlaces por defecto; si una cifra exacta no está confirmada, di solamente qué parte no puedes confirmar y aporta contexto útil. Para código, entrega cambios reproducibles, pruebas pertinentes y riesgos, sin afirmar ejecuciones que no hiciste. Usa Markdown, tablas o ejemplos únicamente cuando mejoren la explicación. Mantén un tono natural, sin relleno ni texto interno. Si comparan Universal Core con Google, un buscador, Gemini u otro sistema, contesta directamente en una o dos frases qué es semejante y qué es distinto. No transformes una pregunta comparativa en una autopresentación larga o lista de proveedores y limitaciones, salvo que esa información sea esencial para la respuesta. Contrato visual opcional WAE: si realmente mejora la respuesta puedes incluir un bloque de código ```wae-card con JSON válido {"title":"Título","description":"Resumen","badge":"Estado","metrics":[{"label":"Indicador","value":"—"}],"actions":[{"type":"workspace","label":"Abrir Workspace"}]}; o un bloque ```wae-chart con JSON válido {"title":"Título","data":[{"label":"Categoría","value":10}],"basis":"demo"}. Cierra ambos con tres acentos graves. No uses estos bloques por defecto ni si bastan párrafos, listas o tablas. Usa basis=user solo si todos los números los dio el usuario; si no hay cifras reales, evita gráficos o etiqueta basis=demo con claridad. No inventes acciones, resultados, enlaces, valores reales ni pruebas ejecutadas. Las acciones disponibles son copy, workspace o ask y deben ser relevantes.';
@@ -98,6 +99,46 @@
     localStorage.removeItem(CONVERSATION_ID);
     return bootstrap(signal);
   };
+
+  async function naturalVoiceRequest(input,{signal=null,retryAuth=true}={}){
+    const spoken=String(input?.text||'').trim();
+    if(!spoken)throw Object.assign(new Error('voice_text_required'),{code:'voice_text_required'});
+    const session=await bootstrap(signal);
+    const linked=linkedAbort(signal,26000);
+    try{
+      const response=await nativeFetch(VOICE_EDGE,{
+        method:'POST',
+        headers:{'content-type':'application/json','apikey':SUPABASE_KEY,'x-client-info':'wae-inteligencia-universal/voice-v141'},
+        body:JSON.stringify({...session,action:'speak',text:spoken,voice:String(input?.voice||'Kore').slice(0,40)}),
+        cache:'no-store',
+        signal:linked.signal
+      });
+      if(response.status===401&&retryAuth){
+        linked.cleanup();
+        await refreshBootstrap(signal);
+        return naturalVoiceRequest(input,{signal,retryAuth:false});
+      }
+      if(!response.ok){
+        const errorBody=await response.json().catch(()=>({}));
+        throw Object.assign(new Error(String(errorBody?.error||('voice_http_'+response.status)).slice(0,180)),{code:errorBody?.error||'voice_http_error',status:response.status});
+      }
+      const contentType=String(response.headers.get('content-type')||'');
+      const blob=await response.blob();
+      if(!/^audio\//i.test(contentType)||blob.size<64)throw Object.assign(new Error('voice_invalid_audio'),{code:'voice_invalid_audio'});
+      return {
+        blob,
+        contentType,
+        version:response.headers.get('x-wae-tts-version')||null,
+        voice:response.headers.get('x-wae-tts-voice')||null,
+        model:response.headers.get('x-wae-tts-model')||null
+      };
+    }finally{linked.cleanup()}
+  }
+  window.WAEVoiceRuntime=Object.freeze({
+    synthesize:(input,options)=>naturalVoiceRequest(input,options),
+    available:()=>!!(localStorage.getItem(SESSION_ID)&&localStorage.getItem(SESSION_SECRET)),
+    transport:'wae-natural-voice-v60'
+  });
   // Reuse the IU custom session; never copy the other WAE OS product's org token or Gemini key.
   // Multimodal photo / video requests stay first-party. Render proxies to the
   // same IU-authenticated WAE function, so Android avoids a large cross-origin POST.
