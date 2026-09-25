@@ -47,6 +47,22 @@ test('v137 keeps ordered steps continuous when bullet details appear between the
   assert.match(html,/<ol start="3"><li><strong>Verifica los hechos<\/strong><\/li><\/ol>/);
 });
 
+test('v139 TTS removes markdown table separators and sentence dots before playback',()=>{
+  const raw=[
+    '| Área | Estado |',
+    '|---|---|',
+    '| Voz | Activa. |',
+    '| Calidad | Premium. |'
+  ].join('\n');
+  const spoken=speechText(raw);
+  assert.doesNotMatch(spoken,/\|/);
+  assert.doesNotMatch(spoken,/-{2,}/);
+  assert.doesNotMatch(spoken,/(^|\s)\.(?=\s|$)/);
+  assert.doesNotMatch(spoken,/---/);
+  assert.match(spoken,/Voz/);
+  assert.match(spoken,/Premium/);
+});
+
 test('v137 TTS normalization never speaks literal br markup',()=>{
   const spoken=speechText('El interlocutor te culpa.<br>Cambia de tema.<br/>Te presiona.');
   assert.doesNotMatch(spoken,/<br/i);
