@@ -18,13 +18,14 @@ test('existing factory provides guarded revisions and verifies local save before
  assert.match(factory,/current\.id!==expected\.id\|\|bundle\(\)!==expected\.html/);
  assert.match(factory,/verify\?\.files\.find/);
  assert.match(factory,/function restorePrevious\(/);
- assert.match(factory,/window\.__waeFactoryV1=\{version:'3'/);
+ assert.match(factory,/window\.__waeFactoryV1=\{version:'5'/);
 });
 test('Render shell installs agent after existing Canvas and factory, without replacing old endpoints',()=>{
  const html=read('index.html'),server=read('server.js');
  assert.ok(html.indexOf('canvas-premium-v2.js')<html.indexOf('factory-projects-render-v2.js'));
  assert.ok(html.indexOf('factory-projects-render-v2.js')<html.indexOf('factory-agent-render-v3.js'));
- assert.match(html,/factory-agent-render-v3\.css\?v=5/);
+ const agentCss=html.match(/\.\/factory-agent-render-v3\.css\?[^"'<>\s]+/)?.[0];
+ assert.ok(agentCss&&/foundry=v5/.test(agentCss),agentCss);
  assert.match(server,/['"]?\/api\/canvas['"]?, canvasHandler/);
  assert.match(server,/['"]?\/api\/chat['"]?, chatHandler/);
 });
@@ -36,11 +37,14 @@ test('agent prioritizes conversation and preview, with code optional; never gran
  assert.match(base,/setAttribute\('sandbox','allow-scripts'\)/);
  assert.doesNotMatch(base,/allow-same-origin/);
 });
-test('mobile PWA refreshes chat factory assets and does not cache API responses',()=>{
- const sw=read('sw.js');
+test('mobile PWA refreshes exact current Foundry assets and does not cache API responses',()=>{
+ const html=read('index.html'),sw=read('sw.js');
+ const agentJs=html.match(/\.\/factory-agent-render-v3\.js\?[^"'<>\s]+/)?.[0];
+ const agentCss=html.match(/\.\/factory-agent-render-v3\.css\?[^"'<>\s]+/)?.[0];
  assert.match(sw,/wae-universal-render-waeweb-public-v45/);
- assert.match(sw,/factory-agent-render-v3\.js\?v=6/);
- assert.match(sw,/factory-agent-render-v3\.css\?v=5/);
+ assert.ok(agentJs&&agentCss);
+ assert.match(agentJs,/foundry=v5/);assert.match(agentCss,/foundry=v5/);
+ assert.ok(sw.includes(agentJs));assert.ok(sw.includes(agentCss));
  assert.match(sw,/url\.pathname\.startsWith\('\/api\/'\)/);
 });
 
@@ -66,7 +70,7 @@ test('native mobile factory retains briefs and synchronizes the selected product
 });
 
 
-test('Product Builder v4 has native Canvas transfers and asynchronous project context switching',()=>{
+test('Product Foundry v5 keeps native Canvas transfers and asynchronous project context switching',()=>{
  const agent=read('factory-agent-render-v3.js'),factory=read('factory-projects-render-v2.js');
  const html=read('index.html'),sw=read('sw.js');
  assert.match(agent,/wfAgentToCanvas/);
@@ -77,7 +81,10 @@ test('Product Builder v4 has native Canvas transfers and asynchronous project co
  assert.match(factory,/function announceProjectChange\(/);
  assert.match(factory,/function importProject[\s\S]*?announceProjectChange\(\)/);
  assert.match(factory,/function importCanvas[\s\S]*?announceProjectChange\(\)/);
- assert.match(html,/factory-projects-render-v2\.js\?v=5/);
- assert.match(html,/factory-agent-render-v3\.js\?v=6/);
+ const projectAsset=html.match(/\.\/factory-projects-render-v2\.js\?[^"'<>\s]+/)?.[0];
+ const agentAsset=html.match(/\.\/factory-agent-render-v3\.js\?[^"'<>\s]+/)?.[0];
+ assert.ok(projectAsset&&agentAsset);
+ assert.match(projectAsset,/foundry=v5/);assert.match(agentAsset,/foundry=v5/);
+ assert.ok(sw.includes(projectAsset));assert.ok(sw.includes(agentAsset));
  assert.match(sw,/wae-universal-render-waeweb-public-v45/);
 });
