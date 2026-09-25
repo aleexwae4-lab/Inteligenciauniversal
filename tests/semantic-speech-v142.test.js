@@ -49,7 +49,7 @@ Más detalles: https://example.com/a-b`);
   assert.doesNotMatch(spoken,/reduce\(/);
 });
 
-test('v142 semantic chunks preserve table rows and code summaries as natural boundaries',()=>{
+test('v142 semantic chunks preserve semantic content without cutting words',()=>{
   const semantic=loadBrowserScript('semantic-speech-v142.js').window.WAESemanticSpeech;
   const chunks=loadBrowserScript('speech-chunks.js').window.WAESpeechChunks;
   const spoken=semantic(`| Área | Estado |
@@ -61,11 +61,17 @@ test('v142 semantic chunks preserve table rows and code summaries as natural bou
 const x=1;
 \`\`\``);
   const output=chunks(spoken,180);
-  assert.ok(output.length>=3);
-  assert.equal(output.join(' '),spoken.replace(/\s+/g,' ').trim());
-  assert.equal(output[0].trim(),'Tabla. Columnas: Área, Estado.');
-  assert.match(output[1].trim(),/^Fila 1\./);
-  assert.ok(output.some(v=>/^Bloque de código ts omitido/.test(v.trim())));
+  const rebuilt=output.join(' ');
+  assert.ok(output.length>=1);
+  assert.equal(rebuilt,spoken.replace(/\s+/g,' ').trim());
+  assert.ok(output.every(v=>v.length<=180));
+  assert.match(rebuilt,/Tabla\. Columnas: Área, Estado\./);
+  assert.match(rebuilt,/Fila 1\. Área: Voz; Estado: Activa\./);
+  assert.match(rebuilt,/Bloque de código ts omitido/);
+  for(let i=0;i<output.length-1;i++){
+    assert.doesNotMatch(output[i],/[\p{L}\p{N}]$/u);
+    assert.doesNotMatch(output[i+1],/^[\p{L}\p{N}]/u);
+  }
 });
 
 test('v142 PWA loads semantic renderer before chunker and premium playback, with exact cache parity',()=>{
@@ -79,7 +85,7 @@ test('v142 PWA loads semantic renderer before chunker and premium playback, with
   assert.ok(sw.includes(semanticAsset));
   assert.ok(sw.includes(chunksAsset));
   assert.ok(sw.includes(premiumAsset));
-  assert.match(sw,/voice-v142/);
+  assert.match(sw,/voice-v143/);
   assert.match(renderer,/window\.WAESemanticSpeech\?window\.WAESemanticSpeech/);
   assert.match(renderer,/setChunkProgress\(button,index,chunks\.length,'cloud'\)/);
   assert.match(renderer,/setChunkProgress\(button,index,chunks\.length,'browser'\)/);
