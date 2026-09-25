@@ -1,0 +1,37 @@
+name: Universal Core Release Gate
+on:
+  pull_request:
+    branches: [deploy/render-vercel-production-a3c2a88]
+  push:
+    branches: [fix/render-build-gate-v144]
+permissions:
+  contents: read
+concurrency:
+  group: universal-core-release-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Install dependencies without lifecycle scripts
+        run: yarn install --ignore-scripts --non-interactive
+      - name: Fast production build checks
+        run: npm run check:build
+  regression:
+    needs: build
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Install dependencies without lifecycle scripts
+        run: yarn install --ignore-scripts --non-interactive
+      - name: Full regression gate
+        run: npm run check:release
