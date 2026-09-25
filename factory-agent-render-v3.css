@@ -4,7 +4,7 @@
 #panel-factory.wf-agent-mode .wf-head{flex:0 0 auto}
 #panel-factory .wf-stage{min-height:0;min-width:0;display:grid;grid-template-columns:minmax(260px,0.84fr) minmax(0,1.16fr);gap:1px;background:#243a32;overflow:hidden}
 #panel-factory .wf-agent{min-height:0;min-width:0;display:flex;flex-direction:column;background:#0d1915;overflow:hidden}
-#panel-factory .wf-agent-top{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:center;gap:6px;padding:12px;border-bottom:1px solid #253c32}
+#panel-factory .wf-studio-badge{font-size:10px;line-height:1;border:1px solid #2e6a52;background:#0d2b20;color:#69f2bd;border-radius:999px;padding:5px 7px;white-space:nowrap}\n#panel-factory .wf-agent-top{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:center;gap:6px;padding:12px;border-bottom:1px solid #253c32}
 #panel-factory .wf-agent-top strong{font-size:13px;color:#e3fff1}
 #panel-factory .wf-agent-top span{font-size:10px;color:#9dc9b2}
 #panel-factory .wf-agent-feed{min-height:0;flex:1 1 auto;overflow:auto;overscroll-behavior:contain;padding:12px;display:flex;flex-direction:column;gap:12px}
