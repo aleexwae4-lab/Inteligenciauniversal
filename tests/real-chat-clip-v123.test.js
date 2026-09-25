@@ -10,7 +10,7 @@ test('clip regression: long free-provider inference is not aborted after 16 seco
   assert.ok(clipQuestion.includes('GPU'));
   assert.match(client,/try\{return await edge\(payload,signal,39000\)\}/);
   assert.match(client,/conversation_id:null\},signal,39000\)/);
-  assert.match(app,/setTimeout\(\(\)=>c\.abort\(\),100000\)/);
+  assert.match(app,/setTimeout\(\(\)=>(?:c|controller)\.abort\(\),100000\)/);
   assert.match(provider,/attemptTimeoutMs=38000/);
   assert.match(provider,/Math\.min\(40000,Math\.max\(20,Number\(attemptTimeoutMs\)\|\|38000\)\)/);
   assert.match(provider,/Math\.min\(55000,Math\.max\(6000,Number\(budgetMs\)\|\|46000\)\)/);
