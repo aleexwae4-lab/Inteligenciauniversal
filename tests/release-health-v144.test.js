@@ -9,7 +9,7 @@ test('release health is non-billable and ready when a provider is configured',()
   });
   assert.equal(snapshot.ok,true);
   assert.equal(snapshot.status,'ready');
-  assert.equal(snapshot.readiness,'ready_upstream_not_probed');
+  assert.equal(snapshot.readiness,'providers_configured_not_tested');
   assert.equal(snapshot.checks.providersConfigured,1);
   assert.deepEqual(snapshot.checks.configuredProviderIds,['wae_edge']);
   assert.equal(snapshot.checks.providerInference,'not_run');
@@ -24,7 +24,7 @@ test('release health degrades only when no provider is configured',()=>{
   });
   assert.equal(snapshot.ok,false);
   assert.equal(snapshot.status,'degraded');
-  assert.equal(snapshot.readiness,'degraded_no_provider_configured');
+  assert.equal(snapshot.readiness,'no_providers_configured');
   assert.equal(snapshot.checks.providersConfigured,0);
   assert.equal(snapshot.checks.paidInferenceTriggered,false);
 });
@@ -34,6 +34,6 @@ test('verified provider state is reported without requiring a new probe',()=>{
     health:{providers:[{id:'wae_edge',configured:true}]},
     operations:{providerInferenceVerified:true}
   });
-  assert.equal(snapshot.readiness,'ready_verified_recently');
+  assert.equal(snapshot.readiness,'providers_verified_recently');
   assert.equal(snapshot.checks.providerInference,'verified');
 });
