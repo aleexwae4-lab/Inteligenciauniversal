@@ -1,0 +1,30 @@
+name: Universal Core Production Canary v145
+
+on:
+  push:
+    branches:
+      - deploy/render-vercel-production-a3c2a88
+
+permissions:
+  contents: read
+
+concurrency:
+  group: universal-core-production-canary
+  cancel-in-progress: true
+
+jobs:
+  verify-render-release:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Verify exact Render commit is live and healthy
+        env:
+          WAE_CANARY_BASE_URL: https://inteligenciauniversal.onrender.com
+          WAE_EXPECTED_COMMIT: ${{ github.sha }}
+          WAE_CANARY_ATTEMPTS: '30'
+          WAE_CANARY_DELAY_MS: '10000'
+        run: node scripts/release-canary-v145.mjs
