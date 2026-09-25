@@ -83,6 +83,28 @@ function updateTurnProgress(detail={}){
   if(detail.phase==='end'&&detail.stage==='persistence')current.textContent=detail.status==='failed'?'Respuesta lista · continuidad no guardada':'Respuesta verificada';
 }
 window.addEventListener('wae:turn-progress',event=>updateTurnProgress(event.detail));
+function updateProviderProgress(detail={}){
+  if(!detail||typeof detail!=='object')return;
+  const current=$('#typingStage'),providerChip=$('#typingStages')?.querySelector('[data-stage="provider"]');
+  if(!current)return;
+  const provider=String(detail.provider||'proveedor');
+  if(detail.type==='attempt'){
+    current.textContent=detail.streaming?'Conectando stream · '+provider:'Consultando · '+provider;
+  }else if(detail.type==='first_token'){
+    const ttft=Number(detail.ttftMs);
+    current.textContent='Primer token recibido'+(Number.isFinite(ttft)?' · '+Math.round(ttft)+' ms':'');
+    if(providerChip&&Number.isFinite(ttft))providerChip.title='Proveedor · primer token '+Math.round(ttft)+' ms';
+  }else if(detail.type==='circuit_open'){
+    current.textContent='Proveedor aislado · buscando alternativa';
+  }else if(detail.type==='failed'){
+    current.textContent='Proveedor falló · recuperación automática';
+  }else if(detail.type==='quality_rejected'){
+    current.textContent='Respuesta rechazada por calidad · reintentando';
+  }else if(detail.type==='complete'&&detail.streaming){
+    current.textContent='Generación recibida · verificando calidad';
+  }
+}
+window.addEventListener('wae:provider-progress',event=>updateProviderProgress(event.detail));
 function showTyping(){
   if($('#typingMessage'))return;
   const e=document.createElement('article');e.className='message assistant';e.id='typingMessage';
@@ -142,6 +164,10 @@ async function progressiveChat(payload,signal){
         if(parsed.event==='ready'){ready=true;window.__waeProgressContract=parsed.data;continue}
         if(parsed.event==='progress'){
           window.dispatchEvent(new CustomEvent('wae:turn-progress',{detail:parsed.data}));
+          continue;
+        }
+        if(parsed.event==='provider'){
+          window.dispatchEvent(new CustomEvent('wae:provider-progress',{detail:parsed.data}));
           continue;
         }
         if(parsed.event==='result'){result=parsed.data;continue}
