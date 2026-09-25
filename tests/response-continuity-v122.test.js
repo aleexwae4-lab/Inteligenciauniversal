@@ -53,7 +53,7 @@ test('primary timeout leaves space for the Render fallback, trace has no user pr
  assert.match(client,/signal,7000\)\.then\(data/);
  assert.match(client,/chatWithSessionRepair\(chatPayload,init\.signal\)/);
  assert.match(client,/if\(init\.signal\?\.aborted\)throw err/);
- assert.match(app,/setTimeout\(\(\)=>c\.abort\(\),100000\)/);
+ assert.match(app,/setTimeout\(\(\)=>(?:c|controller)\.abort\(\),100000\)/);
  assert.match(api,/X-WAE-Request-ID/);
  assert.match(api,/\[WAE Chat\]/);
  assert.doesNotMatch(api,/message:body\.message|sessionId:body\.sessionId/);
