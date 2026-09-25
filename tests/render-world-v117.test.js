@@ -100,8 +100,12 @@ test('v117 augments v115 engineering and v116 financial contexts without replaci
 });
 test('PWA, existing UI and installation health remain compatible',()=>{
   const html=read('index.html'),sw=read('sw.js');
-  assert.match(html,/runtime-client\.js\?v=24&industrial=v115&professional=v116&world=v117/);
-  assert.match(sw,/runtime-client\.js\?v=24&industrial=v115&professional=v116&world=v117/);
+  const runtimeAsset=html.match(/\.\/runtime-client\.js\?[^"'<>\s]+/)?.[0];
+  assert.ok(runtimeAsset,'current runtime-client asset missing');
+  assert.match(runtimeAsset,/industrial=v115/);
+  assert.match(runtimeAsset,/professional=v116/);
+  assert.match(runtimeAsset,/world=v117/);
+  assert.ok(sw.includes(runtimeAsset),'service worker must publish the exact current runtime-client asset');
   assert.match(sw,/wae-universal-render-waeweb-public-v45/);
   const identity=coreSelfResponse({providers:[{id:'wae_edge',configured:true}],tools:[{id:'web_search',configured:false},{id:'github_search',configured:false}],memory:{configured:false}});
   assert.match(identity,/retos mundiales con evidencia/);
