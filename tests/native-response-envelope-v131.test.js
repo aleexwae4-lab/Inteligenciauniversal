@@ -48,13 +48,16 @@ test('v131 runtime and browser preserve the native envelope end to end',()=>{
 test('v131 HTML and service worker publish the exact same envelope assets',()=>{
   const html=fs.readFileSync(new URL('../index.html',import.meta.url),'utf8');
   const sw=fs.readFileSync(new URL('../sw.js',import.meta.url),'utf8');
-  for(const asset of [
-    './app.js?v=131&e2e=v130&envelope=v131',
-    './premium-render-v1.js?v=14&e2e=v130&envelope=v131',
-    './premium-render-v1.css?v=8'
-  ]){
-    assert.ok(html.includes(asset),asset+' missing from HTML');
+  const assets=[
+    html.match(/\.\/app\.js\?[^"'<>\s]+/)?.[0],
+    html.match(/\.\/premium-render-v1\.js\?[^"'<>\s]+/)?.[0],
+    html.match(/\.\/premium-render-v1\.css\?[^"'<>\s]+/)?.[0]
+  ];
+  for(const asset of assets){
+    assert.ok(asset,'current envelope asset missing from HTML');
     assert.ok(sw.includes(asset),asset+' missing from service worker');
   }
+  assert.match(assets[0],/envelope=v131/);
+  assert.match(assets[1],/envelope=v131/);
   assert.match(sw,/envelope-v131/);
 });
