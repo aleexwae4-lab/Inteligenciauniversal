@@ -98,3 +98,18 @@ test('v137 PWA publishes the same premium renderer asset as HTML',()=>{
   assert.ok(sw.includes(asset),asset+' missing from service worker');
   assert.match(sw,/answer-v137/);
 });
+
+
+test('v141 voice uses authenticated natural audio first and browser synthesis as recovery',()=>{
+  const runtime=read('runtime-client.js');
+  const renderer=read('premium-render-v1.js');
+  assert.match(runtime,/wae-natural-voice-v60/);
+  assert.match(runtime,/window\.WAEVoiceRuntime=Object\.freeze/);
+  assert.match(runtime,/contentType/);
+  assert.match(renderer,/function cloudPlayback\(/);
+  assert.match(renderer,/ctx\.decodeAudioData/);
+  assert.match(renderer,/createBufferSource\(\)/);
+  assert.match(renderer,/cloud_to_browser/);
+  assert.match(renderer,/function browserPlayback\(/);
+  assert.match(renderer,/document\.addEventListener\('pointerdown',unlockAudio/);
+});
