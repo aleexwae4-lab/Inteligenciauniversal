@@ -28,10 +28,15 @@ test('recovery indicator names observed provider, never assumes Supabase',()=>{
 
 test('updated PWA assets reach Android without changing interface or factory',()=>{
   const html=read('index.html'),sw=read('sw.js');
-  for(const piece of ['waewebpublic=v126&recovery=v121&edgefix=v123','app.js?v=121&edgefix=v123']){
-    assert.ok(html.includes(piece));
-    assert.ok(sw.includes(piece));
-  }
+  const runtimeAsset='waewebpublic=v126&recovery=v121&edgefix=v123';
+  assert.ok(html.includes(runtimeAsset));
+  assert.ok(sw.includes(runtimeAsset));
+
+  // The app asset is intentionally versioned over time. The invariant is that
+  // the HTML shell and service worker cache the exact same current asset.
+  const appAsset=html.match(/\.\/app\.js\?[^"']+/)?.[0];
+  assert.ok(appAsset,'index must version app.js');
+  assert.ok(sw.includes(appAsset),'service worker must cache the same app.js version as index');
   assert.match(sw,/wae-universal-render-waeweb-public-v45-recovery-v121-edgefix-v123/);
   for(const piece of ['canvas-render-factory-v1.js','factory-agent-render-v3.js','workspace-premium-v1.js']){
     assert.ok(html.includes(piece));
