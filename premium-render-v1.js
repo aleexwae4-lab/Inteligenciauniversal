@@ -8,7 +8,7 @@ const notify=(s)=>window.toast&&window.toast(s);
 const AUTO_KEY='iu.premium.voice.auto.v1';
 let auto=localStorage.getItem(AUTO_KEY)!=='off';
 let allowAuto=false;
-const voice={token:0,active:null,paused:false,started:false,startTimer:null,utterances:[],fallbackAttempted:false,completedChunks:0,route:null,source:null,cloudAbort:null};
+const voice={token:0,active:null,paused:false,started:false,startTimer:null,utterances:[],fallbackAttempted:false,completedChunks:0,route:null,source:null,cloudAbort:null,currentChunk:0,totalChunks:0};
 const synth=window.speechSynthesis;
 const browserSupported=!!(synth&&window.SpeechSynthesisUtterance);
 const AudioContextCtor=window.AudioContext||window.webkitAudioContext;
@@ -163,7 +163,7 @@ function resetVoice(){
   if(voice.startTimer){clearTimeout(voice.startTimer);voice.startTimer=null}
   if(voice.cloudAbort){try{voice.cloudAbort.abort()}catch(_){}voice.cloudAbort=null}
   if(voice.source){try{voice.source.onended=null;voice.source.stop(0)}catch(_){}try{voice.source.disconnect()}catch(_){}voice.source=null}
-  voice.utterances=[];voice.fallbackAttempted=false;voice.completedChunks=0;
+  voice.utterances=[];voice.fallbackAttempted=false;voice.completedChunks=0;voice.currentChunk=0;voice.totalChunks=0;
   if(browserSupported)try{synth.cancel()}catch(_){}
   QA('.iu-voice').forEach(b=>{b.textContent='▶';b.title='Escuchar respuesta';b.setAttribute('aria-label','Escuchar respuesta');b.setAttribute('aria-pressed','false')});
 }
@@ -171,6 +171,13 @@ function setPlaying(button,route,details={}){
   voice.started=true;voice.route=route;voice.paused=false;
   button.textContent='⏸';button.title='Pausar voz';button.setAttribute('aria-label','Pausar voz');button.setAttribute('aria-pressed','true');
   voiceEvent('playing',{route,...details});
+}
+function setChunkProgress(button,index,total,route){
+  const current=Math.max(1,Number(index)+1),count=Math.max(current,Number(total)||current);
+  voice.currentChunk=current;voice.totalChunks=count;
+  button.title=count>1?`Pausar voz · ${current}/${count}`:'Pausar voz';
+  button.setAttribute('aria-label',count>1?`Pausar voz. Fragmento ${current} de ${count}`:'Pausar voz');
+  voiceEvent('chunk',{route,index:current,total:count});
 }
 function browserPlayback(content,button,token,prefs,{recoveredFrom=null}={}){
   if(!browserSupported){
@@ -193,6 +200,7 @@ function browserPlayback(content,button,token,prefs,{recoveredFrom=null}={}){
         if(token!==voice.token)return;
         if(voice.startTimer){clearTimeout(voice.startTimer);voice.startTimer=null}
         setPlaying(button,'browser',{fallback,recoveredFrom});
+        setChunkProgress(button,index,chunks.length,'browser');
         if(recoveredFrom)voiceEvent('recovered',{route:'browser',code:recoveredFrom});
       };
       utter.onend=()=>{
@@ -265,6 +273,7 @@ async function cloudPlayback(content,button,token,prefs){
       source.onended=()=>{try{source.disconnect()}catch(_){}if(voice.source===source)voice.source=null;resolve()};
       try{
         if(!voice.started)setPlaying(button,'cloud',{version:packet.version||null,voice:packet.voice||null,model:packet.model||null});
+        setChunkProgress(button,index,chunks.length,'cloud');
         source.start(0);
       }catch(error){reject(error)}
     });
@@ -296,7 +305,8 @@ function speak(article,button){
   }
   unlockAudio();
   resetVoice();
-  const content=speechText(text(article.dataset.iuSpeech||'').trim()||rawOf(article));if(!content)return;
+  const speechSource=text(article.dataset.iuSpeech||'').trim()||rawOf(article);
+  const content=window.WAESemanticSpeech?window.WAESemanticSpeech(speechSource,{locale:'es-MX'}):speechText(speechSource);if(!content)return;
   const token=voice.token;voice.active=article;voice.paused=false;voice.started=false;voice.completedChunks=0;voice.fallbackAttempted=false;
   button.textContent='◌';button.title='Generando voz natural';button.setAttribute('aria-label','Generando voz natural');button.setAttribute('aria-pressed','false');
   const prefs=window.WAESettings?.get?.()||{};
