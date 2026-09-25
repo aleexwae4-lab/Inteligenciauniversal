@@ -252,3 +252,12 @@ dialog.iu-settings-dialog::backdrop{background:rgba(0,0,0,.7)}
 @media(max-width:700px){
   #drawer>.iu-nav-footer{padding-inline:12px!important}
 }
+
+/* v131 native response envelope */
+.iu-native-sources{display:flex;align-items:stretch;gap:8px;overflow-x:auto;padding:10px 0 2px;margin-top:8px;scrollbar-width:none}
+.iu-native-sources::-webkit-scrollbar{display:none}
+.iu-native-sources-label{display:flex;align-items:center;flex:0 0 auto;padding:0 4px;font-size:11px;font-weight:750;letter-spacing:.08em;text-transform:uppercase;opacity:.58}
+.iu-native-source{display:grid;gap:2px;flex:0 0 min(240px,72vw);padding:9px 11px;border:1px solid color-mix(in srgb,currentColor 12%,transparent);border-radius:12px;text-decoration:none;color:inherit;background:color-mix(in srgb,currentColor 3%,transparent);transition:transform .16s ease,border-color .16s ease,background .16s ease}
+.iu-native-source:hover,.iu-native-source:focus-visible{transform:translateY(-1px);border-color:color-mix(in srgb,currentColor 24%,transparent);background:color-mix(in srgb,currentColor 6%,transparent);outline:none}
+.iu-native-source strong{font-size:12px;line-height:1.25;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.iu-native-source small{font-size:10px;line-height:1.2;opacity:.58;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
