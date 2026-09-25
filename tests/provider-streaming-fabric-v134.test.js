@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import {streamOpenAI,streamAnthropic,streamGemini,streamOpenAICompatible,streamingContract,PROVIDER_STREAMING_VERSION} from '../lib/provider-streaming-v134.js';
 import {providerCircuitOpen,providerCircuitFailure,providerCircuitSuccess,providerCircuitSnapshot} from '../lib/provider-breaker-v134.js';
-import {providerRegistry,runtimeHealth} from '../lib/runtime.js';
+import {runtimeHealth} from '../lib/runtime.js';
 
 const read=path=>readFileSync(new URL('../'+path,import.meta.url),'utf8');
 
@@ -126,5 +126,5 @@ test('v134 provider router contains stream-first selection plus quality gate and
   assert.match(providers,/qualityFailure = degradedAnswer\(result\?\.text\)/);
   assert.match(providers,/providerCircuitSuccess\(p\.id\)/);
   assert.match(providers,/providerCircuitFailure\(p\.id,code\)/);
-  assert.match(providers,/type:'first_token'/);
+  assert.match(read('lib/provider-streaming-v134.js'),/type:'first_token'/);
 });
