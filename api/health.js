@@ -1,4 +1,5 @@
 import { runtimeHealth } from '../lib/runtime.js';
+import { runtimeOperations } from '../lib/runtime-observability-v128.js';
 import { applyHeaders } from '../lib/security.js';
 
 // Liveness answers whether the Node process can serve requests, regardless of
@@ -6,6 +7,7 @@ import { applyHeaders } from '../lib/security.js';
 // from a health endpoint.
 export default function handler(req,res){
   applyHeaders(res);
+  res.setHeader('Cache-Control','no-store');
   if(req.method!=='GET'&&req.method!=='HEAD')return res.status(405).json({error:'method_not_allowed'});
   const path=new URL(req.url||'/api/health','http://localhost').pathname;
   if(path==='/api/health/liveness'){
@@ -14,11 +16,17 @@ export default function handler(req,res){
     return res.status(200).json(status);
   }
   const health=runtimeHealth();
+  const operations=runtimeOperations();
+  const readiness=!health.ready
+    ? 'no_providers_configured'
+    : operations.providerInferenceVerified
+      ? (operations.inferenceFresh?'providers_verified_recently':'providers_configured_last_verified_stale')
+      : 'providers_configured_not_tested';
   const status={
     ...health,
-    // Configured environment variables do not prove a working provider.
-    providerInferenceVerified:false,
-    readiness:health.ready?'providers_configured_not_tested':'no_providers_configured',
+    providerInferenceVerified:operations.providerInferenceVerified,
+    readiness,
+    operations,
     checkedAt:new Date().toISOString()
   };
   const code=health.ready?200:503;
