@@ -117,7 +117,7 @@ function normalizeWorldV8(raw){
 }
 function persistWorldStudioV8(sceneRaw,worldRaw){
  saveEditor();
- if(!sceneRaw||typeof sceneRaw!=='object'||!['wae-game-studio/v8','wae-game-studio/v9','wae-game-studio/v10'].includes(sceneRaw.engine))throw Error('Escena Game Studio v8/v9/v10 inválida');
+ if(!sceneRaw||typeof sceneRaw!=='object'||!['wae-game-studio/v8','wae-game-studio/v9','wae-game-studio/v10','wae-game-studio/v11'].includes(sceneRaw.engine))throw Error('Escena Game Studio v8/v9/v10 inválida');
  const world=normalizeWorldV8(worldRaw),clean=JSON.parse(JSON.stringify(sceneRaw));
  if(!clean.materials||typeof clean.materials!=='object'||Object.keys(clean.materials).length>40)throw Error('Materiales inválidos');
  for(const [name,color] of Object.entries(clean.materials)){if(!/^[a-zA-Z0-9_-]{1,40}$/.test(name)||!Array.isArray(color)||color.length!==4||color.some(v=>!Number.isFinite(Number(v))||Number(v)<0||Number(v)>1))throw Error('Material inválido');clean.materials[name]=color.map(Number)}
@@ -278,8 +278,115 @@ function persistNpcStudioV10(raw){
  npcFile.content=npcJson;mainFile.content=mainFile.content.replace(/^const NPCS=.*;$/m,'const NPCS='+JSON.stringify(npcs)+';');current.updatedAt=new Date().toISOString();
  if(!persist())throw Error('No se pudieron persistir los NPCs');if(['npc.json','main.js'].includes(selected))$('#wfEditor').value=file()?.content||'';renderFiles();diagnostics();notify('NPC Engine v10 guardado en npc.json y main.js');return true;
 }
+function normalizeLogicV11(raw){
+ if(!raw||typeof raw!=='object'||raw.schema!=='wae-logic/v11'||!Array.isArray(raw.rules)||raw.rules.length<1||raw.rules.length>160)throw Error('Logic Builder v11 inválido');
+ const clean=JSON.parse(JSON.stringify(raw)),validId=value=>typeof value==='string'&&/^[a-zA-Z0-9_-]{1,60}$/.test(value);
+ const eventTypes=new Set(['scene_enter','trigger_enter','score_changed','mission_completed','timer','npc_interact','npc_state_changed','npc_goal_completed','player_damaged','npc_defeated','item_collected','inventory_changed','player_respawn','checkpoint_set','item_used']);
+ const conditionTypes=new Set(['always','score_gte','visited_scenes_gte','mission_status','scene_is']);
+ const actionTypes=new Set(['message','scene','spawn_prefab','mission_complete','score_add','lighting','npc_set_state','npc_say','heal_player','give_item','set_checkpoint']);
+ const npcStates=new Set(['idle','patrol','chase','interact']),ids=new Set();
+ for(const rule of clean.rules){
+  if(!rule||typeof rule!=='object'||!validId(rule.id)||ids.has(rule.id))throw Error('Regla lógica v11 inválida o duplicada');
+  ids.add(rule.id);rule.name=String(rule.name||rule.id).slice(0,80);rule.enabled=rule.enabled!==false;rule.once=Boolean(rule.once);
+  if(!rule.event||!eventTypes.has(rule.event.type))throw Error('Evento lógico v11 no permitido');
+  const event={type:rule.event.type};
+  if(event.type==='scene_enter')event.sceneId=String(rule.event.sceneId||'').slice(0,60);
+  if(event.type==='trigger_enter')event.triggerId=String(rule.event.triggerId||'').slice(0,60);
+  if(event.type==='mission_completed')event.missionId=String(rule.event.missionId||'').slice(0,60);
+  if(event.type==='timer')event.seconds=Math.max(.2,Math.min(3600,Number(rule.event.seconds)||1));
+  if(['npc_interact','npc_state_changed','npc_goal_completed','npc_defeated'].includes(event.type)){event.npcId=String(rule.event.npcId||'').slice(0,60);if(event.type==='npc_state_changed'&&rule.event.state)event.state=npcStates.has(rule.event.state)?rule.event.state:'idle'}
+  if(['item_collected','inventory_changed','item_used'].includes(event.type))event.itemId=String(rule.event.itemId||'').slice(0,60);
+  rule.event=event;
+  if(!Array.isArray(rule.conditions)||rule.conditions.length<1||rule.conditions.length>8)throw Error('Condiciones lógicas v11 inválidas');
+  rule.conditions=rule.conditions.map(condition=>{
+   const type=conditionTypes.has(condition?.type)?condition.type:'always';
+   if(type==='always')return{type};
+   if(type==='score_gte'||type==='visited_scenes_gte')return{type,value:Math.max(0,Math.min(999999,Number(condition?.value)||0))};
+   if(type==='mission_status')return{type,status:String(condition?.status||'completed').slice(0,30)};
+   return{type,sceneId:String(condition?.sceneId||'').slice(0,60)};
+  });
+  if(!Array.isArray(rule.actions)||rule.actions.length<1||rule.actions.length>12)throw Error('Acciones lógicas v11 inválidas');
+  rule.actions=rule.actions.map(action=>{
+   const type=actionTypes.has(action?.type)?action.type:'message';
+   if(type==='message')return{type,text:String(action?.text||'').slice(0,160)};
+   if(type==='scene')return{type,target:String(action?.target||'').slice(0,60)};
+   if(type==='spawn_prefab')return{type,prefab:String(action?.prefab||'').slice(0,60)};
+   if(type==='mission_complete')return{type,missionId:String(action?.missionId||'').slice(0,60)};
+   if(type==='score_add')return{type,value:Math.max(-99999,Math.min(99999,Number(action?.value)||0))};
+   if(type==='lighting')return{type,ambient:Math.max(.2,Math.min(1.4,Number(action?.ambient)||.8))};
+   if(type==='npc_set_state')return{type,npcId:String(action?.npcId||'').slice(0,60),state:npcStates.has(action?.state)?action.state:'idle'};
+   if(type==='npc_say')return{type,npcId:String(action?.npcId||'').slice(0,60),text:String(action?.text||'').slice(0,160)};
+   if(type==='heal_player')return{type,value:Math.max(0,Math.min(100000,Number(action?.value)||0))};
+   if(type==='give_item')return{type,itemId:String(action?.itemId||'').slice(0,60),quantity:Math.max(1,Math.min(999,Math.floor(Number(action?.quantity)||1)))};
+   return{type:'set_checkpoint'};
+  });
+ }
+ clean.version=11;
+ if(JSON.stringify(clean).length>160000)throw Error('La lógica v11 supera el límite de 160 KB');
+ return clean;
+}
+function persistLogicStudioV11(raw){
+ saveEditor();
+ const logic=normalizeLogicV11(raw),logicJson=JSON.stringify(logic,null,2);
+ const mainFile=current.files.find(f=>f.name==='main.js');let logicFile=current.files.find(f=>f.name==='logic.json');
+ if(!mainFile)throw Error('El proyecto no contiene main.js');
+ if(!logicFile){if(current.files.length>=MAX_FILES)throw Error('No hay espacio para logic.json');logicFile={name:'logic.json',content:''};current.files.push(logicFile)}
+ if(!/^const LOGIC=.*;$/m.test(mainFile.content))throw Error('No se encontró el contrato LOGIC en main.js');
+ logicFile.content=logicJson;mainFile.content=mainFile.content.replace(/^const LOGIC=.*;$/m,'const LOGIC='+JSON.stringify(logic)+';');current.updatedAt=new Date().toISOString();
+ if(!persist())throw Error('No se pudo persistir la lógica v11');if(['logic.json','main.js'].includes(selected))$('#wfEditor').value=file()?.content||'';renderFiles();diagnostics();notify('Gameplay Logic v11 guardado en logic.json y main.js');return true;
+}
+function normalizeCombatV11(raw){
+ if(!raw||typeof raw!=='object'||raw.schema!=='wae-combat/v11'||!raw.player||!raw.items||typeof raw.items!=='object'||!Array.isArray(raw.pickups))throw Error('Combat Engine v11 inválido');
+ const clean=JSON.parse(JSON.stringify(raw)),validId=value=>typeof value==='string'&&/^[a-zA-Z0-9_-]{1,60}$/.test(value),finite3=value=>Array.isArray(value)&&value.length===3&&value.every(n=>Number.isFinite(Number(n)));
+ const worldFile=current.files.find(f=>f.name==='world.json');const npcFile=current.files.find(f=>f.name==='npc.json');let scenes=new Set(),npcIds=new Set();
+ try{const world=JSON.parse(worldFile?.content||'{}');scenes=new Set((world.scenes||[]).map(scene=>scene.id))}catch{}
+ try{const npcs=JSON.parse(npcFile?.content||'{}');npcIds=new Set((npcs.characters||[]).map(npc=>npc.id))}catch{}
+ const p=clean.player;
+ p.maxHealth=Math.max(1,Math.min(100000,Number(p.maxHealth)||100));p.health=Math.max(0,Math.min(p.maxHealth,Number(p.health)||p.maxHealth));
+ p.maxStamina=Math.max(1,Math.min(100000,Number(p.maxStamina)||100));p.stamina=Math.max(0,Math.min(p.maxStamina,Number(p.stamina)||p.maxStamina));
+ p.attackDamage=Math.max(0,Math.min(100000,Number(p.attackDamage)||1));p.attackRange=Math.max(.1,Math.min(20,Number(p.attackRange)||2));
+ p.staminaCost=Math.max(0,Math.min(p.maxStamina,Number(p.staminaCost)||0));p.regenPerSecond=Math.max(0,Math.min(10000,Number(p.regenPerSecond)||0));p.inventoryCapacity=Math.max(1,Math.min(200,Math.floor(Number(p.inventoryCapacity)||12)));
+ if(!p.checkpoint||!scenes.has(p.checkpoint.sceneId)||!finite3(p.checkpoint.position))throw Error('Checkpoint inválido');p.checkpoint.position=p.checkpoint.position.map(n=>Math.max(-100,Math.min(100,Number(n))));
+ if(!Array.isArray(p.inventory)||p.inventory.length>100)throw Error('Inventario inválido');
+ const itemIds=new Set();
+ for(const [id,item] of Object.entries(clean.items)){
+  if(!validId(id)||itemIds.has(id)||!item||!['consumable','resource','loot'].includes(item.type))throw Error('Item inválido');
+  itemIds.add(id);item.label=String(item.label||id).slice(0,80);item.stackMax=Math.max(1,Math.min(999,Math.floor(Number(item.stackMax)||1)));item.material=String(item.material||'itemLoot').slice(0,40);
+  item.effect={heal:Math.max(0,Math.min(100000,Number(item.effect?.heal)||0)),stamina:Math.max(0,Math.min(100000,Number(item.effect?.stamina)||0))};
+ }
+ p.inventory=p.inventory.map(entry=>{if(!itemIds.has(entry?.itemId))throw Error('Inventario referencia item inexistente');return{itemId:entry.itemId,quantity:Math.max(0,Math.min(999,Math.floor(Number(entry.quantity)||0)))}}).filter(entry=>entry.quantity>0);
+ if(clean.pickups.length>300)throw Error('Demasiados pickups');
+ const pickupIds=new Set();
+ clean.pickups=clean.pickups.map(pickup=>{if(!pickup||!validId(pickup.id)||pickupIds.has(pickup.id)||!scenes.has(pickup.sceneId)||!itemIds.has(pickup.itemId)||!finite3(pickup.position))throw Error('Pickup inválido');pickupIds.add(pickup.id);return{id:pickup.id,sceneId:pickup.sceneId,itemId:pickup.itemId,quantity:Math.max(1,Math.min(999,Math.floor(Number(pickup.quantity)||1))),position:pickup.position.map(n=>Math.max(-100,Math.min(100,Number(n)))),collected:Boolean(pickup.collected)}}); 
+ if(!clean.lootTables||typeof clean.lootTables!=='object'||Object.keys(clean.lootTables).length>50)throw Error('Loot tables inválidas');
+ for(const [id,rows] of Object.entries(clean.lootTables)){if(!validId(id)||!Array.isArray(rows)||rows.length>30)throw Error('Loot table inválida');clean.lootTables[id]=rows.map(row=>{if(!itemIds.has(row?.itemId))throw Error('Loot referencia item inexistente');return{itemId:row.itemId,min:Math.max(1,Math.min(999,Math.floor(Number(row.min)||1))),max:Math.max(1,Math.min(999,Math.floor(Number(row.max)||1)))}})}
+ if(!clean.npcCombat||typeof clean.npcCombat!=='object'||Object.keys(clean.npcCombat).length>120)throw Error('Combate NPC inválido');
+ for(const [npcId,profile] of Object.entries(clean.npcCombat)){if(npcIds.size&&!npcIds.has(npcId))throw Error('Combate referencia NPC inexistente');profile.damage=Math.max(0,Math.min(100000,Number(profile.damage)||0));profile.attackRange=Math.max(.1,Math.min(20,Number(profile.attackRange)||1));profile.cooldownMs=Math.max(100,Math.min(60000,Number(profile.cooldownMs)||900));if(profile.lootTable&&!clean.lootTables[profile.lootTable])throw Error('NPC referencia loot table inexistente')}
+ clean.rules={respawnDelayMs:Math.max(100,Math.min(10000,Number(clean.rules?.respawnDelayMs)||450)),pickupRadius:Math.max(.25,Math.min(10,Number(clean.rules?.pickupRadius)||1.15))};
+ clean.version=11;
+ if(JSON.stringify(clean).length>220000)throw Error('Combat Engine supera el límite de 220 KB');
+ return clean;
+}
+function persistCombatStudioV11(raw){
+ saveEditor();
+ const combat=normalizeCombatV11(raw),combatJson=JSON.stringify(combat,null,2);
+ const mainFile=current.files.find(f=>f.name==='main.js');let combatFile=current.files.find(f=>f.name==='combat.json');
+ if(!mainFile)throw Error('El proyecto no contiene main.js');
+ if(!combatFile){if(current.files.length>=MAX_FILES)throw Error('No hay espacio para combat.json');combatFile={name:'combat.json',content:''};current.files.push(combatFile)}
+ if(!/^const COMBAT=.*;$/m.test(mainFile.content))throw Error('No se encontró el contrato COMBAT en main.js');
+ combatFile.content=combatJson;mainFile.content=mainFile.content.replace(/^const COMBAT=.*;$/m,'const COMBAT='+JSON.stringify(combat)+';');current.updatedAt=new Date().toISOString();
+ if(!persist())throw Error('No se pudo persistir Combat Engine');if(['combat.json','main.js'].includes(selected))$('#wfEditor').value=file()?.content||'';renderFiles();diagnostics();notify('Combat Engine v11 guardado en combat.json y main.js');return true;
+}
 function onPreviewMessage(event){
  const frame=$('#wfPreview');if(!frame||event.source!==frame.contentWindow)return;const data=event.data;if(!data||typeof data!=='object')return;
+ if(data.type==='wae-game-studio-combat-save'&&data.studio==='wae-game-studio/v11'){
+  try{persistCombatStudioV11(data.combat);frame.contentWindow?.postMessage({type:'wae-game-studio-combat-saved',ok:true,studio:'wae-game-studio/v11'},'*')}
+  catch(error){notify('No se pudo guardar Combat Engine: '+String(error.message||error));frame.contentWindow?.postMessage({type:'wae-game-studio-combat-saved',ok:false,message:String(error.message||error).slice(0,160)},'*')}return;
+ }
+ if(data.type==='wae-game-studio-logic-save'&&data.studio==='wae-game-studio/v11'){
+  try{persistLogicStudioV11(data.logic);frame.contentWindow?.postMessage({type:'wae-game-studio-logic-saved',ok:true,studio:'wae-game-studio/v11'},'*')}
+  catch(error){notify('No se pudo guardar la lógica v11: '+String(error.message||error));frame.contentWindow?.postMessage({type:'wae-game-studio-logic-saved',ok:false,message:String(error.message||error).slice(0,160)},'*')}return;
+ }
  if(data.type==='wae-game-studio-npc-save'&&data.studio==='wae-game-studio/v10'){
   try{persistNpcStudioV10(data.npcs);frame.contentWindow?.postMessage({type:'wae-game-studio-npc-saved',ok:true,studio:'wae-game-studio/v10'},'*')}
   catch(error){notify('No se pudieron guardar NPCs: '+String(error.message||error));frame.contentWindow?.postMessage({type:'wae-game-studio-npc-saved',ok:false,message:String(error.message||error).slice(0,160)},'*')}return;
@@ -292,7 +399,7 @@ function onPreviewMessage(event){
   try{persistLogicStudioV9(data.logic);frame.contentWindow?.postMessage({type:'wae-game-studio-logic-saved',ok:true,studio:'wae-game-studio/v9'},'*')}
   catch(error){notify('No se pudo guardar la lógica: '+String(error.message||error));frame.contentWindow?.postMessage({type:'wae-game-studio-logic-saved',ok:false,message:String(error.message||error).slice(0,160)},'*')}return;
  }
- if(data.type==='wae-game-studio-world-save'&&['wae-game-studio/v8','wae-game-studio/v9','wae-game-studio/v10'].includes(data.studio)){
+ if(data.type==='wae-game-studio-world-save'&&['wae-game-studio/v8','wae-game-studio/v9','wae-game-studio/v10','wae-game-studio/v11'].includes(data.studio)){
   try{persistWorldStudioV8(data.scene,data.world);frame.contentWindow?.postMessage({type:'wae-game-studio-world-saved',ok:true,studio:data.studio},'*')}
   catch(error){notify('No se pudo guardar el mundo: '+String(error.message||error));frame.contentWindow?.postMessage({type:'wae-game-studio-world-saved',ok:false,message:String(error.message||error).slice(0,160)},'*')}return;
  }
