@@ -68,11 +68,76 @@ function persistStudioScene(scene){
  notify('Escena Game Studio v7 guardada en scene.json y main.js');
  return true;
 }
+function normalizeWorldV8(raw){
+ if(!raw||typeof raw!=='object'||raw.schema!=='wae-world/v8'||!Array.isArray(raw.scenes)||raw.scenes.length<1||raw.scenes.length>40)throw Error('Mundo Game Studio v8 inválido');
+ const clean=JSON.parse(JSON.stringify(raw)),finite3=value=>Array.isArray(value)&&value.length===3&&value.every(n=>Number.isFinite(Number(n)));
+ const validId=value=>typeof value==='string'&&/^[a-zA-Z0-9_-]{1,60}$/.test(value);
+ const sanitizeEntities=list=>{
+  if(!Array.isArray(list)||list.length<2||list.length>240)throw Error('Entidades de escena inválidas');
+  const ids=new Set();
+  for(const entity of list){
+   if(!entity||typeof entity!=='object'||!validId(entity.id)||ids.has(entity.id))throw Error('Entidad inválida o duplicada');
+   ids.add(entity.id);
+   if(!finite3(entity.position)||!finite3(entity.scale)||entity.scale.some(n=>Number(n)<=0||Number(n)>50))throw Error('Transformación inválida');
+   entity.position=entity.position.map(n=>Math.max(-100,Math.min(100,Number(n))));
+   entity.scale=entity.scale.map(n=>Math.max(.05,Math.min(50,Number(n))));
+   entity.rotation=Math.max(-Math.PI*8,Math.min(Math.PI*8,Number(entity.rotation)||0));
+   entity.type=String(entity.type||'entity').slice(0,40);entity.material=String(entity.material||'accent').slice(0,40);entity.label=String(entity.label||entity.id).slice(0,80);entity.dynamic=Boolean(entity.dynamic);
+  }
+  if(!list.some(e=>e.type==='player')||!list.some(e=>e.type==='floor'))throw Error('Cada escena debe conservar jugador y suelo');
+ };
+ const sceneIds=new Set();
+ for(const scene of clean.scenes){
+  if(!scene||!validId(scene.id)||sceneIds.has(scene.id))throw Error('Escena inválida o duplicada');
+  sceneIds.add(scene.id);scene.name=String(scene.name||scene.id).slice(0,80);sanitizeEntities(scene.entities);
+  if(!Array.isArray(scene.spawnPoints)||scene.spawnPoints.length<1||scene.spawnPoints.length>30)throw Error('Spawn points inválidos');
+  for(const spawn of scene.spawnPoints){if(!validId(spawn.id)||!finite3(spawn.position))throw Error('Spawn point inválido');spawn.position=spawn.position.map(Number)}
+  if(!Array.isArray(scene.triggers)||scene.triggers.length>100)throw Error('Triggers inválidos');
+  for(const trigger of scene.triggers){
+   if(!validId(trigger.id)||trigger.type!=='zone'||!finite3(trigger.position)||!finite3(trigger.size))throw Error('Trigger inválido');
+   trigger.position=trigger.position.map(Number);trigger.size=trigger.size.map(n=>Math.max(.1,Math.min(50,Number(n))));trigger.once=Boolean(trigger.once);
+   const type=String(trigger.action?.type||'message');if(!['message','scene'].includes(type))throw Error('Acción de trigger inválida');
+   trigger.action={type,text:String(trigger.action?.text||'').slice(0,160),target:String(trigger.action?.target||'').slice(0,60)};
+  }
+ }
+ if(!sceneIds.has(clean.activeSceneId))clean.activeSceneId=clean.scenes[0].id;
+ if(!clean.prefabs||typeof clean.prefabs!=='object'||Object.keys(clean.prefabs).length<1||Object.keys(clean.prefabs).length>50)throw Error('Prefabs inválidos');
+ for(const [name,prefab] of Object.entries(clean.prefabs)){
+  if(!validId(name)||!prefab||typeof prefab!=='object'||!finite3(prefab.scale))throw Error('Prefab inválido');
+  prefab.label=String(prefab.label||name).slice(0,80);prefab.type=String(prefab.type||'obstacle').slice(0,40);prefab.scale=prefab.scale.map(n=>Math.max(.05,Math.min(50,Number(n))));prefab.material=String(prefab.material||'accent').slice(0,40);prefab.dynamic=Boolean(prefab.dynamic);
+ }
+ if(!Array.isArray(clean.missions)||clean.missions.length>100)throw Error('Misiones inválidas');
+ clean.missions=clean.missions.map(m=>({id:validId(m?.id)?m.id:'mission-'+id(),title:String(m?.title||'Misión').slice(0,100),type:['score','scenes'].includes(m?.type)?m.type:'score',target:Math.max(1,Math.min(999,Number(m?.target)||1)),status:m?.status==='completed'?'completed':'active'}));
+ if(!clean.lighting||typeof clean.lighting!=='object'||!Array.isArray(clean.lighting.sky)||clean.lighting.sky.length!==4)throw Error('Iluminación inválida');
+ clean.lighting.ambient=Math.max(.2,Math.min(1.4,Number(clean.lighting.ambient)||.78));clean.lighting.sky=clean.lighting.sky.map(v=>Math.max(0,Math.min(1,Number(v)||0)));
+ clean.visitedScenes=Array.from(new Set((Array.isArray(clean.visitedScenes)?clean.visitedScenes:[]).filter(v=>sceneIds.has(v)))).slice(0,40);
+ if(!clean.visitedScenes.includes(clean.activeSceneId))clean.visitedScenes.push(clean.activeSceneId);
+ if(JSON.stringify(clean).length>160000)throw Error('El mundo supera el límite de 160 KB');
+ return clean;
+}
+function persistWorldStudioV8(sceneRaw,worldRaw){
+ saveEditor();
+ if(!sceneRaw||typeof sceneRaw!=='object'||sceneRaw.engine!=='wae-game-studio/v8')throw Error('Escena Game Studio v8 inválida');
+ const world=normalizeWorldV8(worldRaw),clean=JSON.parse(JSON.stringify(sceneRaw));
+ if(!clean.materials||typeof clean.materials!=='object'||Object.keys(clean.materials).length>40)throw Error('Materiales inválidos');
+ for(const [name,color] of Object.entries(clean.materials)){if(!/^[a-zA-Z0-9_-]{1,40}$/.test(name)||!Array.isArray(color)||color.length!==4||color.some(v=>!Number.isFinite(Number(v))||Number(v)<0||Number(v)>1))throw Error('Material inválido');clean.materials[name]=color.map(Number)}
+ clean.world=world;const active=world.scenes.find(scene=>scene.id===world.activeSceneId)||world.scenes[0];clean.entities=JSON.parse(JSON.stringify(active.entities));
+ if(!clean.camera||!Array.isArray(clean.camera.offset)||clean.camera.offset.length!==3)throw Error('Cámara inválida');
+ clean.camera.offset=clean.camera.offset.map(n=>Math.max(-100,Math.min(100,Number(n)||0)));clean.camera.fov=Math.max(35,Math.min(95,Number(clean.camera.fov)||62));
+ const sceneJson=JSON.stringify(clean,null,2),worldJson=JSON.stringify(world,null,2);
+ const sceneFile=current.files.find(f=>f.name==='scene.json'),mainFile=current.files.find(f=>f.name==='main.js');let worldFile=current.files.find(f=>f.name==='world.json');
+ if(!sceneFile||!mainFile)throw Error('El proyecto no contiene scene.json y main.js');if(!worldFile){if(current.files.length>=MAX_FILES)throw Error('No hay espacio para world.json');worldFile={name:'world.json',content:''};current.files.push(worldFile)}
+ if(!/^const SCENE=.*;$/m.test(mainFile.content))throw Error('No se encontró el contrato SCENE en main.js');
+ sceneFile.content=sceneJson;worldFile.content=worldJson;mainFile.content=mainFile.content.replace(/^const SCENE=.*;$/m,'const SCENE='+JSON.stringify(clean)+';');current.updatedAt=new Date().toISOString();
+ if(!persist())throw Error('No se pudo persistir el mundo');if(['scene.json','world.json','main.js'].includes(selected))$('#wfEditor').value=file()?.content||'';renderFiles();diagnostics();notify('Mundo Game Studio v8 guardado en world.json, scene.json y main.js');return true;
+}
 function onPreviewMessage(event){
- const frame=$('#wfPreview');
- if(!frame||event.source!==frame.contentWindow)return;
- const data=event.data;
- if(!data||data.type!=='wae-game-studio-scene-save'||data.studio!=='wae-game-studio/v7')return;
+ const frame=$('#wfPreview');if(!frame||event.source!==frame.contentWindow)return;const data=event.data;if(!data||typeof data!=='object')return;
+ if(data.type==='wae-game-studio-world-save'&&data.studio==='wae-game-studio/v8'){
+  try{persistWorldStudioV8(data.scene,data.world);frame.contentWindow?.postMessage({type:'wae-game-studio-world-saved',ok:true,studio:'wae-game-studio/v8'},'*')}
+  catch(error){notify('No se pudo guardar el mundo: '+String(error.message||error));frame.contentWindow?.postMessage({type:'wae-game-studio-world-saved',ok:false,message:String(error.message||error).slice(0,160)},'*')}return;
+ }
+ if(data.type!=='wae-game-studio-scene-save'||data.studio!=='wae-game-studio/v7')return;
  try{persistStudioScene(data.scene);frame.contentWindow?.postMessage({type:'wae-game-studio-scene-saved',ok:true,studio:'wae-game-studio/v7'},'*')}
  catch(error){notify('No se pudo guardar la escena: '+String(error.message||error));frame.contentWindow?.postMessage({type:'wae-game-studio-scene-saved',ok:false,message:String(error.message||error).slice(0,160)},'*')}
 }
