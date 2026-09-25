@@ -72,7 +72,10 @@ test('research and collaboration endpoints exist without changing chat, history 
  assert.match(html,/live-workspace-v119\.js\?v=1/);
  assert.match(sw,/live-workspace-v119\.js\?v=1/);
  assert.match(sw,/wae-universal-render-waeweb-public-v45/);
- assert.match(html,/runtime-client\.js\?v=24&industrial=v115&professional=v116&world=v117&chatfix=v118/);
+ const runtimeAsset=html.match(/\.\/runtime-client\.js\?[^"'<>\s]+/)?.[0];
+ assert.ok(runtimeAsset,'current runtime-client asset missing');
+ for(const tag of ['industrial=v115','professional=v116','world=v117','chatfix=v118'])assert.ok(runtimeAsset.includes(tag),tag);
+ assert.ok(sw.includes(runtimeAsset),'service worker must publish the exact current runtime-client asset');
 });
 test('research sources become real tool context, but explicit no-web remains respected',()=>{
  const tools=read('lib/tools.js'),runtime=read('lib/runtime.js');
