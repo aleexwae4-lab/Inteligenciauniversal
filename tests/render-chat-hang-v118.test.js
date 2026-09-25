@@ -83,8 +83,10 @@ test('preserves visual capabilities, all domain routers, cache contract and sepa
   assert.match(client,/if\(request\.canvas!==true&&worldQuery\(request\.message\)\)return nativeFetch\(input,init\)/);
   assert.match(client,/industrialQuery\(request\.message\)\|\|professionalQuery\(request\.message\)/);
   assert.match(client,/request\.canvas_direct===true\|\|request\.canvas_blueprint===true/);
-  assert.match(html,/runtime-client\.js\?v=24&industrial=v115&professional=v116&world=v117&chatfix=v118/);
-  assert.match(sw,/runtime-client\.js\?v=24&industrial=v115&professional=v116&world=v117&chatfix=v118/);
+  const runtimeAsset=html.match(/\.\/runtime-client\.js\?[^"'<>\s]+/)?.[0];
+  assert.ok(runtimeAsset,'current runtime-client asset missing');
+  for(const tag of ['industrial=v115','professional=v116','world=v117','chatfix=v118'])assert.ok(runtimeAsset.includes(tag),tag);
+  assert.ok(sw.includes(runtimeAsset),'service worker must publish the exact current runtime-client asset');
   assert.match(sw,/wae-universal-render-waeweb-public-v45/);
   assert.match(client,/VISUAL_EDGE/);
 });
