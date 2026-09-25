@@ -61,10 +61,10 @@ test('v142 semantic chunks preserve table rows and code summaries as natural bou
 const x=1;
 \`\`\``);
   const output=chunks(spoken,180);
-  assert.ok(output.length>=3);
-  assert.equal(output[0],'Tabla. Columnas: Área, Estado.');
-  assert.match(output[1],/^Fila 1\./);
-  assert.ok(output.some(v=>/^Bloque de código ts omitido/.test(v)));
+  assert.ok(output.length>=3);\n  assert.equal(output.join(''),spoken);
+  assert.equal(output[0].trim(),'Tabla. Columnas: Área, Estado.');
+  assert.match(output[1].trim(),/^Fila 1\./);
+  assert.ok(output.some(v=>/^Bloque de código ts omitido/.test(v.trim())));
 });
 
 test('v142 PWA loads semantic renderer before chunker and premium playback, with exact cache parity',()=>{
