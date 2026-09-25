@@ -22,23 +22,7 @@
 
   const synth=()=>window.speechSynthesis;
   const browserSupported=()=>('speechSynthesis'in window)&&('SpeechSynthesisUtterance'in window);
-  const clean=raw=>String(raw||'').normalize('NFKC')
-    .replace(/```[\s\S]*?```/g,' código omitido ')
-    .replace(/!\[[^\]]*\]\([^)]*\)/g,' ')
-    .replace(/\[([^\]]+)\]\([^)]*\)/g,'$1')
-    .replace(/\[(?:W|M)\d+\]/gi,' ')
-    .replace(/https?:\/\/\S+|www\.\S+/gi,' enlace disponible ')
-    .replace(/<[^>]+>/g,' ')
-    .replace(/(^|\n)\s{0,3}#{1,6}\s*/g,'$1')
-    .replace(/(^|\n)\s*(?:[-+*•▪◦●○■□◆◇►▶]|\d+[.)])\s+/gu,'$1')
-    .replace(/\*\*|__|~~|[*_~`]/g,'')
-    .replace(/[→⇒➜➝➞➡⟶⟹↦↪]/gu,', ')
-    .replace(/[•▪◦●○■□◆◇►▶]/gu,', ')
-    .replace(/[\p{Extended_Pictographic}\uFE0F\u200D]/gu,'')
-    .replace(/Ω/g,' ohmios ').replace(/×/g,' por ').replace(/÷/g,' dividido entre ')
-    .replace(/[#@|]/g,' ')
-    .replace(/\b(\d+(?:[.,]\d+)?)\s*%/g,'$1 por ciento')
-    .replace(/\s*\n\s*/g,'. ').replace(/\s+/g,' ').trim();
+  const clean=raw=>String(raw||'').normalize('NFKC').replace(/\r\n?/g,'\n').replace(/```[\s\S]*?```/g,' ').replace(/~~~[\s\S]*?~~~/g,' ').replace(/^\s*[-*_#=]{2,}\s*$/gm,' ').replace(/!\[[^\]]*\]\([^)]*\)/g,' ').replace(/\[([^\]]+)\]\([^)]*\)/g,'$1').replace(/\[(?:W|M|MEM)\d+\]/gi,' ').replace(/https?:\/\/\S+|www\.\S+/gi,' ').replace(/<[^>]+>/g,' ').replace(/(^|\n)\s{0,3}#{1,6}\s*/g,'$1').replace(/(^|\n)\s*(?:[-+*•▪◦●○■□◆◇►▶]|\d+[.)])\s+/gu,'$1').replace(/\x60[^\x60\n]+\x60/g,' código ').replace(/\*\*|__|~~|[*_~\x60#@]/g,' ').replace(/[→⇒➜➝➞➡⟶⟹↦↪•▪◦●○■□◆◇►▶]/gu,', ').replace(/\|+/g,', ').replace(/[\p{Extended_Pictographic}\uFE0F\u200D]/gu,' ').replace(/[\[\]{}<>]/g,' ').replace(/[“”„‟"«»]/g,' ').replace(/Ω/g,' ohmios ').replace(/×/g,' por ').replace(/÷/g,' dividido entre ').replace(/\b(\d+(?:[.,]\d+)?)\s*%/g,'$1 por ciento').replace(/(^|[\s(])-(\d+(?:[.,]\d+)?)/g,'$1menos $2').replace(/[-‐‑‒–—―]+/g,' ').replace(/([A-Za-zÁÉÍÓÚÜÑáéíóúüñ])\.([A-Za-zÁÉÍÓÚÜÑáéíóúüñ])/g,'$1 $2').replace(/(\d)\.(\d)/g,'$1§DEC§$2').replace(/[.!?;:]+/g,'\n').replace(/§DEC§/g,'.').replace(/[ \t]+/g,' ').replace(/\s*,\s*/g,', ').replace(/,+/g,',').replace(/,\s*(?=\n|$)/g,'').replace(/\s*\n+\s*/g,'\n').replace(/\n{2,}/g,'\n').trim();
 
   function bestVoice(){
     if(!browserSupported())return null;
