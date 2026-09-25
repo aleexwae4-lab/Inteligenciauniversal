@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import vm from 'node:vm';
 import {createNativeGameStudioProject,inspectGameStudioProject,GAME_STUDIO_VERSION} from '../lib/game-studio-v6.js';
 import {inspectFoundryProject,buildDigitalProduct} from '../lib/product-foundry-v5.js';
+import {GAME_STUDIO_VERSION as ACTIVE_GAME_STUDIO_VERSION,inspectGameStudioProject as inspectActiveGameStudioProject} from '../lib/game-studio-v7.js';
 
 test('Game Studio v6 native scaffold is a real self-contained 3D product',()=>{
   const project=createNativeGameStudioProject({request:'Crea un juego 3D divertido con obstáculos y energía.',profile:'game_3d'});
@@ -23,7 +24,7 @@ test('Game Studio v6 native scaffold is a real self-contained 3D product',()=>{
   assert.ok(manifest.capabilities.includes('scene-editor'));
 });
 
-test('Game Studio v6 recovery removes provider dependency for first 3D build',async()=>{
+test('legacy v6 remains compatible while active recovery upgrades first 3D build to v7',async()=>{
   const fail=async()=>{const e=new Error('Todos los proveedores configurados fallaron');e.code='all_providers_failed';throw e};
   const result=await buildDigitalProduct({
     request:'Crea un juego 3D jugable con WebGL, cámara, controles, físicas y HUD.',
@@ -32,15 +33,15 @@ test('Game Studio v6 recovery removes provider dependency for first 3D build',as
   });
   assert.equal(result.quality.structural,'passed');
   assert.equal(result.provider,'wae_native_game_studio');
-  assert.equal(result.model,GAME_STUDIO_VERSION);
+  assert.equal(result.model,ACTIVE_GAME_STUDIO_VERSION);
   assert.equal(result.recovery.mode,'native_game_studio');
   assert.equal(result.recovery.providerIndependent,true);
-  assert.equal(result.studio.version,GAME_STUDIO_VERSION);
+  assert.equal(result.studio.version,ACTIVE_GAME_STUDIO_VERSION);
   assert.equal(result.studio.qa,'passed');
   assert.equal(result.project.files.some(f=>f.name==='scene.json'),true);
 });
 
-test('Game Studio v6 replaces an incomplete AI 3D scaffold with native audited output',async()=>{
+test('active Game Studio replaces an incomplete AI 3D scaffold with audited v7 output',async()=>{
   const weak={
     plan:'3D incompleto',
     files:[
@@ -55,7 +56,7 @@ test('Game Studio v6 replaces an incomplete AI 3D scaffold with native audited o
   const result=await buildDigitalProduct({request:'Crea un juego 3D premium y completo.',kind:'game_3d',generate});
   assert.equal(result.recovery.mode,'native_game_studio');
   assert.equal(result.provider,'wae_native_game_studio');
-  assert.equal(inspectGameStudioProject(result.project.files).pass,true);
+  assert.equal(inspectActiveGameStudioProject(result.project.files).pass,true);
 });
 
 test('Game Studio v6 does not overwrite an existing project when providers fail during a revision',async()=>{
