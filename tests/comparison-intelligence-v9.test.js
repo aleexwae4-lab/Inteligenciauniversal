@@ -62,7 +62,10 @@ test('tables contain safe data labels for a readable 320px viewport without JS e
  assert.match(css,/@media\(max-width:600px\)/);
  assert.match(css,/content:attr\(data-label\)/);
  assert.match(css,/overflow-wrap:anywhere/);
- assert.match(html,/wae-mobile-tables-v9\.css\?v=1/);
+ const tableAsset=html.match(/\.\/wae-mobile-tables-v9\.css\?[^\"']+/)?.[0];
+ assert.ok(tableAsset,'index must version the mobile table stylesheet');
+ assert.match(tableAsset,/v=\d+/);
+ assert.ok(sw.includes(tableAsset),'service worker must cache the exact current mobile table asset');
  const premiumAsset=html.match(/\.\/premium-render-v1\.js\?[^"']+/)?.[0];
  assert.ok(premiumAsset,'index must version premium-render-v1.js');
  assert.ok(sw.includes(premiumAsset),'service worker must cache the exact current premium-render asset');
