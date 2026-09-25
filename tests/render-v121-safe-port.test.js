@@ -7,12 +7,12 @@ const read=file=>readFileSync(new URL('../'+file,import.meta.url),'utf8');
 const app=read('app.js');
 const html=read('index.html');
 function chat(fetch){
-  const start=app.indexOf('async function getAIReply(message){');
+  const start=app.indexOf('function captureResponseEnvelope(d){');
   const end=app.indexOf('const modeDescriptions=',start);
   assert.ok(start>=0&&end>start);
   const scope={
     fetch,window:{},state:{mode:'general',messages:[{role:'user',text:'consulta'}]},
-    localStorage:{getItem:()=>null},AbortController,setTimeout,clearTimeout,
+    localStorage:{getItem:()=>null},AbortController,setTimeout,clearTimeout,TextDecoder,Uint8Array,
     sanitizeAssistantText:value=>String(value||'').trim(),console,
   };
   vm.runInNewContext(app.slice(start,end)+'\nthis.getAIReply=getAIReply;',scope);
