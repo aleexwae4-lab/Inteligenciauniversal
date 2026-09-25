@@ -113,7 +113,7 @@ async function getAIReply(message){
     return clean;
   }catch(e){
     console.warn('[WAE IU] runtime unavailable',e?.message||e);
-    applyTurnE2E(window.__waeLastTurnE2E);
+    if(typeof applyTurnE2E==='function')applyTurnE2E(window.__waeLastTurnE2E);
     // A provider outage is a transport failure, not an assistant answer.
     // Keep the user's submitted question in the transcript and restore the
     // draft for one-touch retry instead of persisting a fake assistant turn.
