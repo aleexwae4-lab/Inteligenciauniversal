@@ -32,11 +32,13 @@ test('Android shell targets the current Google Play API baseline and preserves c
   assert.match(manifest,/android\.permission\.INTERNET/);
   assert.match(manifest,/android\.permission\.RECORD_AUDIO/);
   assert.match(manifest,/android:usesCleartextTraffic="false"/);
-  assert.match(activity,/https:\/\/inteligenciauniversal\.onrender\.com\/\?mobile=1&app=android&source=play/);
+  assert.match(activity,/https:\/\/wae-inteligencia-universal-vt3h\.onrender\.com\/\?mobile=1&app=android&source=native/);
   assert.match(activity,/setMixedContentMode\(WebSettings\.MIXED_CONTENT_NEVER_ALLOW\)/);
   assert.match(activity,/setAllowFileAccess\(false\)/);
   assert.match(activity,/PermissionRequest\.RESOURCE_AUDIO_CAPTURE/);
   assert.match(activity,/handler\.cancel\(\)/);
   assert.match(workflow,/:app:assembleDebug :app:bundleRelease/);
   assert.match(workflow,/platforms;android-36/);
+  assert.match(workflow,/UniversalCore\.apk/);
+  assert.match(workflow,/gh release create universal-core-android-latest/);
 });

@@ -1,14 +1,17 @@
 {
-  "name": "WAE · Inteligencia Universal",
-  "short_name": "WAE Universal",
-  "start_url": "./",
+  "name": "WAE OS Enterprise · Universal Core",
+  "short_name": "Universal Core",
+  "id": "/",
+  "start_url": "./?source=pwa",
+  "scope": "./",
   "display": "standalone",
-  "background_color": "#050806",
-  "theme_color": "#07110f",
-  "description": "Núcleo mobile-first para investigar, programar, analizar y diseñar.",
+  "display_override": ["window-controls-overlay", "standalone"],
+  "background_color": "#05070D",
+  "theme_color": "#05070D",
+  "description": "Universal Core: inteligencia, investigación, programación, análisis, diseño y ejecución.",
   "icons": [
     {
-      "src": "./assets/logo.svg",
+      "src": "./assets/universal-core-icon.svg",
       "sizes": "any",
       "type": "image/svg+xml",
       "purpose": "any maskable"

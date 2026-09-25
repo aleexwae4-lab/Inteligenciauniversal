@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" role="img" aria-labelledby="title desc">
+  <title id="title">Universal Core</title>
+  <desc id="desc">Premium minimal orbital core mark for WAE Universal Core.</desc>
+  <rect width="1024" height="1024" rx="224" fill="#05070D"/>
+  <circle cx="512" cy="512" r="308" fill="none" stroke="#F7FAFF" stroke-width="44"/>
+  <circle cx="512" cy="512" r="188" fill="none" stroke="#55D9FF" stroke-width="28"/>
+  <path d="M512 356 668 512 512 668 356 512Z" fill="#F7FAFF"/>
+  <path d="M512 430 594 512 512 594 430 512Z" fill="#55D9FF"/>
+  <circle cx="760" cy="334" r="26" fill="#55D9FF"/>
+</svg>
