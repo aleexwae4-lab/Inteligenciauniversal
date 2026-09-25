@@ -46,7 +46,9 @@ test('Render v121 intercept rejects HTTP 200 non-generative rescue before advanc
 test('Render v121 refreshes offline cache with the same scripts referenced by the HTML',()=>{
   const sw=read('sw.js');
   assert.match(sw,/wae-universal-render-waeweb-public-v45-recovery-v121/);
-  assert.match(sw,/app\.js\?v=121/);
+  const currentApp=html.match(/\.\/app\.js\?[^"']+/)?.[0];
+  assert.ok(currentApp,'HTML must version app.js');
+  assert.ok(sw.includes(currentApp),'offline cache must match the current HTML app asset');
   assert.match(sw,/waewebpublic=v126&recovery=v121/);
   assert.match(sw,/render-v121-recovery\.css\?v=1/);
   assert.match(html,/waewebpublic=v126&recovery=v121/);
