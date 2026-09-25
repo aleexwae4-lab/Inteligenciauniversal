@@ -36,6 +36,7 @@ const apiRoutes = new Map([
   ['/api/health/readiness', healthHandler],
   ['/api/health/canary', healthHandler],
   ['/api/capabilities', capabilitiesHandler],
+  ['/api/capabilities/proof', capabilitiesHandler],
   ['/api/tasks', tasksHandler],
   ['/api/export', exportHandler],
   ['/api/canvas', canvasHandler],
