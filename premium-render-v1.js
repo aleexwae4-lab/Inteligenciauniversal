@@ -60,6 +60,36 @@ function rich(raw){
 }
 function rawOf(article){return article.dataset.iuRaw||article.querySelector('p')?.textContent||''}
 function speechText(raw){return text(raw).replace(/(?:\x60{3}|~{3})wae-(?:card|chart)[\s\S]*?(?:\x60{3}|~{3})/gi,' ').replace(/\[([^\]]+)\]\(https?:\/\/[^)]+\)/g,'$1').replace(/https?:\/\/\S+/g,'').replace(/[\x60*_#>|~]/g,'').replace(/\s+/g,' ').trim().slice(0,9000)}
+function takeEnvelope(article){
+  const envelope=window.__waePendingResponseEnvelope;
+  if(!envelope||article!==QA('#messages .message.assistant').at(-1))return null;
+  window.__waePendingResponseEnvelope=null;
+  return envelope;
+}
+function sourceRows(envelope){
+  const seen=new Set(),rows=[];
+  for(const item of Array.isArray(envelope?.sources)?envelope.sources:[]){
+    if(!item||typeof item!=='object'||!item.url||!item.title)continue;
+    let url;try{url=new URL(String(item.url));if(!['http:','https:'].includes(url.protocol))continue}catch{continue}
+    if(seen.has(url.href))continue;seen.add(url.href);
+    rows.push({title:text(item.title).replace(/[\r\n]+/g,' ').slice(0,120),url:url.href,host:url.hostname.replace(/^www\./,'')});
+    if(rows.length>=5)break;
+  }
+  return rows;
+}
+function sourceStrip(envelope){
+  const rows=sourceRows(envelope);if(!rows.length)return null;
+  const wrap=document.createElement('div');wrap.className='iu-native-sources';wrap.setAttribute('aria-label','Fuentes de esta respuesta');
+  const label=document.createElement('span');label.className='iu-native-sources-label';label.textContent='Fuentes';
+  wrap.append(label);
+  for(const row of rows){
+    const a=document.createElement('a');a.href=row.url;a.target='_blank';a.rel='noopener noreferrer';a.className='iu-native-source';
+    const strong=document.createElement('strong');strong.textContent=row.title;
+    const small=document.createElement('small');small.textContent=row.host;
+    a.append(strong,small);wrap.append(a);
+  }
+  return wrap;
+}
 function resetVoice(){
   voice.token++;voice.active=null;voice.paused=false;voice.utterances=[];voice.fallbackAttempted=false;voice.completedChunks=0;
   if(supported)try{synth.cancel()}catch(_){}
@@ -75,7 +105,7 @@ function speak(article,button){
     try{synth.resume();voice.paused=false;button.textContent='⏸';button.title='Pausar voz';button.setAttribute('aria-label','Pausar voz');button.setAttribute('aria-pressed','true')}catch(_){}
     return;
   }
-  resetVoice();const content=speechText(rawOf(article));if(!content)return;
+  resetVoice();const content=text(article.dataset.iuSpeech||'').trim()||speechText(rawOf(article));if(!content)return;
   const token=voice.token;voice.active=article;voice.paused=false;voice.completedChunks=0;voice.fallbackAttempted=false;
   button.textContent='⏸';button.title='Pausar voz';button.setAttribute('aria-label','Pausar voz');button.setAttribute('aria-pressed','true');
   const prefs=window.WAESettings?.get?.()||{};
@@ -164,9 +194,17 @@ function enhance(article){
     if(!Q('.message.user')){article.remove();return}
   }
   if(article.dataset.iuRich==='1')return;
+  const envelope=takeEnvelope(article);
   article.dataset.iuRich='1';article.dataset.iuRaw=raw;
+  if(envelope?.speechText)article.dataset.iuSpeech=text(envelope.speechText).slice(0,12000);
+  if(envelope?.schema)article.dataset.iuResponseSchema=text(envelope.schema).slice(0,80);
   const body=document.createElement('div');body.className='iu-rich';body.innerHTML=rich(raw);p.replaceWith(body);
+  const sources=sourceStrip(envelope);if(sources)article.append(sources);
   article.append(toolbar(article,raw));
+  if(envelope){
+    const detail={schema:envelope.schema||null,sourceCount:sourceRows(envelope).length,componentCount:Array.isArray(envelope.components)?envelope.components.length:0,requestId:envelope.metadata?.requestId||null};
+    try{window.dispatchEvent(new CustomEvent('wae:assistant-envelope',{detail}))}catch(_){}
+  }
   if(allowAuto&&auto&&!window.__waeHydratingHistory&&article===QA('#messages .message.assistant').at(-1)&&!/^El núcleo de inteligencia está reconectando/.test(raw)){
     const b=article.querySelector('.iu-voice');if(b)speak(article,b);
   }
