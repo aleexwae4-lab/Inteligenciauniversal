@@ -71,7 +71,7 @@ test('v132 capabilities API exposes the same capability matrix source of truth',
   assert.match(api,/const capabilityMatrix=capabilitySnapshot\(\)/);
   assert.match(runtime,/deterministicTurn/);
   assert.match(runtime,/coreSelfResponse\(\{question:message,history\}\)/);
-  assert.match(runtime,/runtime_capabilities\/v132/);
+  assert.match(runtime,/runtime_capabilities\/v153/);
 });
 
 test('v132 injected capability registries stay deterministic even when Render web env exists',()=>{
