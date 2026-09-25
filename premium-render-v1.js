@@ -74,7 +74,45 @@ function rich(raw){
   return out.join('')||'<p>'+esc(raw)+'</p>';
 }
 function rawOf(article){return article.dataset.iuRaw||article.querySelector('p')?.textContent||''}
-function speechText(raw){let t=text(raw).normalize('NFKC').replace(/\r\n?/g,'\n');t=t.replace(/<br\s*\/?>/gi,'\n').replace(/(?:\x60{3}|~{3})wae-(?:card|chart)[\s\S]*?(?:\x60{3}|~{3})/gi,' ').replace(/```[\s\S]*?```/g,' ').replace(/~~~[\s\S]*?~~~/g,' ').replace(/^\s*[-*_#=]{2,}\s*$/gm,' ').replace(/!\[[^\]]*\]\([^)]*\)/g,' ').replace(/\[([^\]]+)\]\([^)]*\)/g,'$1').replace(/\[(?:W|M|MEM)\d+\]/gi,' ').replace(/https?:\/\/\S+|www\.\S+/gi,' ').replace(/<[^>]+>/g,' ').replace(/(^|\n)\s{0,3}#{1,6}\s*/g,'$1').replace(/(^|\n)\s*(?:[-+*•▪◦●○■□◆◇►▶]|\d+[.)])\s+/gu,'$1').replace(/\x60[^\x60\n]+\x60/g,' código ').replace(/\*\*|__|~~|[*_~\x60#@]/g,' ').replace(/[→⇒➜➝➞➡⟶⟹↦↪•▪◦●○■□◆◇►▶]/gu,', ').replace(/\|+/g,', ').replace(/[\p{Extended_Pictographic}\uFE0F\u200D]/gu,' ').replace(/[\[\]{}<>]/g,' ').replace(/[“”„‟"«»]/g,' ').replace(/\b(\d+(?:[.,]\d+)?)\s*%/g,'$1 por ciento').replace(/(^|[\s(])-(\d+(?:[.,]\d+)?)/g,'$1menos $2').replace(/[-‐‑‒–—―]+/g,' ').replace(/([A-Za-zÁÉÍÓÚÜÑáéíóúüñ])\.([A-Za-zÁÉÍÓÚÜÑáéíóúüñ])/g,'$1 $2').replace(/(\d)\.(\d)/g,'$1§DEC§$2').replace(/[.!?;:]+/g,'\n').replace(/§DEC§/g,'.').replace(/[ \t]+/g,' ').replace(/\s*,\s*/g,', ').replace(/,+/g,',').replace(/,\s*(?=\n|$)/g,'').replace(/\s*\n+\s*/g,'\n').replace(/\n{2,}/g,'\n').trim();return t.slice(0,9000)}
+function speechText(raw){
+  let t=text(raw).normalize('NFKC').replace(/\r\n?/g,'\n');
+  t=t
+    .replace(/<br\s*\/?>/gi,'\n')
+    .replace(/(?:\x60{3}|~{3})wae-(?:card|chart)[\s\S]*?(?:\x60{3}|~{3})/gi,' ')
+    .replace(/\x60{3}[\s\S]*?\x60{3}/g,' ')
+    .replace(/~{3}[\s\S]*?~{3}/g,' ')
+    .replace(/^\s*\|?\s*:?-{3,}:?\s*(?:\|\s*:?-{3,}:?\s*)+\|?\s*$/gm,' ')
+    .replace(/^\s*[-*_#=]{2,}\s*$/gm,' ')
+    .replace(/!\[[^\]]*\]\([^)]*\)/g,' ')
+    .replace(/\[([^\]]+)\]\([^)]*\)/g,'$1')
+    .replace(/\[(?:W|M|MEM)\d+\]/gi,' ')
+    .replace(/https?:\/\/\S+|www\.\S+/gi,' ')
+    .replace(/<[^>]+>/g,' ')
+    .replace(/(^|\n)\s{0,3}#{1,6}\s*/g,'$1')
+    .replace(/(^|\n)\s*(?:[-+*•▪◦●○■□◆◇►▶]|\d+[.)])\s+/gu,'$1')
+    .replace(/\x60[^\x60\n]+\x60/g,' código ')
+    .replace(/\*\*|__|~~|[*_~\x60#@]/g,' ')
+    .replace(/[→⇒➜➝➞➡⟶⟹↦↪•▪◦●○■□◆◇►▶]/gu,', ')
+    .replace(/\s*\|+\s*/g,', ')
+    .replace(/[\p{Extended_Pictographic}\uFE0F\u200D]/gu,' ')
+    .replace(/[\[\]{}<>]/g,' ')
+    .replace(/[“”„‟"«»]/g,' ')
+    .replace(/\b(\d+(?:[.,]\d+)?)\s*%/g,'$1 por ciento')
+    .replace(/(^|[\s(])-(\d+(?:[.,]\d+)?)/g,'$1menos $2')
+    .replace(/[-‐‑‒–—―]+/g,' ')
+    .replace(/([A-Za-zÁÉÍÓÚÜÑáéíóúüñ])\.([A-Za-zÁÉÍÓÚÜÑáéíóúüñ])/g,'$1 $2')
+    .replace(/(\d)\.(\d)/g,'$1§DEC§$2')
+    .replace(/[.!?;:]+/g,', ')
+    .replace(/§DEC§/g,'.')
+    .replace(/[ \t]+/g,' ')
+    .replace(/\s*,\s*/g,', ')
+    .replace(/,+/g,',')
+    .replace(/,\s*(?=\n|$)/g,'')
+    .replace(/\s*\n+\s*/g,', ')
+    .replace(/(?:,\s*){2,}/g,', ')
+    .trim();
+  return t.slice(0,9000);
+}
 function takeEnvelope(article){
   const envelope=window.__waePendingResponseEnvelope;
   if(!envelope||article!==QA('#messages .message.assistant').at(-1))return null;
@@ -121,7 +159,7 @@ function speak(article,button){
     try{synth.resume();voice.paused=false;button.textContent='⏸';button.title='Pausar voz';button.setAttribute('aria-label','Pausar voz');button.setAttribute('aria-pressed','true')}catch(_){}
     return;
   }
-  resetVoice();const content=text(article.dataset.iuSpeech||'').trim()||speechText(rawOf(article));if(!content)return;
+  resetVoice();const content=speechText(text(article.dataset.iuSpeech||'').trim()||rawOf(article));if(!content)return;
   const token=voice.token;voice.active=article;voice.paused=false;voice.started=false;voice.completedChunks=0;voice.fallbackAttempted=false;
   button.textContent='◌';button.title='Preparando voz';button.setAttribute('aria-label','Preparando voz');button.setAttribute('aria-pressed','false');
   const prefs=window.WAESettings?.get?.()||{};
