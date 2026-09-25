@@ -96,6 +96,13 @@ function updateProviderProgress(detail={}){
     if(providerChip&&Number.isFinite(ttft))providerChip.title='Proveedor · primer token '+Math.round(ttft)+' ms';
   }else if(detail.type==='circuit_open'){
     current.textContent='Proveedor aislado · buscando alternativa';
+  }else if(detail.type==='quarantined'){
+    const seconds=Number.isFinite(Number(detail.remainingMs))?Math.ceil(Number(detail.remainingMs)/1000):null;
+    current.textContent='Ruta en cuarentena por SLO'+(seconds?' · '+seconds+' s':'')+' · usando alternativa';
+  }else if(detail.type==='probation'){
+    current.textContent='Probando recuperación controlada · '+provider;
+  }else if(detail.type==='recovered'){
+    current.textContent='Ruta recuperada · '+provider;
   }else if(detail.type==='failed'){
     current.textContent='Proveedor falló · recuperación automática';
   }else if(detail.type==='quality_rejected'){
