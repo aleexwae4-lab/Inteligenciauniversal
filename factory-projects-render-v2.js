@@ -82,17 +82,18 @@ function commitProject(nextFiles,expected){
   saveEditor();
   if(!expected||current.id!==expected.id||JSON.stringify(current.files)!==JSON.stringify(expected.files))
     return{ok:false,error:'El proyecto cambió durante la construcción. No sobrescribí archivos.'};
-  if(!Array.isArray(nextFiles)||nextFiles.length<4||nextFiles.length>12)
-    return{ok:false,error:'El constructor no devolvió un proyecto de archivos completo.'};
-  const names=new Set(),required=['index.html','styles.css','main.js','README.md'];
+  if(!Array.isArray(nextFiles)||nextFiles.length<5||nextFiles.length>20)
+    return{ok:false,error:'La Fábrica v5 no devolvió un paquete fuente completo de 5 a 20 archivos.'};
+  const names=new Set(),required=['index.html','styles.css','main.js','README.md','wae-product.json'];
   let total=0;
   for(const f of nextFiles){
-    if(!f||typeof f.name!=='string'||typeof f.content!=='string'||!validName(f.name)||f.content.length>100000||names.has(f.name))
+    if(!f||typeof f.name!=='string'||typeof f.content!=='string'||!validName(f.name)||f.content.length>120000||names.has(f.name))
       return{ok:false,error:'El constructor devolvió rutas o archivos inválidos.'};
     names.add(f.name);total+=f.content.length;
   }
-  if(total>170000||required.some(name=>!names.has(name)))
-    return{ok:false,error:'El constructor devolvió un proyecto demasiado grande o incompleto.'};
+  if(total>280000||required.some(name=>!names.has(name)))
+    return{ok:false,error:'La Fábrica v5 devolvió un paquete demasiado grande o incompleto.'};
+  try{const manifest=JSON.parse(nextFiles.find(f=>f.name==='wae-product.json').content);if(manifest?.schema!=='wae-product/v5'||!manifest?.profile)throw Error()}catch{return{ok:false,error:'El manifiesto wae-product.json es inválido.'}}
   const before=current.files.map(f=>({...f}));
   const previousSelected=selected,oldProjects=localStorage.getItem(KEY),oldRevisions=localStorage.getItem(REVISIONS);
   try{
@@ -135,7 +136,7 @@ function init(){
 const workspace=$('#workspace'),tabs=$('.workspace-tabs'),body=$('.workspace-body');if(!workspace||!tabs||!body)return;
 const tab=document.createElement('button');tab.type='button';tab.dataset.tab='factory';tab.textContent='⚒ Fábrica';tabs.appendChild(tab);
 root=document.createElement('section');root.id='panel-factory';root.className='tab-panel wf-panel';
-root.innerHTML='<div class="wf-head"><div><strong>WAE · Fábrica de productos digitales</strong><small>Archivos editables · Vista previa aislada · Exportación real</small></div><select id="wfProjects" aria-label="Proyecto activo"></select><button id="wfNewProject" type="button">＋ Proyecto</button></div><div class="wf-toolbar"><input id="wfNewFile" placeholder="archivo.js" aria-label="Nombre de archivo"><button id="wfAddFile" type="button">＋ Archivo</button><button id="wfRemoveFile" type="button">Eliminar archivo</button><button id="wfImportCanvas" type="button">Importar Canvas</button><button id="wfSendCanvas" type="button">Enviar al Canvas</button><button id="wfInsertResponse" type="button">Insertar respuesta</button><button id="wfAudit" type="button">Auditar</button><button id="wfRun" type="button">▶ Previsualizar</button></div><div class="wf-body"><nav id="wfFiles" aria-label="Archivos del proyecto"></nav><div class="wf-code"><div class="wf-label" id="wfCurrentFile"></div><textarea id="wfEditor" spellcheck="false" aria-label="Editor de código"></textarea></div><div class="wf-preview"><div class="wf-label">Vista previa aislada</div><iframe id="wfPreview" title="Vista previa del producto" sandbox="allow-scripts"></iframe></div></div><div class="wf-footer"><pre id="wfDiagnostics" aria-live="polite"></pre><div class="wf-export"><button id="wfExportFile" type="button">Archivo</button><button id="wfExportHTML" type="button">HTML ejecutable</button><button id="wfExportZIP" type="button">ZIP completo</button><button id="wfExportProject" type="button">Proyecto JSON</button><button id="wfImport" type="button">Importar proyecto</button><input id="wfImportFile" type="file" accept=".json,application/json" hidden></div></div>';
+root.innerHTML='<div class="wf-head"><div><strong>WAE · Digital Product Foundry</strong><small>Juegos 3D · Apps · Web · PWA · API · Automatización · Código fuente exportable</small></div><select id="wfProjects" aria-label="Proyecto activo"></select><button id="wfNewProject" type="button">＋ Proyecto</button></div><div class="wf-toolbar"><input id="wfNewFile" placeholder="archivo.js" aria-label="Nombre de archivo"><button id="wfAddFile" type="button">＋ Archivo</button><button id="wfRemoveFile" type="button">Eliminar archivo</button><button id="wfImportCanvas" type="button">Importar Canvas</button><button id="wfSendCanvas" type="button">Enviar al Canvas</button><button id="wfInsertResponse" type="button">Insertar respuesta</button><button id="wfAudit" type="button">Auditar</button><button id="wfRun" type="button">▶ Previsualizar</button></div><div class="wf-body"><nav id="wfFiles" aria-label="Archivos del proyecto"></nav><div class="wf-code"><div class="wf-label" id="wfCurrentFile"></div><textarea id="wfEditor" spellcheck="false" aria-label="Editor de código"></textarea></div><div class="wf-preview"><div class="wf-label">Vista previa aislada</div><iframe id="wfPreview" title="Vista previa del producto" sandbox="allow-scripts"></iframe></div></div><div class="wf-footer"><pre id="wfDiagnostics" aria-live="polite"></pre><div class="wf-export"><button id="wfExportFile" type="button">Archivo</button><button id="wfExportHTML" type="button">HTML ejecutable</button><button id="wfExportZIP" type="button">ZIP completo</button><button id="wfExportProject" type="button">Proyecto JSON</button><button id="wfImport" type="button">Importar proyecto</button><input id="wfImportFile" type="file" accept=".json,application/json" hidden></div></div>';
 body.appendChild(root);load();render();
 tab.addEventListener('click',()=>{tabs.querySelectorAll('button').forEach(b=>b.classList.toggle('active',b===tab));body.querySelectorAll('.tab-panel').forEach(p=>p.classList.toggle('active',p===root));preview()});
 $('#wfProjects').addEventListener('change',e=>{save();current=projects.find(p=>p.id===e.target.value)||current;selected=current.files[0].name;persist();render();preview();announceProjectChange()});
@@ -146,6 +147,6 @@ $('#wfImportCanvas').addEventListener('click',importCanvas);$('#wfSendCanvas').a
 $('#wfExportFile').addEventListener('click',exportFile);$('#wfExportHTML').addEventListener('click',exportBundle);$('#wfExportZIP').addEventListener('click',exportZip);$('#wfExportProject').addEventListener('click',exportProject);
 $('#wfImport').addEventListener('click',()=>$('#wfImportFile').click());$('#wfImportFile').addEventListener('change',importProject);
 $('#exportBtn')?.addEventListener('click',onExport,true);$('#saveBtn')?.addEventListener('click',onSave,true);
-window.__waeFactoryV1={version:'3',save,preview,diagnostics,exportProject,exportZip,snapshot,commitGenerated,commitProject,restorePrevious};if(new URLSearchParams(location.search).get('wae_factory')==='1'){setTimeout(()=>{$('#workspaceBtn')?.click();tab.click()},80)}}
+window.__waeFactoryV1={version:'5',save,preview,diagnostics,exportProject,exportZip,snapshot,commitGenerated,commitProject,restorePrevious};if(new URLSearchParams(location.search).get('wae_factory')==='1'){setTimeout(()=>{$('#workspaceBtn')?.click();tab.click()},80)}}
 document.readyState==='loading'?document.addEventListener('DOMContentLoaded',init,{once:true}):init();
 })();
