@@ -49,8 +49,9 @@ test('comparison routing, primary policy and cache version agree with live Rende
  assert.match(server,/preguntas comparativas/);
  assert.match(client,/selfQuery\(request\.message\)/);
  assert.match(client,/Si comparan Universal Core con Google/);
- assert.match(html,/runtime-client\.js\?v=24/);
- assert.match(sw,/runtime-client\.js\?v=24/);
+ const runtimeAsset=html.match(/\.\/runtime-client\.js\?[^"'<>\s]+/)?.[0];
+ assert.ok(runtimeAsset,'current runtime-client asset missing');
+ assert.ok(sw.includes(runtimeAsset),'service worker must publish the exact current runtime-client asset');
  assert.match(sw,/wae-universal-render-waeweb-public-v45/);
  assert.match(sw,/factory-projects-render-v2/);
  assert.match(sw,/continuity-backup-v7/);
