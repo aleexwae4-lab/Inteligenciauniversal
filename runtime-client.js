@@ -160,6 +160,16 @@
     return q.length<=105 && /^(?:(?:hola|oye|dime|me dices|una pregunta|por favor) )*(?:(?:tu|universal core|wae os) )?(?:(?:puedes|podrias|puede|podria|podemos) )?(?:competir|compites|compite|competencia) (?:contra|con|vs|versus) google(?: (?:search|gemini))?$/.test(q);
   };
   const comparisonBrief='CONTEXTO DE IDENTIDAD, NO RESPUESTA PREFABRICADA: La persona conversa con Universal Core, producto WAE OS Enterprise; NO está conversando con ChatGPT como producto. Universal Core combina chat, rutas de IA, Workspace, Canvas y Fábrica. Google puede significar Search, Gemini o la empresa/ecosistema: distingue solo los sentidos pertinentes. No atribuyas a Universal Core el índice web, la infraestructura, el entrenamiento ni los servicios de Google. No declares herramientas, búsquedas actuales ni pruebas que no estén verificadas. Responde con naturalidad en 2–4 frases si es una comparación informal; no hagas una tabla salvo que te la pidan. Habla sobre Universal Core, no sobre ChatGPT.';
+  // Mirrors lib/wae-product-identity-v126.js. Reject only an assistant's own
+  // false vendor persona; ordinary research ABOUT AI providers stays allowed.
+  const productIdentityIssue=(answer,question)=>{
+    const q=String(question||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase();
+    if(/\b(?:traduce|transcribe|cita textual|ejemplo de dialogo|escribe un guion|escribe codigo|analiza este texto|resumen de este texto)\b/.test(q))return '';
+    const first=String(answer||'').trim().replace(/^\*\*(.+?)\*\*/,'$1').slice(0,500).replace(/^\s*(?:hola[,!.]?\s*)?/i,'');
+    if(/^(?:soy|i am|i'm|me llamo)\s+(?:el\s+|la\s+|un\s+|una\s+)?(?:chatgpt|gemini|claude|copilot|grok)(?:\b|[,.!])/i.test(first))return 'wrong_assistant_brand';
+    if(/^(?:soy|i am|i'm)\s+(?:un\s+|una\s+)?(?:modelo|asistente|chatbot|inteligencia artificial)(?:\s+de lenguaje)?[^\n.!?]{0,85}\b(?:openai|anthropic|google deepmind|microsoft)\b/i.test(first))return 'wrong_assistant_provenance';
+    return '';
+  };
   const comparisonIssue=(answer,question)=>{
     if(!coreComparison(question))return '';
     const raw=String(answer||'').trim(),q=String(question||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase(),plain=raw.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase();
@@ -347,6 +357,8 @@
       if(data.success===false||data.provider==='web_recovery'||data.resilience?.automatic_evidence_rescue===true)throw new Error('non_generative_evidence_rescue');
       // A degraded upstream status sentence is not a successful answer; let the existing Render fallback try another configured model.
       if(/la ruta generativa avanzada no est[aá] disponible|no existe evidencia p[uú]blica suficiente para responder sin inventar|ninguna ruta alcanz[oó] el umbral m[ií]nimo/i.test(String(data.reply)))throw new Error('degraded_supabase_reply');
+      const identityFailure=!incoming.canvas?productIdentityIssue(data.reply,incoming.message):'';
+      if(identityFailure)throw new Error('product_identity_quality_'+identityFailure);
       const comparisonFailure=!incoming.canvas?comparisonIssue(data.reply,incoming.message):'';
       if(comparisonFailure)throw new Error('comparison_quality_'+comparisonFailure);
       const purposeFailure=!incoming.canvas?purposeIssue(data.reply,incoming.message,Array.isArray(data.web_sources)&&data.web_sources.length>0):'';
