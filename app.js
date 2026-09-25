@@ -65,6 +65,7 @@ function renderMessage(m){
   const n=m.role==='user'?'Tú':state.coreName;
   e.innerHTML=`<div class="message-meta"><strong>${safeText(n)}</strong><span>${safeText(m.at||nowLabel())}</span></div><p>${safeText(m.text)}</p>`;
   $('#messages').appendChild(e);
+  return e;
 }
 let typingTimer=null;
 const turnStageLabels={router:'Interpretando',memory:'Recuperando contexto',tools:'Ejecutando herramientas',provider:'Generando respuesta',sources:'Verificando evidencia',persistence:'Guardando continuidad'};
@@ -124,8 +125,9 @@ function hideTyping(){if(typingTimer){clearInterval(typingTimer);typingTimer=nul
 function scrollChat(){requestAnimationFrame(()=>{const s=$('.chat-layout');if(s)s.scrollTop=s.scrollHeight})}
 function addMessage(role,text){
   text=role==='assistant'?sanitizeAssistantText(text):String(text??'').trim();
-  if(!text)return;
-  const i={role,text,at:nowLabel()};state.messages.push(i);persistMessages();renderMessage(i);scrollChat();
+  if(!text)return null;
+  const i={role,text,at:nowLabel()};state.messages.push(i);persistMessages();
+  const article=renderMessage(i);scrollChat();return article;
 }
 
 function captureResponseEnvelope(d){
@@ -415,6 +417,8 @@ async function submitMessage(ev){
   ev.preventDefault();
   const i=$('#messageInput'),m=i.value.trim()||(window.WAECoreTools?.defaultQuestion?.()||'');
   if(!m||state.busy)return;
+  // v143: arm the audio pipeline inside the same trusted gesture that submits the turn.
+  try{window.dispatchEvent(new CustomEvent('wae:voice-prime',{detail:{reason:'submit'}}))}catch(_){}
   state.busy=true;$('#waeRetryTurn')?.remove();
   const send=$('.send-btn');if(send){send.disabled=true;send.setAttribute('aria-busy','true')}
   i.value='';autosizeInput();
@@ -427,7 +431,12 @@ async function submitMessage(ev){
     const r=await getAIReply(m);hideTyping();
     // v130: health remains global, while the last completed turn exposes its own E2E contract.
     void refreshCoreReadiness().then(()=>applyTurnE2E(window.__waeLastTurnE2E));
-    if(typeof r==='string'&&r.trim()){addMessage('assistant',r);applyTurnE2E(markUIStage(window.__waeLastTurnE2E));}
+    if(typeof r==='string'&&r.trim()){
+      const assistantArticle=addMessage('assistant',r);
+      applyTurnE2E(markUIStage(window.__waeLastTurnE2E));
+      // v143: autoplay is an explicit completed-turn contract, not a MutationObserver side effect.
+      try{window.dispatchEvent(new CustomEvent('wae:assistant-final',{detail:{article:assistantArticle,at:Date.now()}}))}catch(_){}
+    }
     else{
       if(!i.value.trim()){i.value=m;autosizeInput();}
       showRetryTurn(m);
