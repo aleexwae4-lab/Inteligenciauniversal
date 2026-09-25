@@ -1,0 +1,23 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="Universal Core">
+  <defs>
+    <linearGradient id="coreGradient" x1="96" y1="72" x2="416" y2="440" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#74FFD0"/>
+      <stop offset="0.52" stop-color="#28F7A4"/>
+      <stop offset="1" stop-color="#00A86F"/>
+    </linearGradient>
+    <radialGradient id="coreGlow" cx="0" cy="0" r="1" gradientTransform="translate(256 256) rotate(90) scale(118)">
+      <stop offset="0" stop-color="#28F7A4" stop-opacity=".32"/>
+      <stop offset="1" stop-color="#28F7A4" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+  <rect x="18" y="18" width="476" height="476" rx="124" fill="#050806"/>
+  <rect x="19" y="19" width="474" height="474" rx="123" fill="none" stroke="#FFFFFF" stroke-opacity=".08" stroke-width="2"/>
+  <circle cx="256" cy="256" r="151" fill="url(#coreGlow)"/>
+  <circle cx="256" cy="256" r="132" fill="none" stroke="#28F7A4" stroke-opacity=".16" stroke-width="2"/>
+  <circle cx="256" cy="256" r="104" fill="none" stroke="url(#coreGradient)" stroke-width="18" stroke-linecap="round" stroke-dasharray="488 166" transform="rotate(-42 256 256)"/>
+  <path d="M256 164 336 210v92l-80 46-80-46v-92z" fill="#08110E" stroke="url(#coreGradient)" stroke-width="9" stroke-linejoin="round"/>
+  <circle cx="256" cy="256" r="38" fill="url(#coreGradient)"/>
+  <circle cx="256" cy="256" r="14" fill="#EFFFF8"/>
+  <circle cx="368" cy="171" r="12" fill="#74FFD0"/>
+  <circle cx="144" cy="341" r="8" fill="#28F7A4" fill-opacity=".82"/>
+</svg>
