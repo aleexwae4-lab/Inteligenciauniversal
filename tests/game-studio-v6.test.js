@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import vm from 'node:vm';
 import {createNativeGameStudioProject,inspectGameStudioProject,GAME_STUDIO_VERSION} from '../lib/game-studio-v6.js';
 import {inspectFoundryProject,buildDigitalProduct} from '../lib/product-foundry-v5.js';
-import {GAME_STUDIO_VERSION as ACTIVE_GAME_STUDIO_VERSION,inspectGameStudioProject as inspectActiveGameStudioProject} from '../lib/game-studio-v11.js';
+import {GAME_STUDIO_VERSION as ACTIVE_GAME_STUDIO_VERSION,inspectGameStudioProject as inspectActiveGameStudioProject} from '../lib/game-studio-v12.js';
 
 test('Game Studio v6 native scaffold is a real self-contained 3D product',()=>{
   const project=createNativeGameStudioProject({request:'Crea un juego 3D divertido con obstáculos y energía.',profile:'game_3d'});
@@ -24,7 +24,7 @@ test('Game Studio v6 native scaffold is a real self-contained 3D product',()=>{
   assert.ok(manifest.capabilities.includes('scene-editor'));
 });
 
-test('legacy v6 remains compatible while active recovery upgrades first 3D build to v11',async()=>{
+test('legacy v6 remains compatible while active recovery upgrades first 3D build to v12',async()=>{
   const fail=async()=>{const e=new Error('Todos los proveedores configurados fallaron');e.code='all_providers_failed';throw e};
   const result=await buildDigitalProduct({
     request:'Crea un juego 3D jugable con WebGL, cámara, controles, físicas y HUD.',
@@ -41,7 +41,7 @@ test('legacy v6 remains compatible while active recovery upgrades first 3D build
   assert.equal(result.project.files.some(f=>f.name==='scene.json'),true);
 });
 
-test('active Game Studio replaces an incomplete AI 3D scaffold with audited v11 output',async()=>{
+test('active Game Studio replaces an incomplete AI 3D scaffold with audited v12 output',async()=>{
   const weak={
     plan:'3D incompleto',
     files:[
