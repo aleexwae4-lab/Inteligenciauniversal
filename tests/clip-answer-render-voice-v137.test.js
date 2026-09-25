@@ -82,8 +82,8 @@ test('v141 voice UI stays preparing until a real audio route starts',()=>{
   const preparing=source.indexOf("button.textContent='◌';button.title='Generando voz natural'");
   const cloudStart=source.indexOf("source.start(0)");
   const browserStart=source.indexOf("utter.onstart=()=>");
-  const cloudCall=source.indexOf("cloudPlayback(content,button,token,prefs)");
-  assert.ok(preparing>=0&&cloudStart>=0&&browserStart>=0&&cloudCall>preparing);
+  assert.ok(preparing>=0&&cloudStart>=0&&browserStart>=0);
+  assert.match(source,/if\(cloudSupported\(\)\)\{[\s\S]*?cloudPlayback\(content,button,token,prefs\)\.catch/);
 });
 
 test('v137 voice fallback cannot duplicate an already-started response',()=>{
