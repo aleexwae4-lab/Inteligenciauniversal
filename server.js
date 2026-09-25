@@ -14,11 +14,16 @@ import tasksHandler from './api/tasks.js';
 import exportHandler from './api/export.js';
 import canvasHandler from './api/canvas.js';
 import factoryProjectHandler from './api/factory-project.js';
+import { assertStartupSafety, markRuntimeReady, beginRuntimeDrain, lifecycleSnapshot } from './lib/runtime-lifecycle-v145.js';
 
 const ROOT = fileURLToPath(new URL('.', import.meta.url));
 const PORT = Number(process.env.PORT || 10000);
 const HOST = '0.0.0.0';
 const MAX_BODY_BYTES = Number(process.env.WAE_MAX_BODY_BYTES || 2_000_000);
+const REQUEST_TIMEOUT_MS = Number(process.env.WAE_REQUEST_TIMEOUT_MS || 120_000);
+const SHUTDOWN_GRACE_MS = Number(process.env.WAE_SHUTDOWN_GRACE_MS || 20_000);
+
+assertStartupSafety({port:PORT,maxBodyBytes:MAX_BODY_BYTES});
 
 const apiRoutes = new Map([
   ['/api/chat', chatHandler],
@@ -29,6 +34,7 @@ const apiRoutes = new Map([
   ['/api/health', healthHandler],
   ['/api/health/liveness', healthHandler],
   ['/api/health/readiness', healthHandler],
+  ['/api/health/canary', healthHandler],
   ['/api/capabilities', capabilitiesHandler],
   ['/api/tasks', tasksHandler],
   ['/api/export', exportHandler],
@@ -166,10 +172,39 @@ const server = createServer(async (req, res) => {
   return serveFile(req, res, url.pathname);
 });
 
-server.requestTimeout = Number(process.env.WAE_REQUEST_TIMEOUT_MS || 120_000);
+server.requestTimeout = REQUEST_TIMEOUT_MS;
 server.headersTimeout = 65_000;
 server.keepAliveTimeout = 5_000;
 
+let shuttingDown=false;
+function shutdown(signal){
+  if(shuttingDown)return;
+  shuttingDown=true;
+  const lifecycle=beginRuntimeDrain(signal);
+  console.log(`[WAE Universal Runtime] draining (${signal}) phase=${lifecycle.phase}`);
+  const forceTimer=setTimeout(()=>{
+    console.error('[WAE Universal Runtime] graceful shutdown deadline exceeded');
+    process.exit(1);
+  },SHUTDOWN_GRACE_MS);
+  forceTimer.unref?.();
+  server.close(error=>{
+    clearTimeout(forceTimer);
+    if(error){
+      console.error('[WAE Universal Runtime] shutdown error');
+      process.exitCode=1;
+      return;
+    }
+    console.log('[WAE Universal Runtime] shutdown complete');
+  });
+  server.closeIdleConnections?.();
+}
+
+process.once('SIGTERM',()=>shutdown('SIGTERM'));
+process.once('SIGINT',()=>shutdown('SIGINT'));
+
 server.listen(PORT, HOST, () => {
-  console.log(`[WAE Universal Runtime] listening on http://${HOST}:${PORT}`);
+  const lifecycle=markRuntimeReady();
+  console.log(`[WAE Universal Runtime] listening on http://${HOST}:${PORT} phase=${lifecycle.phase}`);
 });
+
+export { server, shutdown, lifecycleSnapshot };
