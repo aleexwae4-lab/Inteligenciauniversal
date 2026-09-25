@@ -11,13 +11,13 @@ function sse(res,event,payload){
 
 function safeProviderEvent(event={}){
   const type=String(event.type||'').slice(0,40);
-  const allowed=new Set(['attempt','first_token','complete','failed','quality_rejected','circuit_open']);
+  const allowed=new Set(['attempt','first_token','complete','failed','quality_rejected','circuit_open','quarantined','probation','recovered']);
   if(!allowed.has(type))return null;
   const out={type};
   for(const key of ['provider','model','code']){
     const value=event[key];if(value!==undefined&&value!==null)out[key]=String(value).replace(/[\r\n\t]+/g,' ').slice(0,key==='model'?120:80);
   }
-  for(const key of ['ttftMs','chunks'])if(Number.isFinite(Number(event[key])))out[key]=Math.max(0,Math.round(Number(event[key])));
+  for(const key of ['ttftMs','chunks','remainingMs'])if(Number.isFinite(Number(event[key])))out[key]=Math.max(0,Math.round(Number(event[key])));
   if(typeof event.streaming==='boolean')out.streaming=event.streaming;
   return out;
 }
