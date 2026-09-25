@@ -57,7 +57,9 @@ test('v130 UI and voice close the E2E loop with bounded native TTS recovery',()=
   assert.match(premium,/voice-unavailable\|language-unavailable\|synthesis-unavailable\|synthesis-failed\|text-too-long\|network/);
   assert.match(premium,/voice\.completedChunks===0&&!voice\.fallbackAttempted/);
   assert.match(premium,/WAESpeechChunks\(content,700\)/);
-  assert.match(premium,/fallback\?'recovered':'(?:playing|completed)'/);
+  assert.match(premium,/setPlaying\(button,'browser'/);
+  assert.match(premium,/voiceEvent\('recovered',\{route:'browser'/);
+  assert.match(premium,/cloud_to_browser/);
 });
 
 test('v130 PWA cache and shell reference the same current E2E assets',()=>{
