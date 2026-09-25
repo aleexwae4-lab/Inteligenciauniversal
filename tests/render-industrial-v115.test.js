@@ -68,8 +68,10 @@ test('live user-visible chat routes industry to real Render backend without repl
 });
 test('premium UI and cache-busted web route remain consistent',()=>{
   const html=read('index.html'),sw=read('sw.js'),app=read('app.js');
-  assert.match(html,/runtime-client\.js\?v=24&industrial=v115/);
-  assert.match(sw,/runtime-client\.js\?v=24&industrial=v115/);
+  const runtimeAsset=html.match(/\.\/runtime-client\.js\?[^"'<>\s]+/)?.[0];
+  assert.ok(runtimeAsset,'current runtime-client asset missing');
+  assert.match(runtimeAsset,/industrial=v115/);
+  assert.ok(sw.includes(runtimeAsset),'service worker must publish the exact current runtime-client asset');
   assert.match(sw,/wae-universal-render-waeweb-public-v45/);
   assert.match(app,/fetch\('\/api\/chat'/);
 });
