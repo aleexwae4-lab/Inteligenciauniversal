@@ -10,6 +10,7 @@ import {
   LOGIC_SCHEMA
 } from '../lib/game-studio-v11.js';
 import {inspectFoundryProject,buildDigitalProduct} from '../lib/product-foundry-v5.js';
+import {GAME_STUDIO_VERSION as ACTIVE_GAME_STUDIO_VERSION,inspectGameStudioProject as inspectActiveGameStudioProject} from '../lib/game-studio-v12.js';
 
 const read=path=>readFileSync(new URL('../'+path,import.meta.url),'utf8');
 
@@ -58,7 +59,7 @@ test('Game Studio v11 builds portable health stamina inventory loot checkpoint a
   ])assert.ok(manifest.capabilities.includes(capability),capability);
 });
 
-test('Game Studio v11 native recovery survives total provider failure',async()=>{
+test('legacy v11 Combat Engine remains compatible while active recovery upgrades to v12',async()=>{
   const fail=async()=>{const error=new Error('all providers failed');error.code='all_providers_failed';throw error};
   const result=await buildDigitalProduct({
     request:'Construye un juego 3D con combate abstracto, vida, stamina, inventario, loot y respawn.',
@@ -66,12 +67,12 @@ test('Game Studio v11 native recovery survives total provider failure',async()=>
     generate:fail
   });
   assert.equal(result.provider,'wae_native_game_studio');
-  assert.equal(result.model,GAME_STUDIO_VERSION);
-  assert.equal(result.studio.version,GAME_STUDIO_VERSION);
+  assert.equal(result.model,ACTIVE_GAME_STUDIO_VERSION);
+  assert.equal(result.studio.version,ACTIVE_GAME_STUDIO_VERSION);
   assert.equal(result.studio.qa,'passed');
   assert.equal(result.recovery.mode,'native_game_studio');
   assert.equal(result.project.files.some(file=>file.name==='combat.json'),true);
-  assert.equal(inspectGameStudioProject(result.project.files).pass,true);
+  assert.equal(inspectActiveGameStudioProject(result.project.files).pass,true);
 });
 
 test('Combat Engine v11 persistence validates source iframe and bounded contracts',()=>{
