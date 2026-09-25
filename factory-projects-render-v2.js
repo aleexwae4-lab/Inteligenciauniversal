@@ -387,6 +387,10 @@ function onPreviewMessage(event){
   try{persistLogicStudioV11(data.logic);frame.contentWindow?.postMessage({type:'wae-game-studio-logic-saved',ok:true,studio:'wae-game-studio/v11'},'*')}
   catch(error){notify('No se pudo guardar la lógica v11: '+String(error.message||error));frame.contentWindow?.postMessage({type:'wae-game-studio-logic-saved',ok:false,message:String(error.message||error).slice(0,160)},'*')}return;
  }
+ if(data.type==='wae-game-studio-npc-save'&&data.studio==='wae-game-studio/v11'){
+  try{persistNpcStudioV10(data.npcs);frame.contentWindow?.postMessage({type:'wae-game-studio-npc-saved',ok:true,studio:'wae-game-studio/v11'},'*')}
+  catch(error){notify('No se pudieron guardar NPCs v11: '+String(error.message||error));frame.contentWindow?.postMessage({type:'wae-game-studio-npc-saved',ok:false,message:String(error.message||error).slice(0,160)},'*')}return;
+ }
  if(data.type==='wae-game-studio-npc-save'&&data.studio==='wae-game-studio/v10'){
   try{persistNpcStudioV10(data.npcs);frame.contentWindow?.postMessage({type:'wae-game-studio-npc-saved',ok:true,studio:'wae-game-studio/v10'},'*')}
   catch(error){notify('No se pudieron guardar NPCs: '+String(error.message||error));frame.contentWindow?.postMessage({type:'wae-game-studio-npc-saved',ok:false,message:String(error.message||error).slice(0,160)},'*')}return;
