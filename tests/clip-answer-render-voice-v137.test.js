@@ -114,5 +114,5 @@ test('v141 voice uses authenticated natural audio first and browser synthesis as
   assert.match(renderer,/createBufferSource\(\)/);
   assert.match(renderer,/cloud_to_browser/);
   assert.match(renderer,/function browserPlayback\(/);
-  assert.match(renderer,/document\.addEventListener\('pointerdown',unlockAudio/);
+  assert.match(renderer,/document\.addEventListener\('pointerdown',primeAudio/);
 });
