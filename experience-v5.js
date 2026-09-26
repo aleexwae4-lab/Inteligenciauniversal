@@ -25,9 +25,11 @@
     return engine==='browser'?'voz · dispositivo':'voz lista';
   }
   function syncVoice(detail={}){
-    const btn=voiceBtn(),enabled=detail.enabled??window.__waeVoice?.enabled??true,state=detail.state||html.dataset.voiceState||(enabled?'ready':'disabled'),engine=detail.engine||html.dataset.voiceEngine||'idle';
-    if(btn){btn.setAttribute('aria-pressed',String(!!enabled));btn.dataset.voiceState=state;btn.title=enabled?`Voz activa · ${voiceLabel(state,engine)}. Toca para desactivar.`:'Toca para activar respuestas por voz';btn.textContent=state==='playing'?'■':'♩'}
-    const status=ensureStatus();if(status){status.dataset.state=state;status.querySelector('b').textContent=voiceLabel(state,engine)}
+    const btn=voiceBtn(),diag=window.__waeVoice?.diagnostics||{},enabled=detail.enabled??diag.enabled??window.__waeVoice?.enabled??true,state=detail.state||diag.state||html.dataset.voiceState||(enabled?'ready':'disabled'),engine=detail.engine||diag.engine||html.dataset.voiceEngine||'idle';
+    const voiceName=diag.voice||detail.voice||window.__waeVoice?.voice||'voz del sistema';
+    const voiceCount=Number(detail.voiceCount??diag.voiceCount??0);
+    if(btn){btn.setAttribute('aria-pressed',String(!!enabled));btn.dataset.voiceState=state;const base=enabled?'Voz activa · '+voiceLabel(state,engine)+'. Toca para desactivar.':'Toca para activar respuestas por voz';btn.title=voiceCount?base+' '+voiceName+' · '+voiceCount+' voces disponibles.':base;btn.setAttribute('aria-label',voiceCount?base+' '+voiceName+', '+voiceCount+' voces disponibles.':base);btn.textContent=state==='playing'?'■':'♩'}
+    const status=ensureStatus();if(status){status.dataset.state=state;status.querySelector('b').textContent=voiceLabel(state,engine);status.title=voiceCount?voiceName+' · '+voiceCount+' voces disponibles'+(diag.lastLatencyMs?' · '+diag.lastLatencyMs+' ms':''):''}
   }
   window.addEventListener('wae:voice-state',e=>syncVoice(e.detail||{}));
 
