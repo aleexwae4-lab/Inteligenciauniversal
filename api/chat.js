@@ -183,7 +183,7 @@ export default async function handler(req,res) {
 
   const awareness=userContext.affectsGeneration?{eligible:false}:classifySelfAwarenessV99(runtimeBody);
   if(awareness.eligible){
-    const reply=buildSelfAwarenessReplyV99({kind:awareness.kind});
+    const reply=buildSelfAwarenessReplyV99({kind:awareness.kind,query:awareness.query});
     const snapshot=selfAwarenessSnapshotV99();
     res.setHeader('X-WAE-Fast-Path','grounded-self-awareness-v103');
     return res.status(200).json({
