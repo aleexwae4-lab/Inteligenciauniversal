@@ -41,9 +41,7 @@
       #mobileSafeSend{flex:0 0 42px!important;width:42px!important;height:42px!important;border:0!important;border-radius:11px!important;background:#28f7a4!important;color:#001b10!important;font-weight:900!important;pointer-events:auto!important;touch-action:manipulation!important}
       .runtime-bar{padding-bottom:72px!important}
     }
-    @media(max-width:420px){
-      .workspace-topbar>.icon-btn{min-width:32px!important;width:32px!important;height:32px!important}.workspace-icon{display:none}.workspace-actions .chip,.workspace-actions .save-btn{padding:7px 8px!important}.document-sheet{padding:16px!important}
-    }
+    @media(max-width:420px){.workspace-topbar>.icon-btn{min-width:32px!important;width:32px!important;height:32px!important}.workspace-icon{display:none}.workspace-actions .chip,.workspace-actions .save-btn{padding:7px 8px!important}.document-sheet{padding:16px!important}}
     .voice-control{min-width:42px!important;height:42px!important;font-size:17px!important;touch-action:manipulation!important}
     .voice-control[data-voice-state="paused"],.voice-control[aria-pressed="false"]{opacity:.62}
   </style>
@@ -57,78 +55,19 @@
       <div class="brand"><img src="./assets/logo.svg" alt="WAE" /><div><strong>WAE OS Enterprise</strong><span>Universal Core</span></div></div>
       <div class="top-actions"><button class="chip" id="newChatBtn">＋ Nueva</button><button class="icon-btn" id="workspaceBtn" title="Workspace">◇</button><button class="avatar" aria-label="Perfil">AW</button></div>
     </header>
-
     <div class="status-strip"><span class="status-dot"></span><span>Universal Core · online</span><span class="status-meta">4 capacidades activas</span></div>
-
-    <main class="chat-layout">
-      <section class="chat-column">
-        <div class="chat-heading"><p class="eyebrow">UNIVERSAL CORE</p><h1>¿Qué quieres construir hoy?</h1><p>Investiga, programa, analiza, diseña y convierte ideas en entregables desde una sola interfaz.</p></div>
-        <div class="messages" id="messages" aria-live="polite"></div>
-        <div class="capability-grid" id="capabilityGrid">
-          <button class="capability-card" data-mode="research"><span class="cap-icon">⌕</span><span><strong>Investigar</strong><small>Fuentes, contexto, síntesis</small></span></button>
-          <button class="capability-card" data-mode="code"><span class="cap-icon">⌘</span><span><strong>Programar</strong><small>Arquitectura, código, pruebas</small></span></button>
-          <button class="capability-card" data-mode="analysis"><span class="cap-icon">▦</span><span><strong>Analizar</strong><small>Datos, riesgos, decisiones</small></span></button>
-          <button class="capability-card" data-mode="design"><span class="cap-icon">✦</span><span><strong>Diseñar</strong><small>Producto, UX, sistemas</small></span></button>
-        </div>
-      </section>
-    </main>
-
-    <form class="composer" id="composer">
-      <div class="mode-pill" id="modePill">General</div>
-      <textarea id="messageInput" rows="1" placeholder="Describe una misión, crea un sistema o pide un análisis…"></textarea>
-      <div class="composer-actions"><div><button type="button" class="mini-btn" id="attachBtn" title="Adjuntar">＋</button><button type="button" class="mini-btn voice-control" id="voiceBtn" title="Pausar voz" aria-pressed="true">🔊</button></div><button class="send-btn" type="submit" aria-label="Enviar">➜</button></div>
-    </form>
-
+    <main class="chat-layout"><section class="chat-column"><div class="chat-heading"><p class="eyebrow">UNIVERSAL CORE</p><h1>¿Qué quieres construir hoy?</h1><p>Investiga, programa, analiza, diseña y convierte ideas en entregables desde una sola interfaz.</p></div><div class="messages" id="messages" aria-live="polite"></div><div class="capability-grid" id="capabilityGrid"><button class="capability-card" data-mode="research"><span class="cap-icon">⌕</span><span><strong>Investigar</strong><small>Fuentes, contexto, síntesis</small></span></button><button class="capability-card" data-mode="code"><span class="cap-icon">⌘</span><span><strong>Programar</strong><small>Arquitectura, código, pruebas</small></span></button><button class="capability-card" data-mode="analysis"><span class="cap-icon">▦</span><span><strong>Analizar</strong><small>Datos, riesgos, decisiones</small></span></button><button class="capability-card" data-mode="design"><span class="cap-icon">✦</span><span><strong>Diseñar</strong><small>Producto, UX, sistemas</small></span></button></div></section></main>
+    <form class="composer" id="composer"><div class="mode-pill" id="modePill">General</div><textarea id="messageInput" rows="1" placeholder="Describe una misión, crea un sistema o pide un análisis…"></textarea><div class="composer-actions"><div><button type="button" class="mini-btn" id="attachBtn" title="Adjuntar">＋</button><button type="button" class="mini-btn voice-control" id="voiceBtn" title="Pausar voz" aria-pressed="true">🔊</button></div><button class="send-btn" type="submit" aria-label="Enviar">➜</button></div></form>
     <footer class="runtime-bar"><div><span class="pulse"></span><strong>Universal Core</strong><small> · operativo</small></div><strong class="health">LIVE</strong></footer>
-
-    <aside class="drawer" id="drawer" aria-hidden="true">
-      <div class="drawer-head"><div class="brand compact"><img src="./assets/logo.svg" alt="WAE" /><div><strong>WAE OS Enterprise</strong><span>Universal Core</span></div></div><button class="icon-btn" id="closeDrawerBtn">×</button></div>
-      <button class="primary-wide" id="drawerNewChat">＋ Nueva conversación</button>
-      <button class="secondary-wide" id="drawerWorkspace">◇ Workspace</button>
-      <a class="secondary-wide native-app-download" href="https://github.com/aleexwae4-lab/Inteligenciauniversal/releases/latest/download/UniversalCore.apk" aria-label="Descargar Universal Core para Android">↓ App Android</a>
-      <p class="nav-label">NAVEGACIÓN</p>
-      <nav class="nav-list">
-        <button data-view="control">◫ <span>Centro de Control</span></button><button data-view="comms">◌ <span>Comunicaciones</span></button><button data-view="projects">◇ <span>Proyectos</span></button><button data-view="agents">✣ <span>Agentes</span><em>4</em></button><button data-view="automations">↻ <span>Automatizaciones</span></button><button data-view="memory">◈ <span>Memoria</span></button><button data-view="knowledge">▤ <span>Base de Conocimiento</span></button><button data-view="ai">✦ <span>Universal Core</span></button><button data-view="market">▧ <span>Marketplace</span><em class="new-badge">NEW</em></button><button id="settingsBtn">⚙ <span>Configuración</span></button>
-      </nav>
-      <div class="drawer-foot"><small>MEMORIA UNIVERSAL</small><div class="memory-meter"><span style="width:18%"></span></div><small>18% utilizada</small></div>
-    </aside>
+    <aside class="drawer" id="drawer" aria-hidden="true"><div class="drawer-head"><div class="brand compact"><img src="./assets/logo.svg" alt="WAE" /><div><strong>WAE OS Enterprise</strong><span>Universal Core</span></div></div><button class="icon-btn" id="closeDrawerBtn">×</button></div><button class="primary-wide" id="drawerNewChat">＋ Nueva conversación</button><button class="secondary-wide" id="drawerWorkspace">◇ Workspace</button><a class="secondary-wide native-app-download" href="https://github.com/aleexwae4-lab/Inteligenciauniversal/releases/latest/download/UniversalCore.apk" aria-label="Descargar Universal Core para Android">↓ App Android</a><p class="nav-label">NAVEGACIÓN</p><nav class="nav-list"><button data-view="control">◫ <span>Centro de Control</span></button><button data-view="comms">◌ <span>Comunicaciones</span></button><button data-view="projects">◇ <span>Proyectos</span></button><button data-view="agents">✣ <span>Agentes</span><em>4</em></button><button data-view="automations">↻ <span>Automatizaciones</span></button><button data-view="memory">◈ <span>Memoria</span></button><button data-view="knowledge">▤ <span>Base de Conocimiento</span></button><button data-view="ai">✦ <span>Universal Core</span></button><button data-view="market">▧ <span>Marketplace</span><em class="new-badge">NEW</em></button><button id="settingsBtn">⚙ <span>Configuración</span></button></nav><div class="drawer-foot"><small>MEMORIA UNIVERSAL</small><div class="memory-meter"><span style="width:18%"></span></div><small>18% utilizada</small></div></aside>
     <div class="scrim" id="scrim"></div>
-
-    <section class="workspace" id="workspace" aria-hidden="true">
-      <header class="workspace-topbar">
-        <button class="icon-btn" id="closeWorkspaceBtn" aria-label="Cerrar Workspace">←</button>
-        <div class="workspace-title"><span class="workspace-icon">◆</span><div><strong>Workspace</strong><small id="saveState">Guardado</small></div></div>
-        <div class="workspace-actions"><button class="chip" id="exportBtn">Exportar</button><button class="save-btn" id="saveBtn">Guardar</button></div>
-      </header>
-      <div class="workspace-tabs"><button class="active" data-tab="document">Documento</button><button data-tab="html">Canvas HTML</button><button data-tab="plans">Planes</button></div>
-      <div class="workspace-body">
-        <section class="tab-panel active" id="panel-document">
-          <div class="toolbar" aria-label="Formato"><button data-format="bold"><b>B</b></button><button data-format="italic"><i>I</i></button><button data-format="underline"><u>U</u></button><button data-format="insertUnorderedList">• Lista</button><button data-format="formatBlock" data-value="h2">H2</button><button data-format="formatBlock" data-value="blockquote">❝</button></div>
-          <div class="document-sheet" id="documentEditor" contenteditable="true"><p class="placeholder-line">Comienza a escribir o pega el texto de una respuesta para editarlo…</p></div>
-        </section>
-        <section class="tab-panel split-panel" id="panel-html">
-          <div class="code-pane"><div class="pane-label">HTML</div><textarea id="htmlEditor" spellcheck="false">&lt;!doctype html&gt;
-&lt;html lang="es"&gt;
-&lt;head&gt;&lt;meta charset="utf-8"&gt;&lt;style&gt;body{font-family:Inter,system-ui;padding:32px;color:#101316}h1{margin-bottom:8px}&lt;/style&gt;&lt;/head&gt;
-&lt;body&gt;&lt;h1&gt;Hola WAE OS&lt;/h1&gt;&lt;p&gt;Edita este HTML y mira la vista previa.&lt;/p&gt;&lt;/body&gt;
-&lt;/html&gt;</textarea></div>
-          <div class="preview-pane"><div class="pane-label">VISTA PREVIA</div><iframe id="htmlPreview" title="Vista previa HTML" sandbox="allow-scripts"></iframe></div>
-        </section>
-        <section class="tab-panel" id="panel-plans"><div class="plan-board"><article><span>01</span><div><strong>Definir objetivo</strong><p>Resultado, restricciones y criterio de éxito.</p></div></article><article><span>02</span><div><strong>Diseñar arquitectura</strong><p>Datos, componentes, integraciones y seguridad.</p></div></article><article><span>03</span><div><strong>Ejecutar</strong><p>Construcción, pruebas, corrección y entrega.</p></div></article></div></section>
-      </div>
-    </section>
-
-    <dialog id="settingsDialog"><form method="dialog" class="settings-card"><div class="settings-head"><div><p class="eyebrow">CONFIGURACIÓN</p><h2>Universal Core</h2></div><button class="icon-btn" value="cancel">×</button></div><label>Núcleo activo<input id="coreName" type="text" value="Universal Core" readonly aria-readonly="true" /></label><p class="help">Universal Core se administra automáticamente dentro de WAE OS Enterprise. La interfaz mantiene una sola identidad para respuestas, memoria, herramientas y voz.</p><div class="dialog-actions"><button value="cancel" class="secondary-wide">Cancelar</button><button type="button" id="saveSettingsBtn" class="save-btn">Guardar</button></div></form></dialog>
-    <input id="fileInput" type="file" hidden multiple />
+    <section class="workspace" id="workspace" aria-hidden="true"><header class="workspace-topbar"><button class="icon-btn" id="closeWorkspaceBtn" aria-label="Cerrar Workspace">←</button><div class="workspace-title"><span class="workspace-icon">◆</span><div><strong>Workspace</strong><small id="saveState">Guardado</small></div></div><div class="workspace-actions"><button class="chip" id="exportBtn">Exportar</button><button class="save-btn" id="saveBtn">Guardar</button></div></header><div class="workspace-tabs"><button class="active" data-tab="document">Documento</button><button data-tab="html">Canvas HTML</button><button data-tab="plans">Planes</button></div><div class="workspace-body"><section class="tab-panel active" id="panel-document"><div class="toolbar" aria-label="Formato"><button data-format="bold"><b>B</b></button><button data-format="italic"><i>I</i></button><button data-format="underline"><u>U</u></button><button data-format="insertUnorderedList">• Lista</button><button data-format="formatBlock" data-value="h2">H2</button><button data-format="formatBlock" data-value="blockquote">❝</button></div><div class="document-sheet" id="documentEditor" contenteditable="true"><p class="placeholder-line">Comienza a escribir o pega el texto de una respuesta para editarlo…</p></div></section><section class="tab-panel split-panel" id="panel-html"><div class="code-pane"><div class="pane-label">HTML</div><textarea id="htmlEditor" spellcheck="false">&lt;!doctype html&gt;\n&lt;html lang="es"&gt;\n&lt;head&gt;&lt;meta charset="utf-8"&gt;&lt;style&gt;body{font-family:Inter,system-ui;padding:32px;color:#101316}h1{margin-bottom:8px}&lt;/style&gt;&lt;/head&gt;\n&lt;body&gt;&lt;h1&gt;Hola WAE OS&lt;/h1&gt;&lt;p&gt;Edita este HTML y mira la vista previa.&lt;/p&gt;&lt;/body&gt;\n&lt;/html&gt;</textarea></div><div class="preview-pane"><div class="pane-label">VISTA PREVIA</div><iframe id="htmlPreview" title="Vista previa HTML" sandbox="allow-scripts"></iframe></div></section><section class="tab-panel" id="panel-plans"><div class="plan-board"><article><span>01</span><div><strong>Definir objetivo</strong><p>Resultado, restricciones y criterio de éxito.</p></div></article><article><span>02</span><div><strong>Diseñar arquitectura</strong><p>Datos, componentes, integraciones y seguridad.</p></div></article><article><span>03</span><div><strong>Ejecutar</strong><p>Construcción, pruebas, corrección y entrega.</p></div></article></div></section></div></section>
+    <dialog id="settingsDialog"><form method="dialog" class="settings-card"><div class="settings-head"><div><p class="eyebrow">CONFIGURACIÓN</p><h2>Universal Core</h2></div><button class="icon-btn" value="cancel">×</button></div><label>Núcleo activo<input id="coreName" type="text" value="Universal Core" readonly aria-readonly="true" /></label><p class="help">Universal Core se administra automáticamente dentro de WAE OS Enterprise. La interfaz mantiene una sola identidad para respuestas, memoria, herramientas y voz.</p><div class="dialog-actions"><button value="cancel" class="secondary-wide">Cancelar</button><button type="button" id="saveSettingsBtn" class="save-btn">Guardar</button></div></form></dialog><input id="fileInput" type="file" hidden multiple />
   </div>
-
-  <form id="mobileSafeComposer" aria-label="Escribir a Universal Core" autocomplete="off">
-    <textarea id="mobileSafeInput" rows="1" inputmode="text" enterkeyhint="send" autocomplete="off" autocapitalize="sentences" spellcheck="true" placeholder="Escribe un mensaje…"></textarea>
-    <button id="mobileSafeVoice" type="button" class="mini-btn voice-control" aria-label="Pausar voz">🔊</button><button id="mobileSafeSend" type="submit" aria-label="Enviar">➜</button>
-  </form>
-
+  <form id="mobileSafeComposer" aria-label="Escribir a Universal Core" autocomplete="off"><textarea id="mobileSafeInput" rows="1" inputmode="text" enterkeyhint="send" autocomplete="off" autocapitalize="sentences" spellcheck="true" placeholder="Escribe un mensaje…"></textarea><button id="mobileSafeVoice" type="button" class="mini-btn voice-control" aria-label="Pausar voz">🔊</button><button id="mobileSafeSend" type="submit" aria-label="Enviar">➜</button></form>
   <script src="./startup-guard-v23.js" defer></script>
   <script src="./voice-client.js" defer></script>
+  <script src="./voice-intelligence-v1.js" defer></script>
   <script src="./native-voice-input-v1.js" defer></script>
   <script src="./runtime-client.js" defer></script>
   <script src="./fast-lane-v23.js" defer></script>
