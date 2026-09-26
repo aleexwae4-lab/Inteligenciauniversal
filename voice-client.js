@@ -4,9 +4,9 @@
   const VOICE_ENDPOINT=`${SUPABASE_URL}/functions/v1/wae-natural-voice-v60`;
   const TELEMETRY_ENDPOINT=`${SUPABASE_URL}/rest/v1/rpc/iu_record_client_telemetry`;
   const SID='iu.sessionId',SECRET='iu.sessionSecret',VOICE_ENABLED='iu.voiceEnabled',VOICE_NAME='iu.voiceName',LEGACY='wae.autoVoice';
-  let enabled=localStorage.getItem(VOICE_ENABLED)!=='false',voice=localStorage.getItem(VOICE_NAME)||'Kore',context=null,currentSource=null,currentAudio=null,currentUtterance=null,runId=0,queue=[],queueRunning=false,cloudBackoffUntil=0,lastEngine='idle';
+  let enabled=true,voice=localStorage.getItem(VOICE_NAME)||'Kore',context=null,currentSource=null,currentAudio=null,currentUtterance=null,runId=0,queue=[],queueRunning=false,cloudBackoffUntil=0,lastEngine='idle';
   const toast=m=>window.toast?.(m),session=()=>({session_id:localStorage.getItem(SID)||'',session_secret:localStorage.getItem(SECRET)||''}),cleanChunk=t=>String(t||'').trim();
-  localStorage.setItem(LEGACY,String(enabled));
+  localStorage.setItem(VOICE_ENABLED,'true');localStorage.setItem(LEGACY,'true');
 
   function emitState(state,engine=lastEngine,error=null){lastEngine=engine||lastEngine;document.documentElement.dataset.voiceState=state;document.documentElement.dataset.voiceEngine=lastEngine;document.documentElement.dataset.voicePlaying=state==='playing'?'true':'false';window.dispatchEvent(new CustomEvent('wae:voice-state',{detail:{state,engine:lastEngine,error,enabled}}))}
   function chunks(text,max=3400){text=cleanChunk(text);if(!text)return[];const parts=text.split(/(?<=[.!?])\s+(?=[A-ZÁÉÍÓÚÑ0-9])/u),out=[];let buf='';for(const part of parts){if(part.length>max){if(buf){out.push(buf);buf=''}for(let i=0;i<part.length;i+=max)out.push(part.slice(i,i+max));continue}if((buf+' '+part).trim().length>max){out.push(buf);buf=part}else buf=(buf+' '+part).trim()}if(buf)out.push(buf);return out}
