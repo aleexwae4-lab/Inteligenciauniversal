@@ -11,6 +11,7 @@ import {
   LOGIC_SCHEMA
 } from '../lib/game-studio-v12.js';
 import {inspectFoundryProject,buildDigitalProduct} from '../lib/product-foundry-v5.js';
+import {GAME_STUDIO_VERSION as ACTIVE_GAME_STUDIO_VERSION,inspectGameStudioProject as inspectActiveGameStudioProject} from '../lib/game-studio-v13.js';
 
 const read=path=>readFileSync(new URL('../'+path,import.meta.url),'utf8');
 
@@ -71,13 +72,13 @@ test('Game Studio v12 native recovery survives total provider failure',async()=>
     generate:fail
   });
   assert.equal(result.provider,'wae_native_game_studio');
-  assert.equal(result.model,GAME_STUDIO_VERSION);
-  assert.equal(result.studio.version,GAME_STUDIO_VERSION);
+  assert.equal(result.model,ACTIVE_GAME_STUDIO_VERSION);
+  assert.equal(result.studio.version,ACTIVE_GAME_STUDIO_VERSION);
   assert.equal(result.studio.qa,'passed');
   assert.equal(result.recovery.mode,'native_game_studio');
   assert.equal(result.project.files.some(file=>file.name==='story.json'),true);
   assert.equal(result.project.files.some(file=>file.name==='savegame.json'),true);
-  assert.equal(inspectGameStudioProject(result.project.files).pass,true);
+  assert.equal(inspectActiveGameStudioProject(result.project.files).pass,true);
 });
 
 test('Story Engine v12 persistence validates iframe quest and dialogue contracts',()=>{
