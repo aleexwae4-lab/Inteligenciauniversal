@@ -41,12 +41,12 @@ test('v122: HTTP validation preserves safe 400/413 and blocks source browsing', 
     const liveness=await fetch(base+'/api/health/liveness');
     assert.equal(liveness.status,200);
     const malformed=await fetch(base+'/api/chat',{
-      method:'POST',headers:{'content-type':'application/json'},body:'{invalid'
+      method:'POST',headers:{'content-type':'application/json',connection:'close'},body:'{invalid'
     });
     assert.equal(malformed.status,400);
     assert.deepEqual(await malformed.json(),{error:'invalid_json'});
     const large=await fetch(base+'/api/chat',{
-      method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({message:'x'.repeat(180)})
+      method:'POST',headers:{'content-type':'application/json',connection:'close'},body:JSON.stringify({message:'x'.repeat(180)})
     });
     assert.equal(large.status,413);
     assert.deepEqual(await large.json(),{error:'request_body_too_large'});
