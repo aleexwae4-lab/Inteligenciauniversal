@@ -5,7 +5,7 @@
   function engine(){return window.__waeVoice||null}
   function sync(detail={}){
     const v=engine(),enabled=detail.enabled??v?.enabled??desired(),state=detail.state||document.documentElement.dataset.voiceState||(enabled?'ready':'disabled');
-    for(const id of ['voiceBtn','mobileSafeVoice']){const b=document.getElementById(id);if(!b)continue;b.setAttribute('aria-pressed',String(!!enabled));b.dataset.voiceState=state;b.title=enabled?(state==='playing'?'Universal Core está hablando. Toca para desactivar.':'Voz automática activa. Toca para desactivar.'):'Activar respuestas por voz';if(id==='mobileSafeVoice')b.textContent=state==='playing'?'■':'♪'}
+    for(const id of ['voiceBtn','mobileSafeVoice']){const b=document.getElementById(id);if(!b)continue;b.setAttribute('aria-pressed',String(!!enabled));b.dataset.voiceState=state;b.title=enabled?(state==='playing'?'Pausar voz':'Reproducir voz'):'Activar respuestas por voz';if(id==='mobileSafeVoice')b.textContent=state==='playing'?'⏸':'▶';else b.textContent=state==='playing'?'⏸':'🔊'}
   }
   async function applyDesired(){const v=engine();if(!v)return false;await v.unlock?.();await v.setEnabled?.(desired());sync({enabled:v.enabled,state:v.enabled?'ready':'disabled'});return true}
   function install(){
