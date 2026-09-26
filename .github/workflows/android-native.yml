@@ -1,0 +1,30 @@
+name: Universal Core Android
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - "android/**"
+      - ".github/workflows/android-native.yml"
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+      - uses: android-actions/setup-android@v3
+      - uses: gradle/gradle-build-action@v3
+        with:
+          gradle-version: "8.10"
+      - name: Build release APK
+        run: gradle --no-daemon --stacktrace :app:assembleRelease
+        working-directory: android
+      - name: Upload Universal Core APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: UniversalCore-Android
+          path: android/app/build/outputs/apk/release/app-release.apk
