@@ -12,7 +12,7 @@
     const legacySpeak=window.speakAnswer;
     if(typeof legacySpeak==='function')window.speakAnswer=(text)=>{if(window.__iuSuppressNextAutoSpeech===true){window.__iuSuppressNextAutoSpeech=false;return false}return legacySpeak(text)};
     const native=document.getElementById('voiceBtn');
-    if(native){native.setAttribute('aria-pressed',String(desired()));native.addEventListener('click',()=>{queueMicrotask(async()=>{const v=engine();if(!v)return;await v.unlock?.();await v.setEnabled?.(desired());sync({enabled:v.enabled})})})}
+    if(native){native.setAttribute('aria-pressed',String(desired()));native.addEventListener('click',()=>{queueMicrotask(async()=>{const v=engine();if(!v)return;await v.unlock?.();const next=await v.toggle?.();localStorage.setItem(LEGACY,String(next));sync({enabled:next})})})}
     const form=document.getElementById('mobileSafeComposer'),send=document.getElementById('mobileSafeSend');
     if(form&&send&&!document.getElementById('mobileSafeVoice')){const b=document.createElement('button');b.type='button';b.id='mobileSafeVoice';b.setAttribute('aria-label','Voz automática');b.textContent='♪';b.style.cssText='flex:0 0 42px;width:42px;height:42px;border:1px solid rgba(255,255,255,.12);border-radius:11px;background:#11161a;color:#79e8a4;font:700 18px/1 system-ui;pointer-events:auto;touch-action:manipulation';b.addEventListener('click',async()=>{if(native){native.click();return}const v=engine();if(!v)return;await v.unlock?.();const next=await v.toggle?.();localStorage.setItem(LEGACY,String(next));sync({enabled:next})});form.insertBefore(b,send)}
     window.addEventListener('wae:voice-state',e=>sync(e.detail||{}));
