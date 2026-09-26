@@ -104,11 +104,11 @@
     const spoken=String(input?.text||'').trim();
     if(!spoken)throw Object.assign(new Error('voice_text_required'),{code:'voice_text_required'});
     const session=await bootstrap(signal);
-    const linked=linkedAbort(signal,26000);
+    const linked=linkedAbort(signal,3500);
     try{
       const response=await nativeFetch(VOICE_EDGE,{
         method:'POST',
-        headers:{'content-type':'application/json','apikey':SUPABASE_KEY,'x-client-info':'wae-inteligencia-universal/voice-v141'},
+        headers:{'content-type':'application/json','apikey':SUPABASE_KEY,'x-client-info':'wae-inteligencia-universal/voice-v144'},
         body:JSON.stringify({...session,action:'speak',text:spoken,voice:String(input?.voice||'Kore').slice(0,40)}),
         cache:'no-store',
         signal:linked.signal
