@@ -146,6 +146,7 @@
       const clean=sanitizeReply(data.reply);if(!clean)throw Object.assign(new Error('unsafe_or_empty_output'),{status:502,serverStarted:true,hasPartial:false});
       if(data.conversation_id)localStorage.setItem(CONVERSATION_ID,data.conversation_id);
       window.__iuLastRuntime={...data,reply:clean};
+      speakResponse({...data,reply:clean});
       queueMicrotask(()=>{updateRuntimeCard(data);loadConversations().catch(()=>{});loadPerformanceGate(true).catch(()=>{})});
       return new Response(JSON.stringify({...data,reply:clean}),{status:200,headers:{'content-type':'application/json','cache-control':'no-store','x-wae-runtime':'universal-core'}});
     }catch(err){
@@ -164,6 +165,35 @@
   };
 
   async function readAttachments(files){const allowed=/\.(txt|md|markdown|json|csv|tsv|js|mjs|cjs|ts|tsx|jsx|css|html|htm|xml|yaml|yml|py|java|go|rs|sql|sh|log)$/i,output=[];for(const file of [...files].slice(0,5)){const looksText=file.type.startsWith('text/')||file.type.includes('json')||file.type.includes('xml')||allowed.test(file.name);if(!looksText)continue;output.push({name:file.name,type:file.type||'text/plain',text:(await file.text()).slice(0,120000)})}window.__waeRuntimeAttachments=output;window.toast?.(output.length?`${output.length} archivo${output.length===1?'':'s'} listo${output.length===1?'':'s'} para Universal Core`:'Ese formato todavía no se procesa como texto')}
+
+  // Voz nativa por defecto: usa SpeechSynthesis del dispositivo, sin API de pago.
+  const VOICE_ENABLED_KEY='iu.voiceResponsesEnabled';
+  const voiceResponsesEnabled=()=>localStorage.getItem(VOICE_ENABLED_KEY)!=='false';
+  const speakResponse=(data)=>{
+    if(!voiceResponsesEnabled()||!('speechSynthesis' in window))return;
+    const text=sanitizeReply(data?.speech_text||data?.response?.speechText||data?.reply||'').slice(0,12000);
+    if(!text)return;
+    try{
+      window.speechSynthesis.cancel();
+      const utterance=new SpeechSynthesisUtterance(text);
+      utterance.lang='es-MX';
+      utterance.rate=0.98;
+      utterance.pitch=1;
+      const voices=window.speechSynthesis.getVoices?.()||[];
+      const preferred=voices.find(v=>/^es-MX$/i.test(v.lang))||voices.find(v=>/^es[-_]/i.test(v.lang));
+      if(preferred)utterance.voice=preferred;
+      utterance.onstart=()=>emit('voice.start',{enabled:true,lang:utterance.lang});
+      utterance.onend=()=>emit('voice.complete',{enabled:true});
+      utterance.onerror=()=>emit('voice.error',{enabled:true});
+      window.speechSynthesis.speak(utterance);
+    }catch{}
+  };
+  window.__iuVoice={
+    get enabled(){return voiceResponsesEnabled()},
+    set enabled(value){localStorage.setItem(VOICE_ENABLED_KEY,value?'true':'false');if(!value&&'speechSynthesis' in window)window.speechSynthesis.cancel()},
+    speak:(text)=>speakResponse({reply:String(text||'')}),
+    stop:()=>('speechSynthesis' in window?window.speechSynthesis.cancel():undefined)
+  };
 
   function updateRuntimeCard(data){
     const copy=document.querySelector('.v2-runtime-copy'),eff=document.querySelector('.v2-efficiency');if(!copy)return;
