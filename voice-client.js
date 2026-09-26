@@ -28,9 +28,12 @@
     return b;
   }
   const nativePending=new Map();
+  const nativeEarlyResults=new Map();
   window.__waeNativeVoiceComplete=(id,ok,error)=>{
-    const pending=nativePending.get(String(id));if(!pending)return;
-    nativePending.delete(String(id));clearTimeout(pending.timer);
+    const key=String(id);
+    const pending=nativePending.get(key);
+    if(!pending){nativeEarlyResults.set(key,{ok:!!ok,error:error||''});return;}
+    nativePending.delete(key);clearTimeout(pending.timer);
     ok?pending.resolve(true):pending.reject(new Error(error||'native_tts_failed'));
   };
   async function playNative(text,myRun){
@@ -40,13 +43,20 @@
     const clean=browserText(text);
     if(typeof b.speakAsync==='function'){
       const id=String(b.speakAsync(clean,'es-MX',.98,1));
-      await new Promise((resolve,reject)=>{
-        const timer=setTimeout(()=>{
-          nativePending.delete(id);
-          reject(new Error('native_tts_timeout'));
-        },Math.max(6000,Math.min(20000,clean.length*90)));
-        nativePending.set(id,{resolve,reject,timer});
-      });
+      const early=nativeEarlyResults.get(id);
+      if(early){
+        nativeEarlyResults.delete(id);
+        if(!early.ok)throw new Error(early.error||'native_tts_failed');
+      }else{
+        await new Promise((resolve,reject)=>{
+          const timer=setTimeout(()=>{
+            nativePending.delete(id);
+            nativeEarlyResults.delete(id);
+            reject(new Error('native_tts_timeout'));
+          },Math.max(6000,Math.min(20000,clean.length*90)));
+          nativePending.set(id,{resolve,reject,timer});
+        });
+      }
     }else{
       const result=await b.speak(clean,{language:'es-MX',voice,rate:.98,pitch:1});
       if(result===false)throw new Error('native_voice_rejected');
