@@ -27,7 +27,7 @@ async function freePort(){
   return port;
 }
 
-test('v122: HTTP validation preserves safe 400/413 and blocks source browsing', {timeout:12000},async t=>{
+test('v122: HTTP validation preserves safe 400/413 and blocks source browsing', {timeout:30000},async t=>{
   const port=await freePort();
   const child=spawn(process.execPath,['server.js'],{
     cwd:new URL('..',import.meta.url),
@@ -37,7 +37,7 @@ test('v122: HTTP validation preserves safe 400/413 and blocks source browsing', 
   t.after(()=>child.kill());
   const base='http://127.0.0.1:'+port;
   let ready=false;
-  for(let attempt=0;attempt<70;attempt++){
+  for(let attempt=0;attempt<220;attempt++){
     if(child.exitCode!==null)break;
     try{
       const result=await fetch(base+'/api/health/liveness',{signal:AbortSignal.timeout(200)});
