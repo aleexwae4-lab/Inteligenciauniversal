@@ -32,10 +32,13 @@ test('v122: HTTP validation preserves safe 400/413 and blocks source browsing', 
   process.env.PORT=String(port);
   process.env.WAE_MAX_BODY_BYTES='128';
   const child=spawn(process.execPath,['server.js'],{
-    cwd:new URL('..',import.meta.url),
+    cwd:process.cwd(),
     env:{...process.env,PORT:String(port),WAE_MAX_BODY_BYTES:'128'},
     stdio:['ignore','pipe','pipe']
   });
+  let childStderr='';
+  child.stderr.setEncoding('utf8');
+  child.stderr.on('data',chunk=>{childStderr+=chunk});
   try{
     let ready=false;
     for(let attempt=0;attempt<220;attempt++){
@@ -46,7 +49,7 @@ test('v122: HTTP validation preserves safe 400/413 and blocks source browsing', 
       }catch{}
       await new Promise(resolve=>setTimeout(resolve,75));
     }
-    assert.ok(ready,'test server did not become ready');
+    assert.ok(ready,childStderr||'test server did not become ready');
     const base='http://127.0.0.1:'+port;
     const malformed=await fetch(base+'/api/chat',{
       method:'POST',headers:{'content-type':'application/json',connection:'close','content-length':'8'},body:'{invalid'
@@ -63,6 +66,6 @@ test('v122: HTTP validation preserves safe 400/413 and blocks source browsing', 
     assert.equal(source.status,404);
   }finally{
     child.kill('SIGTERM');
-    await once(child,'exit').catch(()=>{});
+    if(child.exitCode===null)child.kill('SIGTERM');
   }
 });
