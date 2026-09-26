@@ -1,7 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
-import { spawn } from 'node:child_process';
 import { createServer } from 'node:net';
 import { once } from 'node:events';
 
@@ -27,35 +26,33 @@ async function freePort(){
   return port;
 }
 
-test('v122: HTTP validation preserves safe 400/413 and blocks source browsing', {timeout:30000},async t=>{
+test('v122: HTTP validation preserves safe 400/413 and blocks source browsing', {timeout:30000},async()=>{
   const port=await freePort();
-  const child=spawn(process.execPath,['server.js'],{
-    cwd:new URL('..',import.meta.url),
-    env:{...process.env,PORT:String(port),WAE_MAX_BODY_BYTES:'128'},
-    stdio:['ignore','pipe','pipe']
+  process.env.PORT=String(port);
+  process.env.WAE_MAX_BODY_BYTES='128';
+  const {server}=await import('../server.js?v122_test='+Date.now());
+  await new Promise((resolve,reject)=>{
+    if(server.listening)return resolve();
+    server.once('listening',resolve);
+    server.once('error',reject);
   });
-  t.after(()=>child.kill());
-  const base='http://127.0.0.1:'+port;
-  let ready=false;
-  for(let attempt=0;attempt<220;attempt++){
-    if(child.exitCode!==null)break;
-    try{
-      const result=await fetch(base+'/api/health/liveness',{signal:AbortSignal.timeout(200)});
-      if(result.status===200){ready=true;break}
-    }catch{}
-    await new Promise(resolve=>setTimeout(resolve,75));
+  try{
+    const base='http://127.0.0.1:'+port;
+    const liveness=await fetch(base+'/api/health/liveness');
+    assert.equal(liveness.status,200);
+    const malformed=await fetch(base+'/api/chat',{
+      method:'POST',headers:{'content-type':'application/json'},body:'{invalid'
+    });
+    assert.equal(malformed.status,400);
+    assert.deepEqual(await malformed.json(),{error:'invalid_json'});
+    const large=await fetch(base+'/api/chat',{
+      method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({message:'x'.repeat(180)})
+    });
+    assert.equal(large.status,413);
+    assert.deepEqual(await large.json(),{error:'request_body_too_large'});
+    const source=await fetch(base+'/server.js');
+    assert.equal(source.status,404);
+  }finally{
+    await new Promise(resolve=>server.close(resolve));
   }
-  assert.ok(ready,'test server did not become ready');
-  const malformed=await fetch(base+'/api/chat',{
-    method:'POST',headers:{'content-type':'application/json'},body:'{invalid'
-  });
-  assert.equal(malformed.status,400);
-  assert.deepEqual(await malformed.json(),{error:'invalid_json'});
-  const large=await fetch(base+'/api/chat',{
-    method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({message:'x'.repeat(180)})
-  });
-  assert.equal(large.status,413);
-  assert.deepEqual(await large.json(),{error:'request_body_too_large'});
-  const source=await fetch(base+'/server.js');
-  assert.equal(source.status,404);
 });
