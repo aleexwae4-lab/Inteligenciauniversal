@@ -2,6 +2,12 @@ package com.wae.universalcore
 
 import android.app.Activity
 import android.os.Bundle
+import android.content.Intent
+import android.os.Handler
+import android.os.Looper
+import android.speech.RecognitionListener
+import android.speech.RecognizerIntent
+import android.speech.SpeechRecognizer
 import android.speech.tts.TextToSpeech
 import android.speech.tts.UtteranceProgressListener
 import android.webkit.JavascriptInterface
@@ -16,6 +22,8 @@ class MainActivity : Activity() {
     private lateinit var webView: WebView
     private var tts: TextToSpeech? = null
     private var ttsReady = false
+    private var speechRecognizer: SpeechRecognizer? = null
+    private var speechSessionId: String? = null
 
     companion object {
         private const val START_URL =
@@ -43,6 +51,7 @@ class MainActivity : Activity() {
         webView.webViewClient = WebViewClient()
         webView.webChromeClient = WebChromeClient()
         webView.addJavascriptInterface(NativeVoiceBridge(), "WAE_NATIVE_VOICE")
+        webView.addJavascriptInterface(NativeInputBridge(), "WAE_NATIVE_VOICE_INPUT")
     }
 
     private fun initTts() {
@@ -77,6 +86,67 @@ class MainActivity : Activity() {
                 "window.__waeNativeVoiceComplete&&window.__waeNativeVoiceComplete('$safeId',$ok,'$safeError')",
                 null
             )
+        }
+    }
+
+    private fun notifyInputResult(session: String, text: String?, error: String?) {
+        runOnUiThread {
+            val safeSession = session.replace("\\", "\\\\").replace("'", "\\'")
+            val safeText = (text ?: "").replace("\\", "\\\\").replace("'", "\\'")
+            val safeError = (error ?: "").replace("\\", "\\\\").replace("'", "\\'")
+            webView.evaluateJavascript(
+                "window.__waeNativeVoiceInputComplete&&window.__waeNativeVoiceInputComplete('$safeSession','$safeText','$safeError')",
+                null
+            )
+        }
+    }
+
+    private inner class NativeInputBridge {
+        @JavascriptInterface
+        fun isAvailable(): Boolean = SpeechRecognizer.isRecognitionAvailable(this@MainActivity)
+
+        @JavascriptInterface
+        fun start(language: String): String {
+            val session = UUID.randomUUID().toString()
+            speechSessionId = session
+            runOnUiThread {
+                if (!SpeechRecognizer.isRecognitionAvailable(this@MainActivity)) {
+                    notifyInputResult(session, null, "android_speech_unavailable")
+                    return@runOnUiThread
+                }
+                speechRecognizer?.destroy()
+                speechRecognizer = SpeechRecognizer.createSpeechRecognizer(this@MainActivity)
+                speechRecognizer?.setRecognitionListener(object : RecognitionListener {
+                    override fun onResults(results: android.os.Bundle) {
+                        val text = results.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION)?.firstOrNull()
+                        notifyInputResult(session, text, if (text.isNullOrBlank()) "empty_result" else null)
+                    }
+                    override fun onError(error: Int) {
+                        notifyInputResult(session, null, "android_speech_error_$error")
+                    }
+                    override fun onReadyForSpeech(params: android.os.Bundle?) = Unit
+                    override fun onBeginningOfSpeech() = Unit
+                    override fun onRmsChanged(rmsdB: Float) = Unit
+                    override fun onBufferReceived(buffer: ByteArray?) = Unit
+                    override fun onEndOfSpeech() = Unit
+                    override fun onPartialResults(partialResults: android.os.Bundle?) = Unit
+                    override fun onEvent(eventType: Int, params: android.os.Bundle?) = Unit
+                })
+                val intent = Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH).apply {
+                    putExtra(RecognizerIntent.EXTRA_LANGUAGE, if (language.isBlank()) "es-MX" else language)
+                    putExtra(RecognizerIntent.EXTRA_LANGUAGE_PREFERENCE, "es-MX")
+                    putExtra(RecognizerIntent.EXTRA_PARTIAL_RESULTS, false)
+                    putExtra(RecognizerIntent.EXTRA_MAX_RESULTS, 1)
+                }
+                speechRecognizer?.startListening(intent)
+            }
+            return session
+        }
+
+        @JavascriptInterface
+        fun stop(): Boolean {
+            runOnUiThread { speechRecognizer?.stopListening() }
+            return true
         }
     }
 
@@ -120,6 +190,9 @@ class MainActivity : Activity() {
         tts?.stop()
         tts?.shutdown()
         webView.removeJavascriptInterface("WAE_NATIVE_VOICE")
+        webView.removeJavascriptInterface("WAE_NATIVE_VOICE_INPUT")
+        speechRecognizer?.destroy()
+        speechRecognizer = null
         webView.destroy()
         super.onDestroy()
     }
