@@ -27,13 +27,31 @@
     if(typeof b.speak!=='function')return null;
     return b;
   }
+  const nativePending=new Map();
+  window.__waeNativeVoiceComplete=(id,ok,error)=>{
+    const pending=nativePending.get(String(id));if(!pending)return;
+    nativePending.delete(String(id));clearTimeout(pending.timer);
+    ok?pending.resolve(true):pending.reject(new Error(error||'native_tts_failed'));
+  };
   async function playNative(text,myRun){
     const b=nativeVoiceBridge();if(!b)throw new Error('native_voice_unavailable');
     if(myRun!==runId)return'cancelled';
     emitState('playing','native');
-    const result=await b.speak(browserText(text),{language:'es-MX',voice,rate:.98,pitch:1});
+    const clean=browserText(text);
+    if(typeof b.speakAsync==='function'){
+      const id=String(b.speakAsync(clean,'es-MX',.98,1));
+      await new Promise((resolve,reject)=>{
+        const timer=setTimeout(()=>{
+          nativePending.delete(id);
+          reject(new Error('native_tts_timeout'));
+        },Math.max(6000,Math.min(20000,clean.length*90)));
+        nativePending.set(id,{resolve,reject,timer});
+      });
+    }else{
+      const result=await b.speak(clean,{language:'es-MX',voice,rate:.98,pitch:1});
+      if(result===false)throw new Error('native_voice_rejected');
+    }
     if(myRun!==runId){try{await b.stop?.()}catch{};return'cancelled'}
-    if(result===false)throw new Error('native_voice_rejected');
     return'native';
   }
   function pickBrowserVoice(){if(!('speechSynthesis'in window))return null;const voices=speechSynthesis.getVoices()||[];lastVoiceCount=voices.length;const score=v=>{const lang=String(v.lang||'').replace('_','-').toLowerCase(),name=String(v.name||'').toLowerCase();let n=0;if(lang==='es-mx')n+=100;else if(lang.startsWith('es-419'))n+=90;else if(lang.startsWith('es-us'))n+=80;else if(lang.startsWith('es'))n+=70;if(/google|microsoft|natural|premium|enhanced|neural/.test(name))n+=15;if(v.localService)n+=3;return n};return voices.filter(v=>/^es/i.test(v.lang||'')).sort((a,b)=>score(b)-score(a))[0]||voices[0]||null}
