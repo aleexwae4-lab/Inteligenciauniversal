@@ -9,7 +9,7 @@ import {
   LOGIC_SCHEMA
 } from '../lib/game-studio-v9.js';
 import {inspectFoundryProject,buildDigitalProduct} from '../lib/product-foundry-v5.js';
-import {GAME_STUDIO_VERSION as ACTIVE_GAME_STUDIO_VERSION,inspectGameStudioProject as inspectActiveGameStudioProject} from '../lib/game-studio-v12.js';
+import {GAME_STUDIO_VERSION as ACTIVE_GAME_STUDIO_VERSION,inspectGameStudioProject as inspectActiveGameStudioProject} from '../lib/game-studio-v13.js';
 
 const read=path=>readFileSync(new URL('../'+path,import.meta.url),'utf8');
 
@@ -56,7 +56,7 @@ test('Game Studio v9 builds a portable visual gameplay logic package',()=>{
   }
 });
 
-test('legacy v9 Logic Builder remains compatible while active recovery upgrades to v12',async()=>{
+test('legacy v9 Logic Builder remains compatible while active recovery upgrades to v13',async()=>{
   const fail=async()=>{
     const error=new Error('Todos los proveedores configurados fallaron');
     error.code='all_providers_failed';
