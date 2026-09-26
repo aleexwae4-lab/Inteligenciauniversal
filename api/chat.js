@@ -50,6 +50,7 @@ function conversationalHelpReply(body={}) {
   if(!match)return null;
   const topic=match[1].trim();
   if(!topic||topic.length>180)return null;
+  if(/gobierno|municipio|secretar[ií]a|dependencia|empresa|administr|mantenimiento|automatiz|ciberseguridad|datos|pol[ií]tica p[uú]blica|proyecto|operaci[oó]n/.test(topic))return null;
   if(/presidencia.*universidad|universidad.*presidencia/.test(topic)){
     return 'Sí. Puedo ayudarte con la presidencia de tu universidad: estrategia, plan de trabajo, propuestas, discurso, organización, comunicación y toma de decisiones. Dime si buscas ganar la presidencia, preparar una propuesta o dirigirla mejor y avanzamos desde ahí.';
   }
