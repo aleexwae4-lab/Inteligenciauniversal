@@ -57,7 +57,20 @@
     return streamingCanaryEligible({sessionId:localStorage.getItem(SESSION_ID)||'',verifiedModels:Number(runtimeCaps.verified_streaming_models||0),canaryPct:Number(runtimeCaps.canary_pct||25),override:localStorage.getItem(STREAM_OVERRIDE)||''});
   }
 
-  async function localChat(payload,{signal}={}){\n    const res=await nativeFetch('/api/chat',{method:'POST',headers:{'content-type':'application/json','accept':'application/json','x-wae-client-runtime':'native-first-v158'},body:JSON.stringify(payload),cache:'no-store',signal});\n    const data=await res.json().catch(()=>({success:false,error:'HTTP '+res.status}));\n    if(!res.ok)throw Object.assign(new Error(data?.message||data?.error||('local_chat_'+res.status)),{status:res.status,data});\n    return data;\n  }\n\n  function rejectContinuityPayload(data){\n    const reply=String(data?.reply||data?.response?.content||'').trim();\n    const provider=String(data?.provider||'').toLowerCase();\n    const resilience=String(data?.resilience?.path||data?.cognitive_policy?.path||'').toLowerCase();\n    return !reply || provider==='web_recovery' || /continuity|continuidad|all_models_unavailable|rutas generativas.*saturad|respuesta con evidencia recuperada/i.test(reply) || /continuity|web_recovery|evidence-rescue/i.test(resilience);\n  }\n\n  async function streamChat(payload,outerSignal){
+  async function localChat(payload,{signal}={}){
+    const res=await nativeFetch('/api/chat',{method:'POST',headers:{'content-type':'application/json','accept':'application/json','x-wae-client-runtime':'native-first-v158'},body:JSON.stringify(payload),cache:'no-store',signal});
+    const data=await res.json().catch(()=>({success:false,error:'HTTP '+res.status}));
+    if(!res.ok)throw Object.assign(new Error(data?.message||data?.error||('local_chat_'+res.status)),{status:res.status,data});
+    return data;
+  }
+
+  function rejectContinuityPayload(data){
+    const reply=String(data?.reply||data?.response?.content||'').trim();
+    const provider=String(data?.provider||'').toLowerCase();
+    const resilience=String(data?.resilience?.path||data?.cognitive_policy?.path||'').toLowerCase();
+    return !reply || provider==='web_recovery' || /continuity|continuidad|all_models_unavailable|rutas generativas.*saturad|respuesta con evidencia recuperada/i.test(reply) || /continuity|web_recovery|evidence-rescue/i.test(resilience);
+  }
+  async function streamChat(payload,outerSignal){
     const {createSSEParser}=await sseModule();
     const controller=new AbortController();
     const startedPerf=performance.now();
@@ -154,9 +167,11 @@
       if(err?.serverStarted&&err?.hasPartial){
         return new Response(JSON.stringify({error:'primary_stream_interrupted',recoverable:true}),{status:503,headers:{'content-type':'application/json','cache-control':'no-store'}});
       }
-      try{\n        const fallback=await edge(payload,{signal:init.signal});\n        if(!rejectContinuityPayload(fallback))return new Response(JSON.stringify(fallback),{status:200,headers:{'content-type':'application/json','cache-control':'no-store','x-wae-runtime':'supabase-rescue'}});\n      }catch{}\n      throw err; }catch{
-        return new Response(JSON.stringify({error:'runtime_temporarily_unavailable'}),{status:503,headers:{'content-type':'application/json','cache-control':'no-store'}});
-      }
+      try{
+        const fallback=await edge(payload,{signal:init.signal});
+        if(!rejectContinuityPayload(fallback))return new Response(JSON.stringify(fallback),{status:200,headers:{'content-type':'application/json','cache-control':'no-store','x-wae-runtime':'supabase-rescue'}});
+      }catch{}
+      throw err;
     }finally{document.documentElement.dataset.aiBusy='false'}
   };
 
