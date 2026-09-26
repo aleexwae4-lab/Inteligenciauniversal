@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import vm from 'node:vm';
 import {readFileSync} from 'node:fs';
-import {createNativeGameStudioProject,inspectGameStudioProject,GAME_STUDIO_VERSION,ASSET_SCHEMA,ANIMATION_SCHEMA,CHARACTER_SCHEMA} from '../lib/game-studio-v14.js';
+import {createNativeGameStudioProject,inspectGameStudioProject,GAME_STUDIO_VERSION,ASSET_SCHEMA,ANIMATION_SCHEMA,CHARACTER_SCHEMA} from '../lib/game-studio-v13.js';
 import {buildDigitalProduct} from '../lib/product-foundry-v5.js';
 import {GAME_STUDIO_VERSION as ACTIVE_GAME_STUDIO_VERSION,inspectGameStudioProject as inspectActiveGameStudioProject} from '../lib/game-studio-v14.js';
 
