@@ -482,6 +482,30 @@ function persistStoryStudioV12(raw){
 }
 function onPreviewMessage(event){
  const frame=$('#wfPreview');if(!frame||event.source!==frame.contentWindow)return;const data=event.data;if(!data||typeof data!=='object')return;
+ if(data.type==='wae-game-studio-presentation-save'&&data.studio==='wae-game-studio/v14'){
+  try{
+   saveEditor();
+   const valid=v=>v&&typeof v==='object';
+   if(!valid(data.camera)||data.camera.schema!=='wae-camera/v14')throw Error('Camera v14 inválida');
+   if(!valid(data.vfx)||data.vfx.schema!=='wae-vfx/v14')throw Error('VFX v14 inválidos');
+   if(!valid(data.audio)||data.audio.schema!=='wae-audio/v14')throw Error('Audio v14 inválido');
+   if(!valid(data.cinematic)||data.cinematic.schema!=='wae-cinematic/v14')throw Error('Cinematic v14 inválido');
+   for(const [name,value] of [['camera.json',data.camera],['vfx.json',data.vfx],['audio.json',data.audio],['cinematic.json',data.cinematic]]){
+    let target=current.files.find(f=>f.name===name);
+    if(!target){if(current.files.length>=MAX_FILES)throw Error('No hay espacio para '+name);target={name,content:''};current.files.push(target)}
+    target.content=JSON.stringify(value,null,2);
+   }
+   const mainFile=current.files.find(f=>f.name==='main.js');
+   if(!mainFile||!/^const CAMERA=/.test(mainFile.content)||!/^const VFX=/.test(mainFile.content)||!/^const AUDIO=/.test(mainFile.content)||!/^const CINEMATIC=/.test(mainFile.content))throw Error('No se encontraron contratos v14 en main.js');
+   mainFile.content=mainFile.content.replace(/^const CAMERA=.*;$/m,'const CAMERA='+JSON.stringify(data.camera)+';').replace(/^const VFX=.*;$/m,'const VFX='+JSON.stringify(data.vfx)+';').replace(/^const AUDIO=.*;$/m,'const AUDIO='+JSON.stringify(data.audio)+';').replace(/^const CINEMATIC=.*;$/m,'const CINEMATIC='+JSON.stringify(data.cinematic)+';');
+   current.updatedAt=new Date().toISOString();
+   if(!persist())throw Error('No se pudo persistir Cinematic Presentation v14');
+   if(['camera.json','vfx.json','audio.json','cinematic.json','main.js'].includes(selected))$('#wfEditor').value=file()?.content||'';
+   renderFiles();diagnostics();notify('Cinematic Presentation v14 guardada');
+   frame.contentWindow?.postMessage({type:'wae-game-studio-presentation-saved',ok:true,studio:'wae-game-studio/v14'},'*');
+  }catch(error){notify('No se pudo guardar presentación v14: '+String(error.message||error));frame.contentWindow?.postMessage({type:'wae-game-studio-presentation-saved',ok:false,message:String(error.message||error).slice(0,160)},'*')}
+  return;
+ }
  if(data.type==='wae-game-studio-character-save'&&data.studio==='wae-game-studio/v13'){
   try{
    saveEditor();
