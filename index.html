@@ -44,6 +44,8 @@
     @media(max-width:420px){
       .workspace-topbar>.icon-btn{min-width:32px!important;width:32px!important;height:32px!important}.workspace-icon{display:none}.workspace-actions .chip,.workspace-actions .save-btn{padding:7px 8px!important}.document-sheet{padding:16px!important}
     }
+    .voice-control{min-width:42px!important;height:42px!important;font-size:17px!important;touch-action:manipulation!important}
+    .voice-control[data-voice-state="paused"],.voice-control[aria-pressed="false"]{opacity:.62}
   </style>
   <title>WAE OS Enterprise · Universal Core</title>
   <link rel="stylesheet" href="./ui/premium/surface.css?v=119" />
@@ -74,7 +76,7 @@
     <form class="composer" id="composer">
       <div class="mode-pill" id="modePill">General</div>
       <textarea id="messageInput" rows="1" placeholder="Describe una misión, crea un sistema o pide un análisis…"></textarea>
-      <div class="composer-actions"><div><button type="button" class="mini-btn" id="attachBtn" title="Adjuntar">＋</button><button type="button" class="mini-btn" id="voiceBtn" title="Voz" aria-pressed="true">◉</button></div><button class="send-btn" type="submit" aria-label="Enviar">➜</button></div>
+      <div class="composer-actions"><div><button type="button" class="mini-btn" id="attachBtn" title="Adjuntar">＋</button><button type="button" class="mini-btn voice-control" id="voiceBtn" title="Pausar voz" aria-pressed="true">🔊</button></div><button class="send-btn" type="submit" aria-label="Enviar">➜</button></div>
     </form>
 
     <footer class="runtime-bar"><div><span class="pulse"></span><strong>Universal Core</strong><small> · operativo</small></div><strong class="health">LIVE</strong></footer>
@@ -122,7 +124,7 @@
 
   <form id="mobileSafeComposer" aria-label="Escribir a Universal Core" autocomplete="off">
     <textarea id="mobileSafeInput" rows="1" inputmode="text" enterkeyhint="send" autocomplete="off" autocapitalize="sentences" spellcheck="true" placeholder="Escribe un mensaje…"></textarea>
-    <button id="mobileSafeSend" type="submit" aria-label="Enviar">➜</button>
+    <button id="mobileSafeVoice" type="button" class="mini-btn voice-control" aria-label="Pausar voz">🔊</button><button id="mobileSafeSend" type="submit" aria-label="Enviar">➜</button>
   </form>
 
   <script src="./startup-guard-v23.js" defer></script>
