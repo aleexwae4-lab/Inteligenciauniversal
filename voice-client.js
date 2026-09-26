@@ -24,7 +24,7 @@
     const b=window.WAE_NATIVE_VOICE||window.AndroidVoice||window.waeNativeVoice;
     if(!b)return null;
     if(typeof b.isAvailable==='function'&&!b.isAvailable())return null;
-    if(typeof b.speak!=='function')return null;
+    if(typeof b.speak!=='function'&&typeof b.speakAsync!=='function')return null;
     return b;
   }
   const nativePending=new Map();
