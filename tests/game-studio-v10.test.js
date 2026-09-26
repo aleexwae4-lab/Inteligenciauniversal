@@ -10,7 +10,7 @@ import {
   LOGIC_SCHEMA
 } from '../lib/game-studio-v10.js';
 import {inspectFoundryProject,buildDigitalProduct} from '../lib/product-foundry-v5.js';
-import {GAME_STUDIO_VERSION as ACTIVE_GAME_STUDIO_VERSION,inspectGameStudioProject as inspectActiveGameStudioProject} from '../lib/game-studio-v12.js';
+import {GAME_STUDIO_VERSION as ACTIVE_GAME_STUDIO_VERSION,inspectGameStudioProject as inspectActiveGameStudioProject} from '../lib/game-studio-v13.js';
 
 const read=path=>readFileSync(new URL('../'+path,import.meta.url),'utf8');
 
@@ -61,7 +61,7 @@ test('Game Studio v10 builds portable NPC characters with local state-machine AI
   ])assert.ok(manifest.capabilities.includes(capability),capability);
 });
 
-test('legacy v10 NPC Engine remains compatible while active recovery upgrades to v12',async()=>{
+test('legacy v10 NPC Engine remains compatible while active recovery upgrades to v13',async()=>{
   const fail=async()=>{const error=new Error('all providers failed');error.code='all_providers_failed';throw error};
   const result=await buildDigitalProduct({
     request:'Construye un juego 3D con NPCs, facciones, patrullas, percepción, diálogo y reglas.',
