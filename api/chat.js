@@ -210,7 +210,8 @@ export default async function handler(req,res) {
     }
   }
 
-  // Keep the capability helper in the request path for protocol compatibility; non-trivial work is handled by executeMission.\n  const helpReply=conversationalHelpReply(runtimeBody);
+  // Keep the capability helper in the request path for protocol compatibility; non-trivial work is handled by executeMission.
+  const helpReply=conversationalHelpReply(runtimeBody);
   if(helpReply){
     res.setHeader('X-WAE-Fast-Path','conversational-help-v46');
     return res.status(200).json({
