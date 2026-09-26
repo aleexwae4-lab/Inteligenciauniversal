@@ -28,8 +28,23 @@
   async function playText(text,myRun){
     if(myRun!==runId)return'cancelled';
     emitState('playing','browser');
-    await playBrowser(text,myRun);
-    return'browser';
+    try{
+      await playBrowser(text,myRun);
+      return'browser';
+    }catch(browserError){
+      if(myRun!==runId)throw browserError;
+      console.warn('[Universal Core Voice] browser fallback:',browserError?.message||browserError);
+      emitState('starting','cloud',browserError?.message||String(browserError));
+      try{
+        const buffer=await fetchAudio(browserText(text));
+        if(myRun!==runId)return'cancelled';
+        await playBuffer(buffer,myRun);
+        return'cloud';
+      }catch(cloudError){
+        console.warn('[Universal Core Voice] cloud fallback:',cloudError?.message||cloudError);
+        throw browserError;
+      }
+    }
   }
   async function speak(text,{force=false}={}){if(paused)paused=false;if(!force&&window.__iuSuppressNextAutoSpeech===true){window.__iuSuppressNextAutoSpeech=false;return false}if(!enabled&&!force)return false;stop();const myRun=runId,started=Date.now(),parts=chunks(browserText(text),900);if(!parts.length)return false;emitState('starting','browser');let engine='browser';try{await unlock();for(const chunk of parts){if(myRun!==runId){void recordTelemetry('cancelled',started,null,{chunks:parts.length,mode:'full'});return false}engine=await playText(chunk,myRun)||engine}void recordTelemetry('ok',started,null,{chunks:parts.length,characters:String(text||'').length,mode:'full',engine});return true}catch(e){console.warn('[Universal Core Voice]',e?.message||e);void recordTelemetry('error',started,e?.message||e,{chunks:parts.length,characters:String(text||'').length,mode:'full',engine});emitState('error',engine,e?.message||String(e));toast('No pude reproducir voz en este dispositivo');return false}finally{if(myRun===runId)emitState(enabled?'ready':'disabled',engine)}}
   async function pumpQueue(myRun,started){if(queueRunning)return true;queueRunning=true;let played=0,engine='cloud';emitState('starting','cloud');try{await unlock();while(myRun===runId&&queue.length){const part=queue.shift();if(!part)continue;engine=await playText(part,myRun)||engine;played++}if(myRun===runId)void recordTelemetry('ok',started,null,{chunks:played,mode:'progressive',engine});return myRun===runId}catch(e){console.warn('[Universal Core Voice queue]',e?.message||e);queue.length=0;void recordTelemetry('error',started,e?.message||e,{chunks:played,mode:'progressive',engine});emitState('error',engine,e?.message||String(e));return false}finally{queueRunning=false;if(myRun===runId)emitState(enabled?'ready':'disabled',engine)}}
