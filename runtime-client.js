@@ -156,7 +156,8 @@
         if(await streamingAllowed())data=await streamChat(retryPayload,init.signal);
         else data=await edge(retryPayload,{signal:init.signal});
       }
-      if(rejectContinuityPayload(data))throw Object.assign(new Error('continuity_payload_rejected'),{status:502,serverStarted:true,hasPartial:false});\n      const clean=sanitizeReply(data.reply);if(!clean)throw Object.assign(new Error('unsafe_or_empty_output'),{status:502,serverStarted:true,hasPartial:false});
+      if(rejectContinuityPayload(data))throw Object.assign(new Error('continuity_payload_rejected'),{status:502,serverStarted:true,hasPartial:false});
+      const clean=sanitizeReply(data.reply);if(!clean)throw Object.assign(new Error('unsafe_or_empty_output'),{status:502,serverStarted:true,hasPartial:false});
       if(data.conversation_id)localStorage.setItem(CONVERSATION_ID,data.conversation_id);
       window.__iuLastRuntime={...data,reply:clean};
       // La salida de voz tiene un único propietario: voice-client.js.\n      // Evita que este runtime cancele/reinicie speechSynthesis y compita con\n      // el watchdog + fallback de audio del motor de voz premium.
