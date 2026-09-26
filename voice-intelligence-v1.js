@@ -9,7 +9,7 @@
   const emit=(intent,text)=>document.dispatchEvent(new CustomEvent('wae:voice-intent',{detail:{intent,text,at:Date.now()}}));
   const exactIntent=text=>{const n=norm(text);if(!n||n.length>64)return null;for(const [intent,list] of patterns)if(list.some(p=>n===p||n.startsWith(p+' ')))return intent;return null};
   const setWaiting=(ms=4500)=>{waitingUntil=Date.now()+ms;setState('paused','Pausado');emit('wait','')};
-  const clearWaiting=()=>{waitingUntil=0;setState('listening','Escuchando');if(window.__waeNativeVoiceInput?.continuous===false)try{window.__waeNativeVoiceInput.toggleContinuous?.()}catch{}};
+  const clearWaiting=()=>{waitingUntil=0;setState('listening','Escuchando')};
   const handle=text=>{const clean=String(text||'').trim(),intent=exactIntent(clean);if(!intent)return false;lastIntent=intent;emit(intent,clean);const v=window.__waeVoice,n=window.__waeNativeVoiceInput;
     if(intent==='stop'){try{n?.stop?.()}catch{};if(n?.continuous)try{n.toggleContinuous?.()}catch{};try{v?.stop?.()}catch{};waitingUntil=0;setState('ready','Listo');return true}
     if(intent==='wait'){try{n?.stop?.()}catch{};try{v?.pause?.()}catch{};setWaiting();return true}
