@@ -56,6 +56,48 @@ function conversationalHelpReply(body={}) {
   return `Sí. Puedo ayudarte con ${topic}. Dime qué resultado quieres conseguir, qué contexto ya tienes y qué restricción es la más importante; con eso te propongo el siguiente paso concreto.`;
 }
 
+async function tryJuriscanGateway(body={}, userKey='') {
+  const base=String(process.env.SUPABASE_URL||'').trim().replace(/\/$/,'');
+  const serviceKey=String(process.env.SUPABASE_SECRET_KEY||process.env.SUPABASE_SERVICE_ROLE_KEY||'').trim();
+  if(!base||!serviceKey)return null;
+  const input=String(body?.message||body?.task||'').trim();
+  if(!input)return null;
+  const controller=new AbortController();
+  const timer=setTimeout(()=>controller.abort(),Number(process.env.WAE_JURISCAN_TIMEOUT_MS||28_000));
+  try{
+    const response=await fetch(base+'/functions/v1/wae-juriscan-gateway',{
+      method:'POST',
+      headers:{'content-type':'application/json','apikey':serviceKey},
+      signal:controller.signal,
+      body:JSON.stringify({
+        input,
+        userKey,
+        sessionId:body?.sessionId||body?.session_id||userKey,
+        profile:body?.profile||'universal_free',
+        consensus:body?.consensus===true,
+        max_candidates:body?.max_candidates,
+        task_type:body?.task_type||body?.mode||'generic',
+        priority:body?.priority,
+        requires_reasoning:body?.requires_reasoning===true,
+        requires_vision:body?.requires_vision===true,
+        min_context_window:Number(body?.min_context_window||0),
+        use_web:body?.web_enabled===true||body?.use_web===true||String(body?.mode||'').toLowerCase()==='research',
+        persist_memory:body?.persist_memory===true
+      })
+    });
+    const payload=await response.json().catch(()=>null);
+    if(!response.ok||!payload)return null;
+    const reply=String(payload?.reply||payload?.response?.content||'').trim();
+    if(!reply)return null;
+    return {...payload,success:true,reply,speech_text:payload?.speech_text||reply,
+      response:{...(payload?.response||{}),content:reply,speechText:payload?.response?.speechText||reply,
+        metadata:{...(payload?.response?.metadata||{}),juriscanGateway:true,juriscanGatewayVersion:'wae-juriscan-gateway/v1'}}};
+  }catch(error){
+    console.warn('[Juriscan Gateway]',String(error?.message||error));
+    return null;
+  }finally{clearTimeout(timer);}
+}
+
 function responseBudgetMs(body={}){
   const mode=String(body?.mode||body?.agent||'general').toLowerCase();
   if(body?.web_enabled===true||mode==='research')return 30_000;
@@ -182,6 +224,13 @@ export default async function handler(req,res) {
       web_sources:[],
       input_interpretation:publicIntent(intent)
     });
+  }
+
+  const juriscan=await tryJuriscanGateway(runtimeBody,String(userKey||'').slice(0,512));
+  if(juriscan){
+    res.setHeader('X-WAE-Cognitive-Path','juriscan-supabase-v1');
+    res.setHeader('X-WAE-Juriscan-Gateway','wae-juriscan-gateway/v1');
+    return res.status(200).json({...juriscan,input_interpretation:publicIntent(intent)});
   }
 
   const route=selectProviderRoute({
