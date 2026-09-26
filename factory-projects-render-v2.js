@@ -117,7 +117,7 @@ function normalizeWorldV8(raw){
 }
 function persistWorldStudioV8(sceneRaw,worldRaw){
  saveEditor();
- if(!sceneRaw||typeof sceneRaw!=='object'||!['wae-game-studio/v8','wae-game-studio/v9','wae-game-studio/v10','wae-game-studio/v11','wae-game-studio/v12'].includes(sceneRaw.engine))throw Error('Escena Game Studio v8/v9/v10 inválida');
+ if(!sceneRaw||typeof sceneRaw!=='object'||!['wae-game-studio/v8','wae-game-studio/v9','wae-game-studio/v10','wae-game-studio/v11','wae-game-studio/v12','wae-game-studio/v13'].includes(sceneRaw.engine))throw Error('Escena Game Studio v8/v9/v10 inválida');
  const world=normalizeWorldV8(worldRaw),clean=JSON.parse(JSON.stringify(sceneRaw));
  if(!clean.materials||typeof clean.materials!=='object'||Object.keys(clean.materials).length>40)throw Error('Materiales inválidos');
  for(const [name,color] of Object.entries(clean.materials)){if(!/^[a-zA-Z0-9_-]{1,40}$/.test(name)||!Array.isArray(color)||color.length!==4||color.some(v=>!Number.isFinite(Number(v))||Number(v)<0||Number(v)>1))throw Error('Material inválido');clean.materials[name]=color.map(Number)}
@@ -482,6 +482,31 @@ function persistStoryStudioV12(raw){
 }
 function onPreviewMessage(event){
  const frame=$('#wfPreview');if(!frame||event.source!==frame.contentWindow)return;const data=event.data;if(!data||typeof data!=='object')return;
+ if(data.type==='wae-game-studio-character-save'&&data.studio==='wae-game-studio/v13'){
+  try{
+   saveEditor();
+   const valid=(v)=>v&&typeof v==='object';
+   if(!valid(data.character)||data.character.schema!=='wae-character/v13')throw Error('Character v13 inválido');
+   if(!valid(data.assets)||data.assets.schema!=='wae-assets/v13')throw Error('Assets v13 inválidos');
+   if(!valid(data.animations)||data.animations.schema!=='wae-animation/v13')throw Error('Animation v13 inválido');
+   const files=['character.json','assets.json','animation.json'];
+   const payload=[data.character,data.assets,data.animations];
+   for(let i=0;i<files.length;i++){
+    let target=current.files.find(f=>f.name===files[i]);
+    if(!target){if(current.files.length>=MAX_FILES)throw Error('No hay espacio para '+files[i]);target={name:files[i],content:''};current.files.push(target)}
+    target.content=JSON.stringify(payload[i],null,2);
+   }
+   const mainFile=current.files.find(f=>f.name==='main.js');
+   if(!mainFile||!/^const ASSETS=/.test(mainFile.content)||!/^const ANIMATIONS=/.test(mainFile.content)||!/^const CHARACTER=/.test(mainFile.content))throw Error('No se encontraron contratos v13 en main.js');
+   mainFile.content=mainFile.content.replace(/^const ASSETS=.*;$/m,'const ASSETS='+JSON.stringify(data.assets)+';').replace(/^const ANIMATIONS=.*;$/m,'const ANIMATIONS='+JSON.stringify(data.animations)+';').replace(/^const CHARACTER=.*;$/m,'const CHARACTER='+JSON.stringify(data.character)+';');
+   current.updatedAt=new Date().toISOString();
+   if(!persist())throw Error('No se pudo persistir Character & Asset Pipeline v13');
+   if(['character.json','assets.json','animation.json','main.js'].includes(selected))$('#wfEditor').value=file()?.content||'';
+   renderFiles();diagnostics();notify('Character, Animation & Asset Pipeline v13 guardado');
+   frame.contentWindow?.postMessage({type:'wae-game-studio-character-saved',ok:true,studio:'wae-game-studio/v13'},'*');
+  }catch(error){notify('No se pudo guardar pipeline v13: '+String(error.message||error));frame.contentWindow?.postMessage({type:'wae-game-studio-character-saved',ok:false,message:String(error.message||error).slice(0,160)},'*')}
+  return;
+ }
  if(data.type==='wae-game-studio-story-save'&&data.studio==='wae-game-studio/v12'){
   try{persistStoryStudioV12(data.story);frame.contentWindow?.postMessage({type:'wae-game-studio-story-saved',ok:true,studio:'wae-game-studio/v12'},'*')}
   catch(error){notify('No se pudo guardar Story Engine: '+String(error.message||error));frame.contentWindow?.postMessage({type:'wae-game-studio-story-saved',ok:false,message:String(error.message||error).slice(0,160)},'*')}return;
