@@ -167,9 +167,11 @@
       if(err?.serverStarted&&err?.hasPartial){
         return new Response(JSON.stringify({error:'primary_stream_interrupted',recoverable:true}),{status:503,headers:{'content-type':'application/json','cache-control':'no-store'}});
       }
-      try{\n        const fallback=await edge(payload,{signal:init.signal});\n        if(!rejectContinuityPayload(fallback))return new Response(JSON.stringify(fallback),{status:200,headers:{'content-type':'application/json','cache-control':'no-store','x-wae-runtime':'supabase-rescue'}});\n      }catch{}\n      throw err; }catch{
-        return new Response(JSON.stringify({error:'runtime_temporarily_unavailable'}),{status:503,headers:{'content-type':'application/json','cache-control':'no-store'}});
-      }
+      try{
+        const fallback=await edge(payload,{signal:init.signal});
+        if(!rejectContinuityPayload(fallback))return new Response(JSON.stringify(fallback),{status:200,headers:{'content-type':'application/json','cache-control':'no-store','x-wae-runtime':'supabase-rescue'}});
+      }catch{}
+      throw err;
     }finally{document.documentElement.dataset.aiBusy='false'}
   };
 
