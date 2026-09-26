@@ -24,7 +24,7 @@ function canonicalProtocolPrompt(value='') {
     return /como estas|como te sientes|como andas|que tal/.test(q) ? '¿Cómo estás?' : 'Hola';
   }
   if (/^(como estas|como te sientes|como andas|que tal)$/.test(q)) return '¿Cómo estás?';
-  if (/^(cuales son tus capacidades|que capacidades tienes|que puedes hacer|como puedes ayudarme|como funcionas)$/.test(q)) return '¿Qué puedes hacer?';
+  if (/^(como puedes ayudarme|como funcionas)$/.test(q)) return '¿Qué puedes hacer?';
   if (/^(quien eres|que eres|que es universal core)$/.test(q)) return '¿Qué eres?';
   return String(value || '');
 }
