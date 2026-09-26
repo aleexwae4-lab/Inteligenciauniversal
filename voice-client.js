@@ -20,6 +20,22 @@
   async function recordTelemetry(status,started,error=null,metadata={}){const s=session();if(!s.session_id||!s.session_secret)return;try{await fetch(TELEMETRY_ENDPOINT,{method:'POST',headers:{'content-type':'application/json','apikey':SUPABASE_KEY},body:JSON.stringify({p_session_id:s.session_id,p_session_secret:s.session_secret,p_kind:'tts',p_status:status,p_latency_ms:Math.max(0,Date.now()-started),p_error_code:error?String(error).slice(0,160):null,p_metadata:{voice,client:'wae-natural-voice-client/2.0',engine:lastEngine,...metadata}}),cache:'no-store'})}catch{}}
   async function fetchAudio(text){if(Date.now()<cloudBackoffUntil)throw new Error('cloud_tts_backoff');const s=session();if(!s.session_id||!s.session_secret)throw new Error('voice_session_missing');const r=await fetch(VOICE_ENDPOINT,{method:'POST',headers:{'content-type':'application/json','apikey':SUPABASE_KEY,'x-client-info':'wae-inteligencia-universal-voice/2.0'},body:JSON.stringify({action:'speak',...s,text,voice}),cache:'no-store'});if(!r.ok){const d=await r.json().catch(()=>({}));const error=new Error(d.error||`voice_${r.status}`);error.status=r.status;throw error}return r.arrayBuffer()}
   async function playBuffer(buffer,myRun){const c=getContext();if(c){if(c.state==='suspended')await c.resume();const decoded=await c.decodeAudioData(buffer.slice(0));if(myRun!==runId)return;await new Promise((resolve,reject)=>{const src=c.createBufferSource();currentSource=src;src.buffer=decoded;src.connect(c.destination);src.onended=()=>{if(currentSource===src)currentSource=null;resolve()};try{src.start()}catch(e){reject(e)}});return}const blob=new Blob([buffer],{type:'audio/wav'}),url=URL.createObjectURL(blob);await new Promise((resolve,reject)=>{const a=new Audio(url);currentAudio=a;a.onended=()=>{URL.revokeObjectURL(url);if(currentAudio===a)currentAudio=null;resolve()};a.onerror=()=>{URL.revokeObjectURL(url);reject(new Error('audio_playback_failed'))};a.play().catch(reject)})}
+  function nativeVoiceBridge(){
+    const b=window.WAE_NATIVE_VOICE||window.AndroidVoice||window.waeNativeVoice;
+    if(!b)return null;
+    if(typeof b.isAvailable==='function'&&!b.isAvailable())return null;
+    if(typeof b.speak!=='function')return null;
+    return b;
+  }
+  async function playNative(text,myRun){
+    const b=nativeVoiceBridge();if(!b)throw new Error('native_voice_unavailable');
+    if(myRun!==runId)return'cancelled';
+    emitState('playing','native');
+    const result=await b.speak(browserText(text),{language:'es-MX',voice,rate:.98,pitch:1});
+    if(myRun!==runId){try{await b.stop?.()}catch{};return'cancelled'}
+    if(result===false)throw new Error('native_voice_rejected');
+    return'native';
+  }
   function pickBrowserVoice(){if(!('speechSynthesis'in window))return null;const voices=speechSynthesis.getVoices()||[];lastVoiceCount=voices.length;const score=v=>{const lang=String(v.lang||'').replace('_','-').toLowerCase(),name=String(v.name||'').toLowerCase();let n=0;if(lang==='es-mx')n+=100;else if(lang.startsWith('es-419'))n+=90;else if(lang.startsWith('es-us'))n+=80;else if(lang.startsWith('es'))n+=70;if(/google|microsoft|natural|premium|enhanced|neural/.test(name))n+=15;if(v.localService)n+=3;return n};return voices.filter(v=>/^es/i.test(v.lang||'')).sort((a,b)=>score(b)-score(a))[0]||voices[0]||null}
   async function waitBrowserVoices(){if(!('speechSynthesis'in window))return[];const list=speechSynthesis.getVoices()||[];lastVoiceCount=list.length;if(list.length)return list;return await new Promise(resolve=>{let done=false;const finish=()=>{if(done)return;done=true;speechSynthesis.removeEventListener?.('voiceschanged',finish);resolve(speechSynthesis.getVoices()||[])};speechSynthesis.addEventListener?.('voiceschanged',finish,{once:true});setTimeout(finish,700)})}
   async function resetBrowserSynthesis(){if(!('speechSynthesis'in window))return;try{speechSynthesis.cancel();speechSynthesis.resume()}catch{}await new Promise(r=>setTimeout(r,120))}
@@ -27,6 +43,12 @@
   async function playBrowser(text,myRun){if(!('speechSynthesis'in window))throw new Error('browser_tts_unavailable');const clean=browserText(text);if(!clean)return;const pieces=chunks(clean,260);await waitBrowserVoices();if(myRun!==runId)return;await resetBrowserSynthesis();for(const part of pieces){if(myRun!==runId)return;await speakBrowserOnce(part,myRun);if(myRun!==runId)return}}
   async function playText(text,myRun){
     if(myRun!==runId)return'cancelled';
+    try{
+      if(nativeVoiceBridge())return await playNative(text,myRun);
+    }catch(nativeError){
+      console.warn('[Universal Core Voice] native bridge fallback:',nativeError?.message||nativeError);
+      emitState('starting','browser',nativeError?.message||String(nativeError));
+    }
     emitState('playing','browser');
     try{
       await playBrowser(text,myRun);
@@ -67,6 +89,6 @@
   });
   emitState(enabled?'ready':'disabled','idle');
   if('speechSynthesis'in window)speechSynthesis.addEventListener?.('voiceschanged',()=>emitState(enabled?'ready':'disabled',lastEngine));
-  window.__waeVoice={speak,enqueue,prepareQueue,stop,pause,resume,toggle,unlock,setEnabled,setVoice,get enabled(){return enabled},get voice(){return voice},get queueLength(){return queue.length},get engine(){return lastEngine},get cloudBackoff(){return Math.max(0,cloudBackoffUntil-Date.now())},get diagnostics(){return {enabled,paused,state:document.documentElement.dataset.voiceState||'unknown',engine:lastEngine,voice,voiceCount:lastVoiceCount,lastError,lastLatencyMs,queueLength:queue.length,cloudFallbackAvailable:!!(localStorage.getItem(SID)&&localStorage.getItem(SECRET)),cloudBackoffMs:Math.max(0,cloudBackoffUntil-Date.now())}}};
+  window.__waeVoice={speak,enqueue,prepareQueue,stop,pause,resume,toggle,unlock,setEnabled,setVoice,get enabled(){return enabled},get voice(){return voice},get queueLength(){return queue.length},get engine(){return lastEngine},get cloudBackoff(){return Math.max(0,cloudBackoffUntil-Date.now())},get nativeAvailable(){return !!nativeVoiceBridge()},get diagnostics(){return {enabled,paused,state:document.documentElement.dataset.voiceState||'unknown',engine:lastEngine,voice,voiceCount:lastVoiceCount,lastError,lastLatencyMs,queueLength:queue.length,cloudFallbackAvailable:!!(localStorage.getItem(SID)&&localStorage.getItem(SECRET)),cloudBackoffMs:Math.max(0,cloudBackoffUntil-Date.now())}}};
   loadExperience();
 })();
