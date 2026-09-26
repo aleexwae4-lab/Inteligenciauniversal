@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import vm from 'node:vm';
 import {createNativeGameStudioProject,inspectGameStudioProject,GAME_STUDIO_VERSION} from '../lib/game-studio-v6.js';
 import {inspectFoundryProject,buildDigitalProduct} from '../lib/product-foundry-v5.js';
-import {GAME_STUDIO_VERSION as ACTIVE_GAME_STUDIO_VERSION,inspectGameStudioProject as inspectActiveGameStudioProject} from '../lib/game-studio-v6.js';
+import {GAME_STUDIO_VERSION as ACTIVE_GAME_STUDIO_VERSION,inspectGameStudioProject as inspectActiveGameStudioProject} from '../lib/game-studio-v14.js';
 
 test('Game Studio v6 native scaffold is a real self-contained 3D product',()=>{
   const project=createNativeGameStudioProject({request:'Crea un juego 3D divertido con obstáculos y energía.',profile:'game_3d'});
