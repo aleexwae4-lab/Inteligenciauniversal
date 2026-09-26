@@ -209,7 +209,7 @@ export default async function handler(req,res) {
     }
   }
 
-  const helpReply=contextualFollowup||userContext.affectsGeneration?null:conversationalHelpReply(runtimeBody);
+  // Non-trivial help requests must enter the real runtime instead of returning a generic capability menu.\n  const helpReply=null;
   if(helpReply){
     res.setHeader('X-WAE-Fast-Path','conversational-help-v46');
     return res.status(200).json({
