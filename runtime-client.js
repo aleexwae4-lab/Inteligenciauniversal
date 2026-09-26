@@ -113,11 +113,36 @@
     const incoming=typeof init.body==='string'?JSON.parse(init.body):{};
     setThinking(true,String(incoming.mode||'')==='research'?'Investigando':'Procesando');
     try{
-      await Promise.all([bootstrap(),loadPerformanceGate()]);
+      // Primera consulta resiliente: las inicializaciones auxiliares nunca deben
+      // bloquear el envío de la misión. Bootstrap tiene un margen corto; el gate
+      // de rendimiento se carga en paralelo y puede terminar después del primer turno.
+      const bootstrapDeadline=Promise.race([
+        bootstrap(),
+        new Promise((_,reject)=>setTimeout(()=>reject(new Error('bootstrap_soft_timeout')),3500))
+      ]);
+      const bootstrapResult=await bootstrapDeadline.catch(error=>{
+        console.warn('[Universal Core] bootstrap diferido en primer turno',error?.message||error);
+        bootPromise=null;
+        return null;
+      });
+      void loadPerformanceGate().catch(()=>{});
       const payload={action:'chat',...sessionPayload(),conversation_id:localStorage.getItem(CONVERSATION_ID)||null,message:String(incoming.message||''),mode:String(incoming.mode||localStorage.getItem('wae.mode')||'general'),web_enabled:incoming.web_enabled===true||String(incoming.mode||'')==='research',attachments:window.__waeRuntimeAttachments||[],routing_variant:routingVariant()};
       let data;
-      if(await streamingAllowed())data=await streamChat(payload,init.signal);
-      else data=await edge(payload,{signal:init.signal});
+      try {
+        if(await streamingAllowed())data=await streamChat(payload,init.signal);
+        else data=await edge(payload,{signal:init.signal});
+      } catch(firstRuntimeError) {
+        // Una sola repetición controlada evita perder el primer turno por un
+        // wake-up/cold-start transitorio. No duplica un stream que ya comenzó.
+        if(firstRuntimeError?.serverStarted||firstRuntimeError?.hasPartial)throw firstRuntimeError;
+        console.warn('[Universal Core] reintentando primer turno',firstRuntimeError?.message||firstRuntimeError);
+        if(bootstrapResult===null) {
+          try { await Promise.race([bootstrap(),new Promise((_,reject)=>setTimeout(()=>reject(new Error('bootstrap_retry_timeout')),2500))]); } catch {}
+        }
+        const retryPayload={...payload,conversation_id:localStorage.getItem(CONVERSATION_ID)||null,...sessionPayload()};
+        if(await streamingAllowed())data=await streamChat(retryPayload,init.signal);
+        else data=await edge(retryPayload,{signal:init.signal});
+      }
       const clean=sanitizeReply(data.reply);if(!clean)throw Object.assign(new Error('unsafe_or_empty_output'),{status:502,serverStarted:true,hasPartial:false});
       if(data.conversation_id)localStorage.setItem(CONVERSATION_ID,data.conversation_id);
       window.__iuLastRuntime={...data,reply:clean};
