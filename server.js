@@ -220,7 +220,7 @@ async function serveFile(req, res, pathname) {
   res.setHeader('Content-Type', contentTypes[ext] || 'application/octet-stream');
   res.setHeader('X-Content-Type-Options', 'nosniff');
   res.setHeader('Referrer-Policy', 'same-origin');
-  if (name === 'sw.js' || name === 'mobile-canonical-chat-v80.js' || name === 'canonical-brain-v106.js' || name === 'universal-core-local-brain-v1.js' || name === 'universal-core-local-worker-v1.js' || name === 'universal-core-local-cpu-worker-v1.js' || ext === '.html') {
+  if (name === 'sw.js' || name === 'runtime-client.js' || name === 'canonical-chat-v78.js' || name === 'mobile-canonical-chat-v80.js' || name === 'canonical-brain-v106.js' || name === 'universal-core-local-brain-v1.js' || name === 'universal-core-local-worker-v1.js' || name === 'universal-core-local-cpu-worker-v1.js' || ext === '.html') {
     res.setHeader('Cache-Control','no-store, max-age=0, must-revalidate');
     res.setHeader('Pragma','no-cache');
     res.setHeader('Expires','0');
