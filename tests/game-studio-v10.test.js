@@ -10,7 +10,7 @@ import {
   LOGIC_SCHEMA
 } from '../lib/game-studio-v10.js';
 import {inspectFoundryProject,buildDigitalProduct} from '../lib/product-foundry-v5.js';
-import {GAME_STUDIO_VERSION as ACTIVE_GAME_STUDIO_VERSION,inspectGameStudioProject as inspectActiveGameStudioProject} from '../lib/game-studio-v10.js';
+import {GAME_STUDIO_VERSION as ACTIVE_GAME_STUDIO_VERSION,inspectGameStudioProject as inspectActiveGameStudioProject} from '../lib/game-studio-v14.js';
 
 const read=path=>readFileSync(new URL('../'+path,import.meta.url),'utf8');
 
