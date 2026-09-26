@@ -146,7 +146,7 @@
       const clean=sanitizeReply(data.reply);if(!clean)throw Object.assign(new Error('unsafe_or_empty_output'),{status:502,serverStarted:true,hasPartial:false});
       if(data.conversation_id)localStorage.setItem(CONVERSATION_ID,data.conversation_id);
       window.__iuLastRuntime={...data,reply:clean};
-      speakResponse({...data,reply:clean});
+      // La salida de voz tiene un único propietario: voice-client.js.\n      // Evita que este runtime cancele/reinicie speechSynthesis y compita con\n      // el watchdog + fallback de audio del motor de voz premium.
       queueMicrotask(()=>{updateRuntimeCard(data);loadConversations().catch(()=>{});loadPerformanceGate(true).catch(()=>{})});
       return new Response(JSON.stringify({...data,reply:clean}),{status:200,headers:{'content-type':'application/json','cache-control':'no-store','x-wae-runtime':'universal-core'}});
     }catch(err){
