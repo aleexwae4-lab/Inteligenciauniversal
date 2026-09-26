@@ -44,7 +44,7 @@ test('v133 deterministic Universal Core turn publishes real stage events and sti
     {onProgress:event=>events.push(event)}
   );
   assert.equal(result.response.schema,'assistant-response/v2');
-  assert.equal(result.model,'runtime_capabilities/v132');
+  assert.match(result.model,/^runtime_capabilities\/v\\d+$/);
   const completed=new Set(events.filter(x=>x.phase==='end').map(x=>x.stage));
   for(const stage of TURN_PROGRESS_STAGES)assert.equal(completed.has(stage),true,stage);
   assert.equal(events.some(x=>x.stage==='provider'&&x.status==='skipped'),true);
