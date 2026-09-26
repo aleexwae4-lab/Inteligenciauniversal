@@ -2,6 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { createServer } from 'node:net';
+import { spawn } from 'node:child_process';
 import { once } from 'node:events';
 
 const serverSource=readFileSync(new URL('../server.js',import.meta.url),'utf8');
@@ -30,29 +31,38 @@ test('v122: HTTP validation preserves safe 400/413 and blocks source browsing', 
   const port=await freePort();
   process.env.PORT=String(port);
   process.env.WAE_MAX_BODY_BYTES='128';
-  const {server}=await import('../server.js?v122_test='+Date.now());
-  await new Promise((resolve,reject)=>{
-    if(server.listening)return resolve();
-    server.once('listening',resolve);
-    server.once('error',reject);
+  const child=spawn(process.execPath,['server.js'],{
+    cwd:new URL('..',import.meta.url),
+    env:{...process.env,PORT:String(port),WAE_MAX_BODY_BYTES:'128'},
+    stdio:['ignore','pipe','pipe']
   });
   try{
+    let ready=false;
+    for(let attempt=0;attempt<220;attempt++){
+      if(child.exitCode!==null)break;
+      try{
+        const result=await fetch('http://127.0.0.1:'+port+'/api/health/liveness',{signal:AbortSignal.timeout(200)});
+        if(result.status===200){ready=true;break}
+      }catch{}
+      await new Promise(resolve=>setTimeout(resolve,75));
+    }
+    assert.ok(ready,'test server did not become ready');
     const base='http://127.0.0.1:'+port;
-    const liveness=await fetch(base+'/api/health/liveness');
-    assert.equal(liveness.status,200);
     const malformed=await fetch(base+'/api/chat',{
-      method:'POST',headers:{'content-type':'application/json',connection:'close'},body:'{invalid'
+      method:'POST',headers:{'content-type':'application/json',connection:'close','content-length':'8'},body:'{invalid'
     });
     assert.equal(malformed.status,400);
     assert.deepEqual(await malformed.json(),{error:'invalid_json'});
+    const largeBody=JSON.stringify({message:'x'.repeat(180)});
     const large=await fetch(base+'/api/chat',{
-      method:'POST',headers:{'content-type':'application/json',connection:'close'},body:JSON.stringify({message:'x'.repeat(180)})
+      method:'POST',headers:{'content-type':'application/json',connection:'close','content-length':String(Buffer.byteLength(largeBody))},body:largeBody
     });
     assert.equal(large.status,413);
     assert.deepEqual(await large.json(),{error:'request_body_too_large'});
     const source=await fetch(base+'/server.js');
     assert.equal(source.status,404);
   }finally{
-    await new Promise(resolve=>server.close(resolve));
+    child.kill('SIGTERM');
+    await once(child,'exit').catch(()=>{});
   }
 });
