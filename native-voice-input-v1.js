@@ -11,7 +11,7 @@
   const sync=()=>{for(const b of micButtons()){b.setAttribute('aria-pressed',String(listening));b.textContent=listening?'■':'🎙';b.title=!supported?'Dictado por voz no compatible en este navegador':(listening?'Detener dictado':'Hablar con Universal Core');b.dataset.state=listening?'listening':'ready'}for(const b of continuousButtons()){b.setAttribute('aria-pressed',String(continuous));b.textContent='∞';b.title=continuous?'Conversación continua activada':'Activar conversación continua';b.dataset.state=continuous?'on':'off'}};
   const setText=t=>{const value=String(t||'').trim();if(!value)return;const el=input();if(!el)return;const base=String(el.value||'').trim();el.value=(base?(base+' '):'')+value;el.dispatchEvent(new Event('input',{bubbles:true}));const desktop=document.getElementById('messageInput');if(desktop&&desktop!==el)desktop.value=el.value;el.focus()};
   const submitRecognized=()=>{if(!continuous)return;const form=document.getElementById('composer'),el=document.getElementById('messageInput');if(!form||!el||!el.value.trim())return;try{form.requestSubmit()}catch{form.dispatchEvent(new Event('submit',{bubbles:true,cancelable:true}))}};
-  const processRecognized=text=>{
+  const processRecognized=text=>{\n    if(window.__waeVoiceAgent?.intercept?.(text))return true;
     const intelligence=window.__waeVoiceIntelligence;
     if(intelligence?.handle?.(text))return true;
     return false;
