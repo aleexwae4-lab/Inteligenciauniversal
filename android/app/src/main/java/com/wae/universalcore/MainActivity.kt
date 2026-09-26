@@ -5,6 +5,7 @@ import android.os.Bundle
 import android.content.Intent
 import android.os.Handler
 import android.os.Looper
+import android.content.pm.PackageManager
 import android.speech.RecognitionListener
 import android.speech.RecognizerIntent
 import android.speech.SpeechRecognizer
@@ -35,8 +36,16 @@ class MainActivity : Activity() {
         webView = WebView(this)
         setContentView(webView)
         configureWebView()
+        requestMicrophonePermission()
         initTts()
         webView.loadUrl(START_URL)
+    }
+
+    private fun requestMicrophonePermission() {
+        if (android.os.Build.VERSION.SDK_INT >= 23 &&
+            checkSelfPermission(android.Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED) {
+            requestPermissions(arrayOf(android.Manifest.permission.RECORD_AUDIO), 1001)
+        }
     }
 
     private fun configureWebView() {
