@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import vm from 'node:vm';
 import {readFileSync} from 'node:fs';
-import {createNativeGameStudioProject,inspectGameStudioProject,GAME_STUDIO_VERSION,ASSET_SCHEMA,ANIMATION_SCHEMA,CHARACTER_SCHEMA} from '../lib/game-studio-v13.js';
+import {createNativeGameStudioProject,inspectGameStudioProject,GAME_STUDIO_VERSION,ASSET_SCHEMA,ANIMATION_SCHEMA,CHARACTER_SCHEMA} from '../lib/game-studio-v14.js';
 import {buildDigitalProduct} from '../lib/product-foundry-v5.js';
 
 const read=path=>readFileSync(new URL('../'+path,import.meta.url),'utf8');
@@ -37,8 +37,8 @@ test('native recovery promotes directly to Game Studio v13 when providers fail',
  const fail=async()=>{throw Object.assign(new Error('all providers failed'),{code:'all_providers_failed'})};
  const result=await buildDigitalProduct({request:'Juego 3D con personajes, animaciones, rigs y prefabs.',kind:'game_3d',generate:fail});
  assert.equal(result.provider,'wae_native_game_studio');
- assert.equal(result.model,GAME_STUDIO_VERSION);
- assert.equal(result.studio.version,GAME_STUDIO_VERSION);
+ assert.equal(result.model,ACTIVE_GAME_STUDIO_VERSION);
+ assert.equal(result.studio.version,ACTIVE_GAME_STUDIO_VERSION);
  assert.equal(result.studio.qa,'passed');
  assert.equal(result.recovery.mode,'native_game_studio');
  assert.ok(result.project.files.some(f=>f.name==='assets.json'));
