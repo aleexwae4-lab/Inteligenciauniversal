@@ -9,7 +9,7 @@ import {
   STORY_SCHEMA,
   SAVE_SCHEMA,
   LOGIC_SCHEMA
-} from '../lib/game-studio-v14.js';
+} from '../lib/game-studio-v12.js';
 import {inspectFoundryProject,buildDigitalProduct} from '../lib/product-foundry-v5.js';
 import {GAME_STUDIO_VERSION as ACTIVE_GAME_STUDIO_VERSION,inspectGameStudioProject as inspectActiveGameStudioProject} from '../lib/game-studio-v14.js';
 
