@@ -1,0 +1,4 @@
+import test from 'node:test';import assert from 'node:assert/strict';import {frontierArenaReferences,evaluateFrontierArena} from '../lib/frontier-arena-v1.js';
+test('references are attributed and synthetic scores are forbidden',()=>{const r=frontierArenaReferences();assert.equal(r.references['gpqa-diamond'].value,.96);assert.equal(r.policy.noSyntheticScores,true)});
+test('missing is not zero',()=>{const r=evaluateFrontierArena({});assert.equal(r.cases[0].actual,null);assert.equal(r.cases[0].status,'UNMEASURED');assert.equal(r.verdict,'NO_EVIDENCE')});
+test('comparison remains benchmark-scoped',()=>{const r=evaluateFrontierArena({'gpqa-diamond':.97,'terminal-bench-4':.50});assert.equal(r.cases.find(x=>x.id==='gpqa-diamond').status,'AT_OR_ABOVE_REFERENCE');assert.equal(r.cases.find(x=>x.id==='terminal-bench-4').status,'BELOW_REFERENCE');assert.equal(r.verdict,'BENCHMARK_SCOPED_ONLY')});
