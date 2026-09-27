@@ -14,6 +14,7 @@ import tasksHandler from './api/tasks.js';
 import exportHandler from './api/export.js';
 import canvasHandler from './api/canvas.js';
 import factoryProjectHandler from './api/factory-project.js';
+import frontierArenaHandler from './api/frontier-arena-v1.js';
 import { assertStartupSafety, markRuntimeReady, beginRuntimeDrain, lifecycleSnapshot } from './lib/runtime-lifecycle-v145.js';
 
 const ROOT = fileURLToPath(new URL('.', import.meta.url));
@@ -41,6 +42,7 @@ const apiRoutes = new Map([
   ['/api/export', exportHandler],
   ['/api/canvas', canvasHandler],
   ['/api/factory-project', factoryProjectHandler],
+  ['/api/benchmark/frontier-arena', frontierArenaHandler],
 ]);
 
 const contentTypes = {
