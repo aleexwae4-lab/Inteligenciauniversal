@@ -17,6 +17,7 @@ import evalsHandler from './api/evals.js';
 import benchmarkV93Handler from './api/benchmark-v93.js';
 import astraRegressionHandler from './api/astra-regression.js';
 import premiumGateV98Handler from './api/premium-gate-v98.js';
+import frontierArenaHandler from './api/frontier-arena-v1.js';
 import tasksHandler from './api/tasks.js';
 import orchestrateHandler from './api/orchestrate.js';
 import mobileHandler from './api/mobile.js';
@@ -110,6 +111,7 @@ const apiRoutes = new Map([
   ['/api/benchmark/v93', benchmarkV93Handler],
   ['/api/benchmark/astra-regression', astraRegressionHandler],
   ['/api/benchmark/v98', premiumGateV98Handler],
+  ['/api/benchmark/frontier-arena', frontierArenaHandler],
   ['/api/tasks', tasksHandler],
   ['/api/orchestrate', orchestrateHandler],
   ['/api/live-data', liveDataHandler],
