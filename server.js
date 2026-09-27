@@ -21,6 +21,7 @@ import tasksHandler from './api/tasks.js';
 import orchestrateHandler from './api/orchestrate.js';
 import mobileHandler from './api/mobile.js';
 import uiDiagnosticsHandler from './api/ui-diagnostics.js';
+import frontierControlHandler from './api/frontier-control.js';
 import liveDataHandler from './api/live-data.js';
 import knowledgeHandler from './api/knowledge.js';
 import webIntelligenceHandler from './api/web-intelligence.js';
@@ -125,6 +126,7 @@ const apiRoutes = new Map([
   ['/api/web/metrics', webIntelligenceHandler],
   ['/api/mobile', mobilePremiumHandler],
   ['/api/ui-diagnostics', uiDiagnosticsHandler],
+  ['/api/frontier-control', frontierControlHandler],
 ]);
 
 const contentTypes = {
