@@ -142,8 +142,7 @@
       const payload={action:'chat',...sessionPayload(),conversation_id:localStorage.getItem(CONVERSATION_ID)||null,message:String(incoming.message||''),mode:String(incoming.mode||localStorage.getItem('wae.mode')||'general'),web_enabled:incoming.web_enabled===true||String(incoming.mode||'')==='research',attachments:window.__waeRuntimeAttachments||[],routing_variant:routingVariant()};
       let data;
       try {
-        if(await streamingAllowed())data=await streamChat(payload,init.signal);
-        else data=await edge(payload,{signal:init.signal});
+        data=await localChat(payload,{signal:init.signal});
       } catch(firstRuntimeError) {
         // Una sola repetición controlada evita perder el primer turno por un
         // wake-up/cold-start transitorio. No duplica un stream que ya comenzó.
@@ -153,8 +152,7 @@
           try { await Promise.race([bootstrap(),new Promise((_,reject)=>setTimeout(()=>reject(new Error('bootstrap_retry_timeout')),2500))]); } catch {}
         }
         const retryPayload={...payload,conversation_id:localStorage.getItem(CONVERSATION_ID)||null,...sessionPayload()};
-        if(await streamingAllowed())data=await streamChat(retryPayload,init.signal);
-        else data=await edge(retryPayload,{signal:init.signal});
+        data=await localChat(retryPayload,{signal:init.signal});
       }
       if(rejectContinuityPayload(data))throw Object.assign(new Error('continuity_payload_rejected'),{status:502,serverStarted:true,hasPartial:false});
       const clean=sanitizeReply(data.reply);if(!clean)throw Object.assign(new Error('unsafe_or_empty_output'),{status:502,serverStarted:true,hasPartial:false});
