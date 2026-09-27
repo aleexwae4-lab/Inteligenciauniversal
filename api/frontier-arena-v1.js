@@ -1,0 +1,16 @@
+import { applyHeaders } from '../lib/security.js';
+import { frontierArenaReferences, evaluateFrontierArena, FRONTIER_ARENA_VERSION } from '../lib/frontier-arena-v1.js';
+
+export default async function handler(req, res) {
+  applyHeaders(res);
+  if (req.method === 'GET') {
+    return res.status(200).json({ success: true, ...frontierArenaReferences() });
+  }
+  if (req.method !== 'POST') return res.status(405).json({ success: false, error: 'method_not_allowed' });
+  const body = req.body && typeof req.body === 'object' ? req.body : {};
+  return res.status(200).json({
+    success: true,
+    version: FRONTIER_ARENA_VERSION,
+    result: evaluateFrontierArena(body.measured || {})
+  });
+}
