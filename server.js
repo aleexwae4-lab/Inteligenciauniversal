@@ -107,6 +107,7 @@ const apiRoutes = new Map([
   ['/api/tools', toolsHandler],
   ['/api/evals', evalsHandler],
   ['/api/benchmark/v93', benchmarkV93Handler],
+  ['/api/benchmark/astra-regression', (await import('./api/astra-regression.js')).default],
   ['/api/benchmark/v98', premiumGateV98Handler],
   ['/api/tasks', tasksHandler],
   ['/api/orchestrate', orchestrateHandler],
