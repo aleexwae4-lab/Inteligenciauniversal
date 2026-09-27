@@ -1,0 +1,4 @@
+import test from 'node:test';import assert from 'node:assert/strict';import {frontierSupremacyManifest,scoreFrontierDomains,frontierGap} from '../lib/frontier-supremacy-v2.js';
+test('frontier manifest contains public reference targets',()=>{const m=frontierSupremacyManifest();assert.equal(m.targets.arcAgi3.reported,99.9);assert.equal(m.gates.noCherryPicking,true);});
+test('domain score is weighted and bounded',()=>{const r=scoreFrontierDomains({reasoning:100,coding:90,research:80,agentic:70,long_context:60,multimodal:50,verification:40,efficiency:30});assert.equal(r.complete,true);assert.ok(r.weightedOverall>0&&r.weightedOverall<=100);assert.equal(r.coverage,100);});
+test('gap distinguishes measured performance from target',()=>{const r=frontierGap({actual:{x:101,y:90},target:{x:100,y:95}});assert.equal(r.beatingTargets,1);assert.equal(r.measured,2);});
