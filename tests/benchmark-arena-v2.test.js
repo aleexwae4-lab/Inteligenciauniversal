@@ -5,7 +5,7 @@ import { astraFrontierSuite } from '../lib/astra-frontier-challenge-v1.js';
 
 test('arena v2 measures the complete frontier suite and creates regression queue',()=>{
   const suite=astraFrontierSuite();
-  const entries=suite.map((c,i)=>({caseId:c.id,score:i===0?.42:.91,verified:true}));
+  const entries=suite.map((c,i)=>({caseId:c.id,score:i===0 ? .42 : .91,verified:true}));
   const arena=buildArenaV2({entries});
   assert.equal(arena.version,BENCHMARK_ARENA_V2);
   assert.equal(arena.cases,suite.length);
