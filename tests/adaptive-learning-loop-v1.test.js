@@ -4,6 +4,7 @@ import { buildLearningSnapshot, recordAdaptiveOutcome, readAdaptiveLearning, ada
 
 test('learning snapshot ranks only after minimum evidence',()=>{
  const s=buildLearningSnapshot([{category:'coding',strategy:'execution_first',attempts:2,successes:2,quality_sum:2,latency_sum_ms:100},{category:'coding',strategy:'deep_verify',attempts:4,successes:4,quality_sum:3.8,latency_sum_ms:800}]);
+ assert.ok(s.categories.coding,JSON.stringify(s));
  assert.equal(s.categories.coding[0].strategy,'deep_verify');
  assert.equal(s.policy.minSamplesForPreference,3);
 });
