@@ -16,6 +16,7 @@ import canvasHandler from './api/canvas.js';
 import factoryProjectHandler from './api/factory-project.js';
 import frontierArenaHandler from './api/frontier-arena-v1.js';
 import frontierLearningHandler from './api/frontier-learning-v1.js';
+import frontierControlHandler from './api/frontier-control-v1.js';
 import { assertStartupSafety, markRuntimeReady, beginRuntimeDrain, lifecycleSnapshot } from './lib/runtime-lifecycle-v145.js';
 
 const ROOT = fileURLToPath(new URL('.', import.meta.url));
@@ -45,6 +46,7 @@ const apiRoutes = new Map([
   ['/api/factory-project', factoryProjectHandler],
   ['/api/benchmark/frontier-arena', frontierArenaHandler],
   ['/api/frontier/learning', frontierLearningHandler],
+  ['/api/frontier/control', frontierControlHandler],
 ]);
 
 const contentTypes = {
