@@ -19,6 +19,7 @@ import frontierLearningHandler from './api/frontier-learning-v1.js';
 import frontierControlHandler from './api/frontier-control-v1.js';
 import frontierEvaluationHandler from './api/frontier-evaluation-v1.js';
 import frontierAutonomousHandler from './api/frontier-autonomous-v2.js';
+import frontierRunnerHandler from './api/frontier-benchmark-runner-v3.js';
 import { assertStartupSafety, markRuntimeReady, beginRuntimeDrain, lifecycleSnapshot } from './lib/runtime-lifecycle-v145.js';
 
 const ROOT = fileURLToPath(new URL('.', import.meta.url));
@@ -51,6 +52,7 @@ const apiRoutes = new Map([
   ['/api/frontier/control', frontierControlHandler],
   ['/api/frontier/evaluation', frontierEvaluationHandler],
   ['/api/frontier/autonomous', frontierAutonomousHandler],
+  ['/api/frontier/runner', frontierRunnerHandler],
 ]);
 
 const contentTypes = {
