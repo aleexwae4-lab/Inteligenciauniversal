@@ -119,7 +119,7 @@ test('public v60 alias advances through v91 to v90 while v86 is the consolidated
   const v90=await readFile(new URL('../api/capacity-chat-v90.js',import.meta.url),'utf8');
   assert.match(alias,/capacity-chat-v91\.js/);
   assert.match(v91,/capacity-chat-v90\.js/);
-  assert.match(v90,/capacity-chat-v86\\.js/);
+  assert.match(v90,/capacity-chat-v86\.js/);
   assert.match(v90,/runFocusedFactualAnswer/);
   assert.match(v90,/runKnowledgeFusionV90/);
   assert.match(v90,/factualityDecision/);
