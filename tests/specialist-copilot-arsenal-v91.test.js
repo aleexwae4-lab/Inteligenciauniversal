@@ -57,7 +57,7 @@ test('simple factual questions stay out of the specialist single-pass lane',()=>
   assert.equal(shouldRunSpecialistSinglePassV91(plan,body),false);
 });
 
-test('explicit continuity provider is routed directly before v89 recovery layers',async()=>{
+test('explicit continuity provider is routed directly before the consolidated legacy recovery layer',async()=>{
   const source=await readFile(new URL('../api/capacity-chat-v90.js',import.meta.url),'utf8');
   const direct=source.indexOf('if(hasExplicitContinuityProvider(body))');
   const generic=source.indexOf('if(hasExplicitProvider(body))');
@@ -67,7 +67,7 @@ test('explicit continuity provider is routed directly before v89 recovery layers
   assert.ok(fusion>generic);
   assert.match(source,/return baseCapacityChatHandler\(req,res\)/);
   assert.match(source,/explicit-continuity-direct/);
-  assert.match(source,/capacity-chat\/v90\.2-latency-autonomous-knowledge/);
+  assert.match(source,/capacity-chat\/v90\.2-latency-autonomous-knowledge/);\n  assert.match(source,/capacity-chat-v86\\.js/);\n  assert.doesNotMatch(source,/capacity-chat-v89\\.js/);
 });
 
 test('public v60 alias advances to v91 and preserves v90 downstream',async()=>{
