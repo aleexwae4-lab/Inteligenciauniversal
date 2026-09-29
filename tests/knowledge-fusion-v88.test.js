@@ -51,7 +51,7 @@ test('public v60 alias advances through v91 and v90 while v86 remains the consol
   assert.equal(KNOWLEDGE_FUSION_VERSION,'universal-knowledge-fusion/v88');
   assert.match(alias,/capacity-chat-v91\.js/);
   assert.match(v91,/capacity-chat-v90\.js/);
-  assert.match(v90,/capacity-chat-v86\\.js/);
+  assert.match(v90,/capacity-chat-v86\.js/);
   assert.match(v88,/KNOWLEDGE_FUSION_VERSION/);
   assert.match(v88,/runKnowledgeFusion/);
   assert.match(v87,/capacity-chat-v86\.js/);
