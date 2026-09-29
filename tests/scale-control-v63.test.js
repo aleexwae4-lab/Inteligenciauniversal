@@ -76,7 +76,7 @@ test('v91 and v90 use the consolidated v86 downstream while legacy v89-v87 remai
   const gpuWrapper=await readFile(new URL('../api/capacity-chat-v77.js',import.meta.url),'utf8');
   assert.match(wrapper,/distributedAdmission/);
   assert.match(wrapper,/releaseDistributedAdmission/);
-  assert.match(wrapper,/capacityChatV62/);
+  assert.match(wrapper,/capacity-chat-v58\.js/);
   assert.match(wrapper,/finally/);
   assert.match(wrapper,/Retry-After/);
   assert.match(compatibility,/capacity-chat-v91\.js/);
