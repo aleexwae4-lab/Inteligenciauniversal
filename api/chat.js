@@ -100,7 +100,37 @@ async function tryJuriscanGateway(body={}, userKey='') {
   }finally{clearTimeout(timer);}
 }
 
-function responseBudgetMs(body={}){
+
+async function tryUniversalCoreContext(body={}, userKey='') {
+  const base=String(process.env.SUPABASE_URL||'').trim().replace(/\/$/,'');
+  const secretKey=String(process.env.SUPABASE_SECRET_KEY||process.env.SUPABASE_SERVICE_ROLE_KEY||'').trim();
+  const input=String(body?.message||body?.task||body?.prompt||'').trim();
+  if(!base||!secretKey||!input)return null;
+  const controller=new AbortController();
+  const timer=setTimeout(()=>controller.abort(),Number(process.env.WAE_UNIVERSAL_CORE_CONTEXT_TIMEOUT_MS||6500));
+  try{
+    const response=await fetch(base+'/functions/v1/universal-core-context',{
+      method:'POST',
+      headers:{'content-type':'application/json','apikey':secretKey},
+      signal:controller.signal,
+      body:JSON.stringify({
+        query:input,
+        user_key:String(userKey||'').slice(0,160),
+        mode:String(body?.mode||'general').slice(0,40),
+        match_count:Number(body?.knowledge_match_count||8),
+        similarity_threshold:Number(body?.knowledge_similarity_threshold||0.45)
+      })
+    });
+    const payload=await response.json().catch(()=>null);
+    if(!response.ok||!payload?.ok||!String(payload?.context_text||'').trim())return null;
+    return payload;
+  }catch(error){
+    console.warn('[Universal Core Context]',String(error?.message||error));
+    return null;
+  }finally{clearTimeout(timer);}
+}
+
+function responseBudgetMs(body={){
   const mode=String(body?.mode||body?.agent||'general').toLowerCase();
   if(body?.web_enabled===true||mode==='research')return 30_000;
   if(['analysis','code','design','executive'].includes(mode))return 24_000;
@@ -173,7 +203,7 @@ export default async function handler(req,res) {
   const body = req.body || {};
   const userKey = body.userKey || body.sessionId || getClientIp(req);
   const intent=normalizeUserIntent(body.message || body.task || '');
-  const runtimeBody=intent.changed?{...body,message:intent.text}:body;
+  let runtimeBody=intent.changed?{...body,message:intent.text}:body;
   const userContext=userContextStateV92(runtimeBody);
   const contextualFollowup=contextualFollowupV103(runtimeBody.message||runtimeBody.task||'',runtimeBody.history||[]);
   const budget=responseBudgetMs(runtimeBody);
@@ -236,6 +266,19 @@ export default async function handler(req,res) {
       web_sources:[],
       input_interpretation:publicIntent(intent)
     });
+  }
+
+
+  const universalCoreContext=await tryUniversalCoreContext(runtimeBody,String(userKey||''));
+  if(universalCoreContext?.context_text){
+    runtimeBody={
+      ...runtimeBody,
+      message:`Consulta del usuario:\n${String(runtimeBody.message||runtimeBody.task||'').trim()}\n\nContexto del Universal Core AI:\n${universalCoreContext.context_text}\n\nUsa este contexto como evidencia interna pertinente. No inventes hechos que el contexto no respalda y, si falta evidencia, indícalo.`,
+      universal_core_context:universalCoreContext.context_text
+    };
+    res.setHeader('X-WAE-Universal-Core','supabase-context-v1');
+    res.setHeader('X-WAE-Universal-Core-Retrieval-Id',String(universalCoreContext.retrieval_id||''));
+    res.setHeader('X-WAE-Universal-Core-Matches',String(universalCoreContext.match_count||0));
   }
 
   const normalizedQuery=normalizeFastPath(runtimeBody.message || runtimeBody.task || '');
