@@ -68,6 +68,7 @@ test('explicit continuity provider is routed directly before the consolidated le
   assert.match(source,/return baseCapacityChatHandler\(req,res\)/);
   assert.match(source,/explicit-continuity-direct/);
   assert.match(source,/capacity-chat\/v90\.2-latency-autonomous-knowledge/);\n  assert.match(source,/capacity-chat-v86\\.js/);\n  assert.doesNotMatch(source,/capacity-chat-v89\\.js/);
+  assert.match(source,/capacity-chat-v86\\.js/);
 });
 
 test('public v60 alias advances to v91 and preserves v90 downstream',async()=>{
