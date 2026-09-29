@@ -17,9 +17,7 @@
     let t=String(raw||'').normalize('NFKC').replace(/\r\n?/g,'\n');
     const emojiNames={'😀':'emoji cara feliz','😂':'emoji riendo','🤣':'emoji riendo mucho','😊':'emoji sonrisa','😍':'emoji enamorado','😎':'emoji lentes','🤔':'emoji pensando','😢':'emoji triste','😭':'emoji llorando','😡':'emoji enojado','😱':'emoji asustado','👍':'emoji pulgar arriba','👎':'emoji pulgar abajo','❤️':'emoji corazón','🔥':'emoji fuego','⭐':'emoji estrella','✨':'emoji brillo','🚀':'emoji cohete','🎯':'emoji objetivo','💡':'emoji idea','⚠️':'emoji advertencia','✅':'emoji correcto','❌':'emoji incorrecto','📌':'emoji chincheta','💰':'emoji dinero','🤖':'emoji robot'};
     const spokenEmoji=m=>emojiNames[m]||'emoji';
-    const rows=[];
-    t=t.split('\n').map(line=>{const x=line.trim();if(/^\|.*\|$/.test(x)){if(/^[|\s:-]+$/.test(x))return '';const cells=x.replace(/^\||\|$/g,'').split('|').map(v=>v.trim()).filter(Boolean);if(cells.length){rows.push(cells);return 'fila: '+cells.map((v,i)=>'columna '+(i+1)+': '+v).join(', ')}return ''}return line}).join('\n');
-    if(rows.length)t='tabla. '+t;
+    t=t.split('\n').map(line=>{const x=line.trim();if(/^\|.*\|$/.test(x)){const cells=x.replace(/^\||\|$/g,'').split('|').map(v=>v.trim()).filter(Boolean);if(!cells.length)return '';if(cells.every(v=>/^:?-{3,}:?$/.test(v)))return '';return cells.join('. ')}return line}).join('\n');
     t=t.replace(/```[\s\S]*?```/g,' código: bloque de código ').replace(/~~~[\s\S]*?~~~/g,' código: bloque de código ')
       .replace(/:::progress\s+([^|\n]+)\|(\d+(?:\.\d+)?)/gi,'$1, $2 por ciento')
       .replace(/:::metric\s+([^|\n]+)\|([^|\n]+)(?:\|[^\n]+)?/gi,'$1, $2')
