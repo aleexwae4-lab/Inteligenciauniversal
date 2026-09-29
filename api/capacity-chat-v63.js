@@ -114,11 +114,12 @@ export default async function capacityChatV63(req,res){
       });
     }
 
+    if(admission?.allowed===true)body.__wae_capacity_admitted=true;
+
     if(admission?.applied&&admission?.allowed===true&&Number(admission?.shardLimit)>0){
       const autopilot=capacityAutopilotDecision({active:Number(admission.shardActive||0),target:Number(admission.shardLimit||1)});
       res.setHeader('X-WAE-Capacity-Mode',autopilot.mode);
       body.preferences={...(body.preferences&&typeof body.preferences==='object'?body.preferences:{}),capacityMode:autopilot.mode,capacityMaxSpecialists:autopilot.maxSpecialists};
-      body.__wae_capacity_admitted=true;
       if(autopilot.mode==='SHED'){
         const retry=Math.max(1,Number(autopilot.retryAfterSeconds||3));
         res.setHeader('Retry-After',String(retry));
