@@ -1,4 +1,5 @@
-import capacityChatV62 from './capacity-chat-v62.js';
+import baseCapacityChatHandler from './capacity-chat-v58.js';
+import { observeQualityOutcome } from '../lib/provider-mesh-v62.js';
 import { getClientIp, applyHeaders, originAllowed, allowRequest } from '../lib/security.js';
 import {
   distributedAdmission,
@@ -151,10 +152,14 @@ export default async function capacityChatV63(req,res){
     }
 
     const buffered=bufferedResponse(res);
-    await capacityChatV62(req,buffered.proxy);
+    await baseCapacityChatHandler(req,buffered.proxy);
     if(res.writableEnded||!buffered.hasJson)return;
     responsePayload=buffered.payload;
     responded=true;
+    if(buffered.code<400&&responsePayload&&typeof responsePayload==='object'){
+      const mesh=responsePayload.provider_mesh||responsePayload?.response?.metadata?.providerMesh||null;
+      observeQualityOutcome({route:mesh,payload:responsePayload});
+    }
     return res.status(buffered.code).json(responsePayload);
   }finally{
     if(admission?.leaseId)await releaseDistributedAdmission(admission).catch(()=>null);
