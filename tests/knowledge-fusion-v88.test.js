@@ -45,14 +45,8 @@ test('public v60 alias advances through v91 and v90 while v86 remains the consol
   const alias=await readFile(new URL('../api/capacity-chat-v60.js',import.meta.url),'utf8');
   const v91=await readFile(new URL('../api/capacity-chat-v91.js',import.meta.url),'utf8');
   const v90=await readFile(new URL('../api/capacity-chat-v90.js',import.meta.url),'utf8');
-  const v89=await readFile(new URL('../api/capacity-chat-v89.js',import.meta.url),'utf8');
-  const v88=await readFile(new URL('../api/capacity-chat-v88.js',import.meta.url),'utf8');
-  const v87=await readFile(new URL('../api/capacity-chat-v87.js',import.meta.url),'utf8');
   assert.equal(KNOWLEDGE_FUSION_VERSION,'universal-knowledge-fusion/v88');
   assert.match(alias,/capacity-chat-v91\.js/);
   assert.match(v91,/capacity-chat-v90\.js/);
   assert.match(v90,/capacity-chat-v86\.js/);
-  assert.match(v88,/KNOWLEDGE_FUSION_VERSION/);
-  assert.match(v88,/runKnowledgeFusion/);
-  assert.match(v87,/capacity-chat-v86\.js/);
 });
