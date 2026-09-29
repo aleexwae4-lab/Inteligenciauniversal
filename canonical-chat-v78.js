@@ -79,6 +79,33 @@
     });
   }
 
+  let localBrainLoadPromise=null;
+  async function ensureLocalBrain(){
+    if(window.__waeLocalBrain?.isNativeLocal)return window.__waeLocalBrain;
+    if(localBrainLoadPromise)return localBrainLoadPromise;
+    localBrainLoadPromise=new Promise(resolve=>{
+      const src='./universal-core-local-brain-v1.js?v=2';
+      const existing=document.querySelector('script[data-local-brain]');
+      if(existing){setTimeout(()=>resolve(window.__waeLocalBrain||null),0);return}
+      const script=document.createElement('script');script.src=src;script.defer=true;script.dataset.localBrain='true';
+      script.onload=()=>resolve(window.__waeLocalBrain||null);script.onerror=()=>resolve(null);document.head.appendChild(script);
+    });
+    return localBrainLoadPromise;
+  }
+
+  async function localRescue(body){
+    if(body.web_enabled===true||body.mode==='research'||(body.attachments||[]).length)return null;
+    try{
+      const brain=await ensureLocalBrain();
+      if(!brain?.isNativeLocal)return null;
+      if(!brain.status?.().ready){await Promise.race([brain.init(),new Promise((_,reject)=>setTimeout(()=>reject(new Error('local_brain_boot_timeout')),14000))]);}
+      if(!brain.status?.().ready)return null;
+      const data=await brain.generate(body);
+      if(!usableReply(data))return null;
+      return {...data,canonical_chat:VERSION,canonical_route:'local-native-rescue-v78',degraded:true};
+    }catch(error){console.warn('[Universal Core v78] local native rescue unavailable',error?.message||error);return null}
+  }
+
   function responseFor(data,status=200,route='same-origin-v77'){
     return new Response(JSON.stringify(data),{status,headers:{'content-type':'application/json; charset=utf-8','cache-control':'no-store','x-wae-canonical-chat':VERSION,'x-wae-chat-route':route}});
   }
@@ -100,13 +127,15 @@
       if(init.signal?.aborted)throw error;
       console.warn('[Universal Core v78] canonical route degraded; activating continuity',error?.message||error);
       markRoute('continuity-fallback',{fallback:true,reason:String(error?.code||error?.message||'canonical_failure').slice(0,120)});
-      const fallback=await previousFetch(input,init);
-      if(!fallback.ok)return fallback;
       try{
-        const data=await fallback.clone().json();
-        if(!usableReply(data))return responseFor({error:'canonical_and_continuity_unavailable',message:'Universal Core no recibió una respuesta válida por ninguna ruta. El turno puede reintentarse sin mostrar una respuesta incompleta.',recoverable:true,canonical_chat:VERSION},503,'continuity-rejected');
-      }catch{}
-      return fallback;
+        const fallback=await previousFetch(input,init);
+        if(fallback.ok){
+          try{const data=await fallback.clone().json();if(usableReply(data))return fallback;}catch{}
+        }
+      }catch(fallbackError){console.warn('[Universal Core v78] server continuity/edge fallback unavailable',fallbackError?.message||fallbackError)}
+      const local=await localRescue(body);
+      if(local){markRoute('local-native-rescue-v78',{fallback:true});window.__iuLastRuntime=local;return responseFor(local,200,'local-native-rescue-v78');}
+      return responseFor({error:'canonical_and_intelligence_unavailable',message:'Universal Core no obtuvo una respuesta generativa válida en este turno. La conversación permanece intacta y puede reintentarse.',recoverable:true,canonical_chat:VERSION},503,'intelligence-rejected');
     }
   };
 
