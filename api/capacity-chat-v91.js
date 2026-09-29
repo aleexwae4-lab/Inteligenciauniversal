@@ -9,6 +9,40 @@ import { recallUserProfileV104, ADAPTIVE_USER_MODEL_V104 } from '../lib/memory.j
 
 export const CAPACITY_CHAT_V91='capacity-chat/v91-specialist-copilot-arsenal';
 
+// Hot-path optimization: profile memory is only needed when the specialist
+// router can actually use it. Ordinary chat no longer pays a profile-recall
+// round trip before the request is classified.
+const PROFILE_CACHE_TTL_MS=Math.max(5_000,Number(process.env.WAE_SPECIALIST_PROFILE_CACHE_TTL_MS||60_000));
+const PROFILE_CACHE_MAX=Math.max(32,Number(process.env.WAE_SPECIALIST_PROFILE_CACHE_MAX||512));
+const profileCache=new Map();
+const profileInflight=new Map();
+
+function profileCacheGet(key){
+  const hit=profileCache.get(key);
+  if(!hit)return null;
+  if(Date.now()-hit.at>PROFILE_CACHE_TTL_MS){profileCache.delete(key);return null;}
+  return hit.profile||null;
+}
+
+function profileCachePut(key,profile){
+  if(!profile)return profile;
+  if(profileCache.size>=PROFILE_CACHE_MAX){
+    const oldest=profileCache.keys().next().value;
+    if(oldest!==undefined)profileCache.delete(oldest);
+  }
+  profileCache.set(key,{at:Date.now(),profile});
+  return profile;
+}
+
+async function recallProfileFast(key){
+  const cached=profileCacheGet(key);
+  if(cached)return cached;
+  if(profileInflight.has(key))return profileInflight.get(key);
+  const pending=recallUserProfileV104(key).catch(()=>null).then(profile=>profileCachePut(key,profile));
+  profileInflight.set(key,pending);
+  try{return await pending;}finally{if(profileInflight.get(key)===pending)profileInflight.delete(key);}
+}
+
 function bufferedResponse(real){
   let code=200,payload,hasJson=false;
   const proxy=new Proxy(real,{
@@ -100,9 +134,17 @@ async function delegate(req,res,plan,path='evidence-or-runtime-delegated'){
 export default async function capacityChatV91(req,res){
   const body=req.body&&typeof req.body==='object'?req.body:{};
   const key=String(body.userKey||body.user_id||body.userId||body.sessionId||body.session_id||getClientIp(req)||'anonymous').slice(0,160);
-  const profile=await recallUserProfileV104(key).catch(()=>null);
-  const plannedBody=planningBodyWithProfile(body,profile);
-  const rawPlan=planSpecialistCopilots(plannedBody);
+  // Classify once without profile I/O. Only specialist-eligible workloads
+  // need the adaptive profile; this removes memory lookup from the ordinary
+  // chat hot path while preserving profile-aware specialist routing.
+  const baselinePlan=planSpecialistCopilots(body);
+  const needsProfile=baselinePlan.eligible===true
+    || baselinePlan.strategy==='single-pass'
+    || baselinePlan.strategy==='parallel-council'
+    || (Array.isArray(body.specialists)&&body.specialists.length>0);
+  const profile=needsProfile?await recallProfileFast(key):null;
+  const plannedBody=profile?planningBodyWithProfile(body,profile):body;
+  const rawPlan=profile?planSpecialistCopilots(plannedBody):baselinePlan;
   const plan={...rawPlan,adaptiveProfileApplied:specialistHintsFromProfile(profile).length>0};
 
   // High-impact topics stay on the evidence/verification stack. The specialist
