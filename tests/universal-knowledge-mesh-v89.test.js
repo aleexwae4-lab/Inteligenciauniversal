@@ -83,7 +83,7 @@ test('v89 remains in the live chain behind v91 and v90 while preserving v88 fusi
   const fusion=fs.readFileSync(new URL('../lib/knowledge-fusion-v88.js',import.meta.url),'utf8');
   assert.match(v60,/capacity-chat-v91\.js/);
   assert.match(v91,/capacity-chat-v90\.js/);
-  assert.match(v90,/capacity-chat-v86\\.js/);
+  assert.match(v90,/capacity-chat-v86\.js/);
   assert.match(v89,/capacity-chat-v88\.js/);
   assert.match(v89,/universal_knowledge:true/);
   assert.match(v88,/knowledge-fusion-v88/);
