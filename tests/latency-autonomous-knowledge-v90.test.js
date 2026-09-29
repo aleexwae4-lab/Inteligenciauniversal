@@ -109,17 +109,17 @@ test('explicit provider selection bypasses automatic research admission before a
   assert.ok(explicitIndex>0);
   assert.ok(slotIndex>explicitIndex);
   assert.ok(fusionIndex>slotIndex);
-  assert.match(source,/explicit-provider-v89/);
+  assert.match(source,/explicit-provider-v86/);
   assert.match(source,/provider&&provider!==['"]auto['"]/);
 });
 
-test('public v60 alias advances through v91 to v90 while v89 remains downstream',async()=>{
+test('public v60 alias advances through v91 to v90 while v86 is the consolidated downstream recovery layer',async()=>{
   const alias=await readFile(new URL('../api/capacity-chat-v60.js',import.meta.url),'utf8');
   const v91=await readFile(new URL('../api/capacity-chat-v91.js',import.meta.url),'utf8');
   const v90=await readFile(new URL('../api/capacity-chat-v90.js',import.meta.url),'utf8');
   assert.match(alias,/capacity-chat-v91\.js/);
   assert.match(v91,/capacity-chat-v90\.js/);
-  assert.match(v90,/capacity-chat-v89\.js/);
+  assert.match(v90,/capacity-chat-v86\\.js/);
   assert.match(v90,/runFocusedFactualAnswer/);
   assert.match(v90,/runKnowledgeFusionV90/);
   assert.match(v90,/factualityDecision/);
