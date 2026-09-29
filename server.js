@@ -24,6 +24,7 @@ import frontierLiveEvalHandler from './api/frontier-live-eval-v1.js';
 import frontierControlLoopHandler from './api/frontier-control-loop-v1.js';
 import frontierArenaV2Handler from './api/frontier-arena-v2.js';
 import { assertStartupSafety, markRuntimeReady, beginRuntimeDrain, lifecycleSnapshot } from './lib/runtime-lifecycle-v145.js';
+import { generateWithFallback } from './lib/providers.js';
 
 const ROOT = fileURLToPath(new URL('.', import.meta.url));
 const PORT = Number(process.env.PORT || 10000);
@@ -248,7 +249,15 @@ async function bootGenerativeProbe(){
       edgeResult={...edgeResult,status:out.status,reply:!!String(out.data?.reply||'').trim(),provider:safe(out.data?.provider),model:safe(out.data?.model),error:safe(out.data?.error)};
     }
     const stat=await call(stateless,{action:'stateless_chat',message:'Responde únicamente OK.',messages:[{role:'user',content:'Responde únicamente OK.'}],system:'Responde únicamente OK.',max_tokens:32,timeout_ms:8000},12000);
-    console.info('[WAE Generative Probe]',JSON.stringify({edge:edgeResult,stateless:{status:stat.status,reply:!!String(stat.data?.reply||'').trim(),provider:safe(stat.data?.provider),model:safe(stat.data?.model),error:safe(stat.data?.error),failures:Array.isArray(stat.data?.failures)?stat.data.failures.map(x=>({provider:safe(x.provider),model:safe(x.model),error:safe(x.error)})).slice(0,6):[]},latencyMs:Date.now()-started}));
+    const routerStarted=Date.now();
+    let routerResult={};
+    try{
+      const generated=await generateWithFallback({provider:'auto',system:'Eres un canario de salud de Universal Core. Responde únicamente con OK.',message:'Responde únicamente: OK',history:[],mode:'general',webEnabled:false,budgetMs:12000,attemptTimeoutMs:4000});
+      routerResult={ok:true,provider:safe(generated?.provider),model:safe(generated?.model),reply:!!String(generated?.text||'').trim(),failures:Array.isArray(generated?.failures)?generated.failures.map(x=>({provider:safe(x.provider),model:safe(x.model),error:safe(x.error)})).slice(0,8):[],latencyMs:Date.now()-routerStarted};
+    }catch(error){
+      routerResult={ok:false,error:safe(error?.code||error?.message||error),failures:Array.isArray(error?.failures)?error.failures.map(x=>({provider:safe(x.provider),model:safe(x.model),error:safe(x.error)})).slice(0,8):[],latencyMs:Date.now()-routerStarted};
+    }
+    console.info('[WAE Generative Probe]',JSON.stringify({edge:edgeResult,stateless:{status:stat.status,reply:!!String(stat.data?.reply||'').trim(),provider:safe(stat.data?.provider),model:safe(stat.data?.model),error:safe(stat.data?.error),failures:Array.isArray(stat.data?.failures)?stat.data.failures.map(x=>({provider:safe(x.provider),model:safe(x.model),error:safe(x.error)})).slice(0,6):[]},router:routerResult,latencyMs:Date.now()-started}));
   }catch(error){
     console.warn('[WAE Generative Probe]',JSON.stringify({error:safe(error?.message||error),latencyMs:Date.now()-started}));
   }
