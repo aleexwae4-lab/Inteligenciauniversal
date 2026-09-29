@@ -103,7 +103,7 @@ async function tryJuriscanGateway(body={}, userKey='') {
 
 async function tryUniversalCoreContext(body={}, userKey='') {
   const base=String(process.env.SUPABASE_URL||'').trim().replace(/\/$/,'');
-  const secretKey=String(process.env.SUPABASE_SECRET_KEY||process.env.SUPABASE_SERVICE_ROLE_KEY||process.env.SUPABASE_PUBLISHABLE_KEY||'').trim();
+  const secretKey=String(process.env.SUPABASE_SECRET_KEY||process.env.SUPABASE_SERVICE_ROLE_KEY||process.env.SUPABASE_PUBLISHABLE_KEY||process.env.SUPABASE_ANON_KEY||'').trim();
   const input=String(body?.message||body?.task||body?.prompt||'').trim();
   if(!base||!secretKey||!input)return null;
   const controller=new AbortController();
