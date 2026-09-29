@@ -60,7 +60,7 @@ test('database migration is private, sharded and lease-based',async()=>{
   assert.match(sql,/contains_prompt_content|stores_prompt_content|never prompt/i);
 });
 
-test('v91 and v90 wrap v89 knowledge, v88 fusion and v87 planner while preserving the v86 -> v84 -> v83 -> v81 -> v77 -> v63 chain and v82 compatibility',async()=>{
+test('v91 and v90 use the consolidated v86 downstream while legacy v89-v87 remain independently chained and the established resilience chain is preserved',async()=>{
   const wrapper=await readFile(new URL('../api/capacity-chat-v63.js',import.meta.url),'utf8');
   const compatibility=await readFile(new URL('../api/capacity-chat-v60.js',import.meta.url),'utf8');
   const specialistWrapper=await readFile(new URL('../api/capacity-chat-v91.js',import.meta.url),'utf8');
@@ -81,7 +81,7 @@ test('v91 and v90 wrap v89 knowledge, v88 fusion and v87 planner while preservin
   assert.match(wrapper,/Retry-After/);
   assert.match(compatibility,/capacity-chat-v91\.js/);
   assert.match(specialistWrapper,/capacity-chat-v90\.js/);
-  assert.match(latencyWrapper,/capacity-chat-v89\.js/);
+  assert.match(latencyWrapper,/capacity-chat-v86\.js/);
   assert.match(knowledgeWrapper,/capacity-chat-v88\.js/);
   assert.match(knowledgeWrapper,/classifyUniversalKnowledge/);
   assert.match(fusionWrapper,/capacity-chat-v87\.js/);
