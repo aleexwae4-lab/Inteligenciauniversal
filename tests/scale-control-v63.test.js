@@ -88,7 +88,7 @@ test('v91 and v90 use the consolidated v86 downstream while legacy v89-v87 remai
   assert.match(fusionWrapper,/runKnowledgeFusion/);
   assert.match(plannerWrapper,/capacity-chat-v86\.js/);
   assert.match(plannerWrapper,/planUniversalIntelligence/);
-  assert.match(factualityWrapper,/capacity-chat-v84\.js/);
+  assert.match(factualityWrapper,/capacity-chat-v81\.js/);
   assert.match(factualityWrapper,/factualityDecision/);
   assert.match(factualityWrapper,/applyAnswerIntelligence/);
   assert.match(resilienceWrapper,/capacity-chat-v83\.js/);
