@@ -11,7 +11,33 @@
   function emitState(state,engine=lastEngine,error=null){lastEngine=engine||lastEngine;if(error)lastError=String(error);document.documentElement.dataset.voiceState=state;document.documentElement.dataset.voiceEngine=lastEngine;document.documentElement.dataset.voicePlaying=state==='playing'?'true':'false';window.dispatchEvent(new CustomEvent('wae:voice-state',{detail:{state,engine:lastEngine,error:error||lastError,enabled,latencyMs:lastLatencyMs,voiceCount:lastVoiceCount,voice}}))}
   function extractSpeech(raw){const d=raw&&typeof raw==='object'?raw:null;return browserText(d?.speech_text||d?.speechText||d?.response?.speechText||d?.reply||d?.response?.content||'')}
   function chunks(text,max=3400){text=cleanChunk(text);if(!text)return[];const parts=text.split(/(?<=[.!?])\s+(?=[A-ZÁÉÍÓÚÑáéíóúüñ0-9¿¡])/u),out=[];let buf='';for(const part of parts){if(part.length>max){if(buf){out.push(buf);buf=''}for(let i=0;i<part.length;i+=max)out.push(part.slice(i,i+max));continue}if((buf+' '+part).trim().length>max){out.push(buf);buf=part}else buf=(buf+' '+part).trim()}if(buf)out.push(buf);return out}
-  function browserText(raw){let t=String(raw||'').normalize('NFKC').replace(/\r\n?/g,'\n');t=t.split('\n').filter(line=>{const x=line.trim();if(!x)return true;if(/^\|/.test(x)||/\|[^|]+\|/.test(x))return false;if(/^\s*(?:[-*_]){3,}\s*$/.test(x))return false;return true}).join('\n');t=t.replace(/```[\s\S]*?```/g,' ').replace(/~~~[\s\S]*?~~~/g,' ').replace(/^\s*[-*_#=]{2,}\s*$/gm,' ').replace(/:::progress\s+([^|\n]+)\|(\d+(?:\.\d+)?)/gi,'$1, $2 por ciento').replace(/:::metric\s+([^|\n]+)\|([^|\n]+)(?:\|[^\n]+)?/gi,'$1, $2').replace(/!\[[^\]]*\]\([^)]*\)/g,' ').replace(/\[([^\]]+)\]\([^)]*\)/g,'$1').replace(/\[(?:W|M|MEM)\d+\]/gi,' ').replace(/https?:\/\/\S+|www\.\S+/gi,' ').replace(/<[^>]+>/g,' ').replace(/(^|\n)\s{0,6}#{1,6}\s*/g,'$1').replace(/(^|\n)\s*[-+*•▪◦●○■□◆◇►▶]\s*/gu,'$1').replace(/(^|\n)\s*\d+[.)]\s+/gu,'$1').replace(/\x60[^\x60\n]+\x60/g,' código ').replace(/\*\*|__|~~|[*_~\x60#@]/g,' ').replace(/(^|\s)[•▪◦●○■□◆◇►▶]+(?=\s|$)/gu,'$1').replace(/[→⇒➜➝➞➡⟶⟹↦↪•▪◦●○■□◆◇►▶]/gu,', ').replace(/\|+/g,', ').replace(/[\p{Extended_Pictographic}\uFE0F\u200D]/gu,' ').replace(/[\[\]{}<>]/g,' ').replace(/[“”„‟"«»]/g,' ').replace(/\b(\d+(?:[.,]\d+)?)\s*%/g,'$1 por ciento').replace(/(^|[\s(])-(\d+(?:[.,]\d+)?)/g,'$1menos $2').replace(/[-‐‑‒–—―]+/g,' ').replace(/([A-Za-zÁÉÍÓÚÜÑáéíóúüñ])\.([A-Za-zÁÉÍÓÚÜÑáéíóúüñ])/g,'$1 $2').replace(/(\d)\.(\d)/g,'$1§DEC§$2').replace(/[.!?;:]+/g,'\n').replace(/§DEC§/g,'.').replace(/[ \t]+/g,' ').replace(/\s*,\s*/g,', ').replace(/,+/g,',').replace(/,\s*(?=\n|$)/g,'').replace(/\s*\n+\s*/g,'\n').replace(/\n{2,}/g,'\n').trim();return t}
+  function browserText(raw){
+    let t=String(raw||'').normalize('NFKC').replace(/\r\n?/g,'\n');
+    const emojiNames={'😀':'emoji cara feliz','😂':'emoji riendo','🤣':'emoji riendo mucho','😊':'emoji sonrisa','😍':'emoji enamorado','😎':'emoji lentes','🤔':'emoji pensando','😢':'emoji triste','😭':'emoji llorando','😡':'emoji enojado','😱':'emoji asustado','👍':'emoji pulgar arriba','👎':'emoji pulgar abajo','❤️':'emoji corazón','🔥':'emoji fuego','⭐':'emoji estrella','✨':'emoji brillo','🚀':'emoji cohete','🎯':'emoji objetivo','💡':'emoji idea','⚠️':'emoji advertencia','✅':'emoji correcto','❌':'emoji incorrecto','📌':'emoji chincheta','💰':'emoji dinero','🤖':'emoji robot'};
+    const spokenEmoji=m=>emojiNames[m]||'emoji';
+    const rows=[];
+    t=t.split('\n').map(line=>{const x=line.trim();if(/^\|.*\|$/.test(x)){if(/^[|\s:-]+$/.test(x))return '';const cells=x.replace(/^\||\|$/g,'').split('|').map(v=>v.trim()).filter(Boolean);if(cells.length){rows.push(cells);return 'fila: '+cells.map((v,i)=>'columna '+(i+1)+': '+v).join(', ')}return ''}return line}).join('\n');
+    if(rows.length)t='tabla. '+t;
+    t=t.replace(/```[\s\S]*?```/g,' código: bloque de código ').replace(/~~~[\s\S]*?~~~/g,' código: bloque de código ')
+      .replace(/:::progress\s+([^|\n]+)\|(\d+(?:\.\d+)?)/gi,'$1, $2 por ciento')
+      .replace(/:::metric\s+([^|\n]+)\|([^|\n]+)(?:\|[^\n]+)?/gi,'$1, $2')
+      .replace(/!\[[^\]]*\]\([^)]*\)/g,' imagen ').replace(/\[([^\]]+)\]\([^)]*\)/g,'$1')
+      .replace(/https?:\/\/\S+|www\.\S+/gi,' enlace ')
+      .replace(/(^|\n)\s*[-+]\s+/gu,'$1 guion: ').replace(/(^|\n)\s*\*\s+/gu,'$1 asterisco: ')
+      .replace(/\*\*/g,' asterisco asterisco ').replace(/__/g,' guion bajo guion bajo ').replace(/~~/g,' doble virgulilla ')
+      .replace(/[*]/g,' asterisco ').replace(/[_]/g,' guion bajo ').replace(/[#]/g,' numeral ').replace(/[@]/g,' arroba ')
+      .replace(/[•▪◦●○■□◆◇►▶]/gu,' viñeta ').replace(/[→⇒➜➝➞➡⟶⟹↦↪]/gu,' flecha ')
+      .replace(/[\[\]{}<>]/g,m=>({'[':' corchete izquierdo ',']':' corchete derecho ','{':' llave izquierda ','}':' llave derecha ','<':' menor que ','>':' mayor que '}[m]))
+      .replace(/[-‐‑‒–—―]+/g,' guion ')
+      .replace(/\p{Extended_Pictographic}/gu,spokenEmoji)
+      .replace(/[“”„‟\"«»]/g,' ')
+      .replace(/\b(\d+(?:[.,]\d+)?)\s*%/g,'$1 por ciento')
+      .replace(/(^|[\s(])-(\d+(?:[.,]\d+)?)/g,'$1menos $2')
+      .replace(/([A-Za-zÁÉÍÓÚÜÑáéíóúüñ])\.([A-Za-zÁÉÍÓÚÜÑáéíóúüñ])/g,'$1 $2')
+      .replace(/(\d)\.(\d)/g,'$1§DEC§$2').replace(/[.!?;:]+/g,'\n').replace(/§DEC§/g,'.')
+      .replace(/[ \t]+/g,' ').replace(/\s*\n+\s*/g,'\n').replace(/\n{2,}/g,'\n').trim();
+    return t;
+  }
   function getContext(){if(context)return context;const AC=window.AudioContext||window.webkitAudioContext;if(AC)context=new AC({latencyHint:'interactive'});return context}
   async function unlock(){try{const c=getContext();if(c?.state==='suspended')await c.resume();if('speechSynthesis'in window)void speechSynthesis.getVoices();return true}catch{return false}}
   function pause(){paused=true;if('speechSynthesis'in window){try{speechSynthesis.pause()}catch{}}emitState('paused','browser')}
