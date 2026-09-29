@@ -3,6 +3,35 @@ import { randomUUID } from 'node:crypto';
 import { allowRequest, originAllowed, applyHeaders } from '../lib/security.js';
 import { recordChatSuccess, recordChatFailure } from '../lib/runtime-observability-v128.js';
 
+async function tryUniversalCoreContext(body={}) {
+  const base=String(process.env.SUPABASE_URL||'').trim().replace(/\/$/,'');
+  const key=String(process.env.SUPABASE_SECRET_KEY||process.env.SUPABASE_SERVICE_ROLE_KEY||process.env.SUPABASE_PUBLISHABLE_KEY||'').trim();
+  const input=String(body?.message||body?.task||body?.prompt||'').trim();
+  if(!base||!key||!input)return null;
+  const controller=new AbortController();
+  const timer=setTimeout(()=>controller.abort(),Number(process.env.WAE_UNIVERSAL_CORE_CONTEXT_TIMEOUT_MS||6500));
+  try{
+    const response=await fetch(base+'/functions/v1/universal-core-context',{
+      method:'POST',
+      headers:{'content-type':'application/json','apikey':key},
+      signal:controller.signal,
+      body:JSON.stringify({
+        query:input,
+        user_key:String(body?.sessionId||body?.userKey||'').slice(0,160),
+        mode:String(body?.mode||'general').slice(0,40),
+        match_count:Number(body?.knowledge_match_count||8),
+        similarity_threshold:Number(body?.knowledge_similarity_threshold||0.45)
+      })
+    });
+    const payload=await response.json().catch(()=>null);
+    if(!response.ok||!payload?.ok||!String(payload?.context_text||'').trim())return null;
+    return payload;
+  }catch(error){
+    console.warn('[Universal Core Context]',String(error?.message||error));
+    return null;
+  }finally{clearTimeout(timer);}
+}
+
 export default async function handler(req,res) {
   applyHeaders(res);
   if (req.method !== 'POST') return res.status(405).json({error:'method_not_allowed'});
@@ -14,7 +43,19 @@ export default async function handler(req,res) {
   try {
     const body = req.body || {};
     // Never use a shared public IP or a caller-selected cross-user key as a memory identity.
-    const result = await executeMission({ ...body, userKey:typeof body.sessionId==='string' ? body.sessionId : '' });
+    let runtimeBody = body;
+    const universalCoreContext = await tryUniversalCoreContext(body);
+    if (universalCoreContext?.context_text) {
+      runtimeBody = {
+        ...body,
+        message: `Consulta del usuario:\n${String(body.message||body.task||body.prompt||'').trim()}\n\nContexto del Universal Core AI:\n${universalCoreContext.context_text}\n\nUsa este contexto como evidencia interna pertinente. No inventes hechos que el contexto no respalda y, si falta evidencia, indícalo.`,
+        universal_core_context: universalCoreContext.context_text
+      };
+      res.setHeader('X-WAE-Universal-Core','supabase-context-v1');
+      res.setHeader('X-WAE-Universal-Core-Retrieval-Id',String(universalCoreContext.retrieval_id||''));
+      res.setHeader('X-WAE-Universal-Core-Matches',String(universalCoreContext.match_count||0));
+    }
+    const result = await executeMission({ ...runtimeBody, userKey:typeof body.sessionId==='string' ? body.sessionId : '' });
     if(result?.response?.metadata&&typeof result.response.metadata==='object')result.response.metadata.requestId=requestId;
     result.request_id=requestId;
     const latencyMs=Date.now()-started;
