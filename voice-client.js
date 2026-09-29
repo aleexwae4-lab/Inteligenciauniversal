@@ -25,7 +25,7 @@
       .replace(/https?:\/\/\S+|www\.\S+/gi,' enlace ')
       .replace(/(^|\n)\s*(?:paso|step)\s*(?:\(\s*\d+\s*\)|\d+)?\s*[:.\-]?\s*/gimu,'$1')
       .replace(/(^|\n)\s*(?:punto|point)\s*(?:\(\s*\d+\s*\)|\d+)?\s*[:.\-]?\s*/gimu,'$1')
-      .replace(/\b(?:tabla|fila|columna)\s*[:.-]?\s*/gi,' ')
+      .replace(/\b(?:tabla|fila|columna)\s*[:.-]\s*/gi,' ')
       .replace(/(^|\n)\s*[-+]\s+/gu,'$1 guion: ').replace(/(^|\n)\s*\*\s+/gu,'$1 asterisco: ')
       .replace(/\*\*/g,' asterisco asterisco ').replace(/__/g,' guion bajo guion bajo ').replace(/~~/g,' doble virgulilla ')
       .replace(/[*]/g,' asterisco ').replace(/[_]/g,' guion bajo ').replace(/[#]/g,' numeral ').replace(/[@]/g,' arroba ')
