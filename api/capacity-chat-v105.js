@@ -1,5 +1,5 @@
 import modernChat from './chat.js';
-import legacyCapacityChat from './capacity-chat-v91.js';
+import legacyCapacityChat from './capacity-chat-v90.js';
 
 export const CAPACITY_CHAT_V105='capacity-chat/v105-conversation-routing-firewall';
 
