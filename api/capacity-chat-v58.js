@@ -58,7 +58,8 @@ export default async function capacityChatV58(req,res){
   if(!message)return res.status(400).json({error:'message_required'});
 
   const key=String(original.userKey||original.sessionId||original.session_id||getClientIp(req)).slice(0,160);
-  const slot=tryAcquireChatSlot(`${key}:live`.slice(0,160));
+  const inheritedAdmission=original.__wae_capacity_admitted===true;
+  const slot=inheritedAdmission?{ok:true,retryAfterMs:0,release(){}}:tryAcquireChatSlot(`${key}:live`.slice(0,160));
   if(!slot.ok){
     res.setHeader('Retry-After',String(Math.max(1,Math.ceil(slot.retryAfterMs/1000))));
     return res.status(503).json({error:'CAPACITY_BUSY',message:'Universal Core está procesando datos vivos. El turno fue rechazado de forma controlada y puede reintentarse.',recoverable:true,retry_after_ms:slot.retryAfterMs});
