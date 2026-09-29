@@ -12,6 +12,8 @@
   function extractSpeech(raw){const d=raw&&typeof raw==='object'?raw:null;return browserText(d?.speech_text||d?.speechText||d?.response?.speechText||d?.reply||d?.response?.content||'')}
   function chunks(text,max=3400){text=cleanChunk(text);if(!text)return[];const parts=text.split(/(?<=[.!?])\s+(?=[A-ZÁÉÍÓÚÑáéíóúüñ0-9¿¡])/u),out=[];let buf='';for(const part of parts){if(part.length>max){if(buf){out.push(buf);buf=''}for(let i=0;i<part.length;i+=max)out.push(part.slice(i,i+max));continue}if((buf+' '+part).trim().length>max){out.push(buf);buf=part}else buf=(buf+' '+part).trim()}if(buf)out.push(buf);return out}
   function browserText(raw){
+    // voice natural-format patch
+
     let t=String(raw||'').normalize('NFKC').replace(/\r\n?/g,'\n');
     const emojiNames={'😀':'emoji cara feliz','😂':'emoji riendo','🤣':'emoji riendo mucho','😊':'emoji sonrisa','😍':'emoji enamorado','😎':'emoji lentes','🤔':'emoji pensando','😢':'emoji triste','😭':'emoji llorando','😡':'emoji enojado','😱':'emoji asustado','👍':'emoji pulgar arriba','👎':'emoji pulgar abajo','❤️':'emoji corazón','🔥':'emoji fuego','⭐':'emoji estrella','✨':'emoji brillo','🚀':'emoji cohete','🎯':'emoji objetivo','💡':'emoji idea','⚠️':'emoji advertencia','✅':'emoji correcto','❌':'emoji incorrecto','📌':'emoji chincheta','💰':'emoji dinero','🤖':'emoji robot'};
     const spokenEmoji=m=>emojiNames[m]||'emoji';
