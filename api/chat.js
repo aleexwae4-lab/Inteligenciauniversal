@@ -130,7 +130,7 @@ async function tryUniversalCoreContext(body={}, userKey='') {
   }finally{clearTimeout(timer);}
 }
 
-function responseBudgetMs(body={){
+function responseBudgetMs(body={}){
   const mode=String(body?.mode||body?.agent||'general').toLowerCase();
   if(body?.web_enabled===true||mode==='research')return 30_000;
   if(['analysis','code','design','executive'].includes(mode))return 24_000;
