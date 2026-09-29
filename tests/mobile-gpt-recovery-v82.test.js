@@ -26,7 +26,7 @@ test('high-risk requests do not fall into generic knowledge recovery',()=>{
   assert.equal(sameOriginKnowledgeEligible('Qué estrategia legal debo usar en un delito?','general'),false);
 });
 
-test('v91 and v90 are the live wrappers over v89, v88, v87 and v86 while v82 remains independently callable over v81',()=>{
+test('v91 and v90 use the consolidated v86 downstream while legacy v89-v87 remain independently chained and v82 remains callable over v81',()=>{
   const v60=fs.readFileSync(new URL('../api/capacity-chat-v60.js',import.meta.url),'utf8');
   const v91=fs.readFileSync(new URL('../api/capacity-chat-v91.js',import.meta.url),'utf8');
   const v90=fs.readFileSync(new URL('../api/capacity-chat-v90.js',import.meta.url),'utf8');
@@ -39,7 +39,7 @@ test('v91 and v90 are the live wrappers over v89, v88, v87 and v86 while v82 rem
   const v82=fs.readFileSync(new URL('../api/capacity-chat-v82.js',import.meta.url),'utf8');
   assert.match(v60,/capacity-chat-v91\.js/);
   assert.match(v91,/capacity-chat-v90\.js/);
-  assert.match(v90,/capacity-chat-v89\.js/);
+  assert.match(v90,/capacity-chat-v86\.js/);
   assert.match(v89,/capacity-chat-v88\.js/);
   assert.match(v89,/classifyUniversalKnowledge/);
   assert.match(v88,/capacity-chat-v87\.js/);
