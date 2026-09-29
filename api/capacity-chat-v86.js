@@ -1,4 +1,4 @@
-import capacityChatV84 from './capacity-chat-v84.js';
+import capacityChatV81 from './capacity-chat-v81.js';
 import { applyAnswerIntelligence, ANSWER_INTELLIGENCE_VERSION } from '../lib/answer-intelligence-v60.js';
 import { applyQualityReliability, QUALITY_RELIABILITY_VERSION } from '../lib/quality-reliability-v61.js';
 import { runFocusedFactualAnswer, focusedFactualEligible, FOCUSED_FACTUAL_VERSION } from '../lib/knowledge/focused-factual-v83.js';
@@ -33,7 +33,7 @@ async function callV84(req,res,body){
   const previous=req.body;
   req.body=body;
   const buffered=bufferedResponse(res);
-  try{await capacityChatV84(req,buffered.proxy)}finally{req.body=previous}
+  try{await capacityChatV81(req,buffered.proxy)}finally{req.body=previous}
   return{code:buffered.code,payload:buffered.payload,hasJson:buffered.hasJson};
 }
 
