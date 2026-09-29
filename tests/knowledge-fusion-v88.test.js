@@ -41,7 +41,7 @@ test('explicit fusion can be enabled or disabled deterministically',()=>{
   assert.equal(shouldFuseUniversalKnowledge(disabled,planUniversalIntelligence(disabled)),false);
 });
 
-test('public v60 alias advances through v91, v90, v89 and v88 while v87 and v86 remain downstream',async()=>{
+test('public v60 alias advances through v91 and v90 while v86 remains the consolidated factual recovery downstream',async()=>{
   const alias=await readFile(new URL('../api/capacity-chat-v60.js',import.meta.url),'utf8');
   const v91=await readFile(new URL('../api/capacity-chat-v91.js',import.meta.url),'utf8');
   const v90=await readFile(new URL('../api/capacity-chat-v90.js',import.meta.url),'utf8');
@@ -51,9 +51,7 @@ test('public v60 alias advances through v91, v90, v89 and v88 while v87 and v86 
   assert.equal(KNOWLEDGE_FUSION_VERSION,'universal-knowledge-fusion/v88');
   assert.match(alias,/capacity-chat-v91\.js/);
   assert.match(v91,/capacity-chat-v90\.js/);
-  assert.match(v90,/capacity-chat-v89\.js/);
-  assert.match(v89,/capacity-chat-v88\.js/);
-  assert.match(v88,/capacity-chat-v87\.js/);
+  assert.match(v90,/capacity-chat-v86\\.js/);
   assert.match(v88,/KNOWLEDGE_FUSION_VERSION/);
   assert.match(v88,/runKnowledgeFusion/);
   assert.match(v87,/capacity-chat-v86\.js/);
