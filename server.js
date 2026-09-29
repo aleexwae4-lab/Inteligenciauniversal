@@ -25,6 +25,7 @@ import frontierControlLoopHandler from './api/frontier-control-loop-v1.js';
 import frontierArenaV2Handler from './api/frontier-arena-v2.js';
 import { assertStartupSafety, markRuntimeReady, beginRuntimeDrain, lifecycleSnapshot } from './lib/runtime-lifecycle-v145.js';
 import { generateWithFallback } from './lib/providers.js';
+import { executeMission } from './lib/runtime.js';
 
 const ROOT = fileURLToPath(new URL('.', import.meta.url));
 const PORT = Number(process.env.PORT || 10000);
@@ -257,7 +258,15 @@ async function bootGenerativeProbe(){
     }catch(error){
       routerResult={ok:false,error:safe(error?.code||error?.message||error),failures:Array.isArray(error?.failures)?error.failures.map(x=>({provider:safe(x.provider),model:safe(x.model),error:safe(x.error)})).slice(0,8):[],latencyMs:Date.now()-routerStarted};
     }
-    console.info('[WAE Generative Probe]',JSON.stringify({edge:edgeResult,stateless:{status:stat.status,reply:!!String(stat.data?.reply||'').trim(),provider:safe(stat.data?.provider),model:safe(stat.data?.model),error:safe(stat.data?.error),failures:Array.isArray(stat.data?.failures)?stat.data.failures.map(x=>({provider:safe(x.provider),model:safe(x.model),error:safe(x.error)})).slice(0,6):[]},router:routerResult,latencyMs:Date.now()-started}));
+    let missionResult={};
+    const missionStarted=Date.now();
+    try{
+      const result=await executeMission({message:'Cómo ganar dinero en internet?',mode:'general',web_enabled:false,userKey:'boot-diagnostic',sessionId:'boot-diagnostic'},{});
+      missionResult={ok:true,provider:safe(result?.provider),model:safe(result?.model),reply:!!String(result?.reply||'').trim(),degraded:result?.degraded===true,fallbackFailures:Array.isArray(result?.fallbackFailures)?result.fallbackFailures.map(x=>({provider:safe(x.provider),model:safe(x.model),error:safe(x.error)})).slice(0,8):[],e2e:result?.e2e||null,latencyMs:Date.now()-missionStarted,replyPreview:safe(result?.reply)};
+    }catch(error){
+      missionResult={ok:false,error:safe(error?.code||error?.message||error),failures:Array.isArray(error?.failures)?error.failures.map(x=>({provider:safe(x.provider),model:safe(x.model),error:safe(x.error)})).slice(0,8):[],e2e:error?.e2e||null,latencyMs:Date.now()-missionStarted};
+    }
+    console.info('[WAE Generative Probe]',JSON.stringify({edge:edgeResult,stateless:{status:stat.status,reply:!!String(stat.data?.reply||'').trim(),provider:safe(stat.data?.provider),model:safe(stat.data?.model),error:safe(stat.data?.error),failures:Array.isArray(stat.data?.failures)?stat.data.failures.map(x=>({provider:safe(x.provider),model:safe(x.model),error:safe(x.error)})).slice(0,6):[]},router:routerResult,mission:missionResult,latencyMs:Date.now()-started}));
   }catch(error){
     console.warn('[WAE Generative Probe]',JSON.stringify({error:safe(error?.message||error),latencyMs:Date.now()-started}));
   }
