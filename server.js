@@ -21,6 +21,7 @@ import frontierEvaluationHandler from './api/frontier-evaluation-v1.js';
 import frontierAutonomousHandler from './api/frontier-autonomous-v2.js';
 import frontierRunnerHandler from './api/frontier-benchmark-runner-v3.js';
 import frontierLiveEvalHandler from './api/frontier-live-eval-v1.js';
+import frontierControlLoopHandler from './api/frontier-control-loop-v1.js';
 import { assertStartupSafety, markRuntimeReady, beginRuntimeDrain, lifecycleSnapshot } from './lib/runtime-lifecycle-v145.js';
 
 const ROOT = fileURLToPath(new URL('.', import.meta.url));
@@ -55,6 +56,7 @@ const apiRoutes = new Map([
   ['/api/frontier/autonomous', frontierAutonomousHandler],
   ['/api/frontier/runner', frontierRunnerHandler],
   ['/api/frontier/live-eval', frontierLiveEvalHandler],
+  ['/api/frontier/control-loop', frontierControlLoopHandler],
 ]);
 
 const contentTypes = {
