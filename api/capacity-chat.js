@@ -192,7 +192,8 @@ export default async function capacityChatHandler(req,res){
   if(intercepted&&!authorizeIntercept(req,res))return;
 
   const key=body.userKey||body.sessionId||body.session_id||getClientIp(req);
-  const slot=tryAcquireChatSlot(key);
+  const inheritedAdmission=body.__wae_capacity_admitted===true;
+  const slot=inheritedAdmission?{ok:true,retryAfterMs:0,release(){}}:tryAcquireChatSlot(key);
   if(!slot.ok){
     const retrySeconds=Math.max(1,Math.ceil(slot.retryAfterMs/1000));
     res.setHeader('Retry-After',String(retrySeconds));
