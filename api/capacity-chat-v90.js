@@ -1,4 +1,4 @@
-import capacityChatV89 from './capacity-chat-v89.js';
+import capacityChatV86 from './capacity-chat-v86.js';
 import baseCapacityChatHandler from './capacity-chat.js';
 import { planUniversalIntelligence } from '../lib/universal-intelligence-planner-v87.js';
 import { runFocusedFactualAnswer } from '../lib/knowledge/focused-factual-v83.js';
@@ -119,7 +119,7 @@ export default async function capacityChatV90(req,res){
   const latencyPlan=planLatencyV90(body,intelligencePlan);
   setHeaders(res,latencyPlan,'planning');
 
-  if(req.method!=='POST')return delegateMeasured(capacityChatV89,req,res,started,'method-delegated-v89');
+  if(req.method!=='POST')return delegateMeasured(capacityChatV86,req,res,started,'method-delegated-v86');
   applyHeaders(res);
   if(!originAllowed(req)){
     record(started,res,'origin-denied',false);
@@ -132,13 +132,13 @@ export default async function capacityChatV90(req,res){
   }
 
   if(hasExplicitProvider(body)){
-    setHeaders(res,latencyPlan,'explicit-provider-v89');
-    return delegateMeasured(capacityChatV89,req,res,started,'explicit-provider-v89');
+    setHeaders(res,latencyPlan,'explicit-provider-v86');
+    return delegateMeasured(capacityChatV86,req,res,started,'explicit-provider-v86');
   }
 
   if(latencyPlan.profile==='bypass'){
-    setHeaders(res,latencyPlan,'direct-v89-bypass');
-    return delegateMeasured(capacityChatV89,req,res,started,'direct-v89-bypass');
+    setHeaders(res,latencyPlan,'direct-v86-bypass');
+    return delegateMeasured(capacityChatV86,req,res,started,'direct-v86-bypass');
   }
 
   const key=userKey(req,body);
@@ -176,8 +176,8 @@ export default async function capacityChatV90(req,res){
     slot.release();
   }
 
-  setHeaders(res,latencyPlan,'v89-fallback');
-  return delegateMeasured(capacityChatV89,req,res,started,'v89-fallback');
+  setHeaders(res,latencyPlan,'v86-fallback');
+  return delegateMeasured(capacityChatV86,req,res,started,'v86-fallback');
 }
 
 // Keep the fusion primitive physically below provider/continuity bypass and
