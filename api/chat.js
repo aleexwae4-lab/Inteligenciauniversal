@@ -282,7 +282,7 @@ export default async function handler(req,res) {
   }
 
   const normalizedQuery=normalizeFastPath(runtimeBody.message || runtimeBody.task || '');
-  const juriscanEligible=/\\b(legal|juridic|penal|delito|jurisprudencia|ley vigente|fiscal|tributar|contrato|litigio|demanda|amparo)\\b/.test(normalizedQuery) || String(runtimeBody.mode||'').toLowerCase()==='research';
+  const juriscanEligible=/\b(legal|juridic|penal|delito|jurisprudencia|ley vigente|fiscal|tributar|contrato|litigio|demanda|amparo|constitucion|derechos humanos|derecho humano|garantias|articulo [0-9]+)\b/.test(normalizedQuery) || String(runtimeBody.mode||'').toLowerCase()==='research';
   const juriscan=juriscanEligible?await tryJuriscanGateway(runtimeBody,String(userKey||'').slice(0,512)):null;
   if(juriscan){
     res.setHeader('X-WAE-Cognitive-Path','juriscan-supabase-v1');
