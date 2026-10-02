@@ -1,7 +1,7 @@
 import {s} from './common.ts';
 import {actualModel,invoke,markFailure,markSuccess} from './router.ts';
 
-export const EDGE_COUNCIL_VERSION='edge-council/v41';
+export const EDGE_COUNCIL_VERSION='edge-council/v42';
 const RESCUE='wae_deterministic_rescue';
 const ELIGIBLE=new Set(['analysis','enterprise','reasoning','coding','structured_data']);
 const INTERNAL_RX=/Language Policy|RELEVANT MEMORY|VERIFIED WEB EVIDENCE|system_guidance|chain[- ]of[- ]thought|hidden reasoning|<thought>|<think>|<analysis>/i;
@@ -9,6 +9,11 @@ const RESCUE_RX=/rutas generativas|evidencia de archivo preservada|respuesta con
 const fold=(v:unknown)=>String(v??'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/\s+/g,' ').trim();
 const words=(v:unknown)=>(String(v??'').match(/\b[\p{L}\p{N}][\p{L}\p{N}'’_-]*\b/gu)||[]).length;
 const clamp=(v:number)=>Math.max(0,Math.min(1,v));
+const debt=(m:any)=>Math.max(0,Number(m?.consecutive_failures)||0);
+const health=(m:any)=>String(m?.effective_health||m?.registry_health||'unknown').toLowerCase();
+const recentSuccess=(m:any,hours=24)=>{const t=Date.parse(String(m?.last_success_at||''));return Number.isFinite(t)&&Date.now()-t<=hours*3600000};
+const reliable=(m:any)=>Number.isFinite(Number(m?.reliability_score))?Number(m.reliability_score):null;
+const latency=(m:any)=>Number.isFinite(Number(m?.ewma_latency_ms))?Number(m.ewma_latency_ms):999999;
 
 export function edgeCouncilEligible(ctx:any,body:any={}){
   if(body.council_mode===false)return false;
@@ -19,16 +24,32 @@ export function edgeCouncilEligible(ctx:any,body:any={}){
   return body.council_mode===true||ctx?.task?.path==='DEEP'||ELIGIBLE.has(category);
 }
 
-export function councilCandidates(ctx:any,max=3){
-  const seen=new Set<string>(),rows:any[]=[];
-  for(const model of Array.isArray(ctx?.ranked)?ctx.ranked:[]){
+function operationalCompare(a:any,b:any){
+  const ar=reliable(a),br=reliable(b);
+  const aKnown=ar===null?1:0,bKnown=br===null?1:0;
+  return aKnown-bKnown || (br??0)-(ar??0) || latency(a)-latency(b) || debt(a)-debt(b) || Number(a?.priority||999999)-Number(b?.priority||999999);
+}
+
+function uniqueModels(rows:any[]){
+  const seen=new Set<string>(),out:any[]=[];
+  for(const model of rows){
     if(model?.provider===RESCUE||model?.rescue_only===true)continue;
     const key=`${model?.provider||''}::${actualModel(model)||model?.model_name||''}`;
     if(!key||seen.has(key))continue;
-    seen.add(key);rows.push(model);
-    if(rows.length>=Math.max(2,Math.min(3,Number(max)||3)))break;
+    seen.add(key);out.push(model);
   }
-  return rows;
+  return out;
+}
+
+export function councilCandidates(ctx:any,max=3){
+  const rows=uniqueModels(Array.isArray(ctx?.ranked)?ctx.ranked:[]);
+  const proven=rows.filter((m:any)=>health(m)==='healthy'&&String(m?.circuit_state||'CLOSED')==='CLOSED'&&debt(m)<=5&&(recentSuccess(m,24)||(reliable(m)??0)>=70)).sort(operationalCompare);
+  const fallback=rows.filter((m:any)=>!proven.includes(m)).sort((a:any,b:any)=>{
+    const ah=health(a)==='healthy'?0:health(a)==='unknown'?1:2,bh=health(b)==='healthy'?0:health(b)==='unknown'?1:2;
+    const ac=String(a?.circuit_state||'CLOSED')==='CLOSED'?0:1,bc=String(b?.circuit_state||'CLOSED')==='CLOSED'?0:1;
+    return ah-bh||ac-bc||debt(a)-debt(b)||operationalCompare(a,b);
+  });
+  return [...proven,...fallback].slice(0,Math.max(2,Math.min(3,Number(max)||3)));
 }
 
 export function blindAnswerScore(answer:string,question:string){
@@ -61,7 +82,7 @@ function synthesisMessages(ctx:any,candidates:any[]){
 
 export async function runEdgeCouncil(db:any,ctx:any,body:any={}){
   if(!edgeCouncilEligible(ctx,body))return null;
-  const models=councilCandidates(ctx,ctx?.task?.path==='DEEP'?3:2);
+  const models=councilCandidates(ctx,3);
   if(models.length<2)return null;
   const msgs=candidateMessages(ctx),settled=await Promise.allSettled(models.map(async(model:any)=>{
     const g=await invoke(model,msgs,{stream:false});
@@ -89,6 +110,6 @@ export async function runEdgeCouncil(db:any,ctx:any,body:any={}){
     failures,
     degraded:false,
     providerTtft:null,
-    council:{version:EDGE_COUNCIL_VERSION,used:true,blind:true,provider_identity_used_for_scoring:false,candidate_count:valid.length,unique_models:valid.map(x=>`${x.provider}:${x.model}`),candidate_scores:valid.map((x,i)=>({id:`candidate_${i+1}`,score:x.score.score,hard_failure:x.score.hardFailure})),synthesis_used:synthesisUsed,synthesis_accepted:synthesisAccepted,synthesis_score:synthesisScore?.score??null}
+    council:{version:EDGE_COUNCIL_VERSION,used:true,blind:true,provider_identity_used_for_scoring:false,candidate_count:valid.length,unique_models:valid.map(x=>`${x.provider}:${x.model}`),candidate_scores:valid.map((x,i)=>({id:`candidate_${i+1}`,score:x.score.score,hard_failure:x.score.hardFailure})),synthesis_used:synthesisUsed,synthesis_accepted:synthesisAccepted,synthesis_score:synthesisScore?.score??null,selection_policy:'healthy_closed_recent_success_low_debt'}
   };
 }
