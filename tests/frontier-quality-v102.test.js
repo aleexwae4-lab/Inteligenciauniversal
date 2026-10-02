@@ -126,3 +126,61 @@ test('v102 capability contract never claims hidden weight training or universal 
   assert.equal(capabilities.claimPolicy.globalNumberOneClaimAllowed,false);
   assert.equal(capabilities.claimPolicy.superiorityRequiresExternalVerifiedBenchmark,true);
 });
+
+
+test('v120 prevents false-positive premium research from a high internal evidence score without sources', () => {
+  const report=assessFrontierQualityV102({
+    question:'Investiga las noticias actuales y cita fuentes verificables',
+    mode:'research',
+    quality:quality(.99,{evidence:1}),
+    sources:[],
+  });
+  assert.equal(report.premiumPass,false);
+  assert.equal(report.needsUpgrade,true);
+  assert.ok(report.reasons.includes('grounding_missing'));
+});
+
+test('v120 requires sufficient coverage for a premium pass, even at a high score', () => {
+  const report=assessFrontierQualityV102({
+    question:'Audita el sistema y responde todos los requisitos de producción',
+    mode:'analysis',
+    quality:quality(.97,{coverage:.72}),
+    sources:[],
+  });
+  assert.equal(report.premiumPass,false);
+  assert.ok(report.reasons.includes('requirement_coverage_below_premium'));
+});
+
+test('v120 never promotes an upgrade that loses requirements, even if labelled premium', () => {
+  assert.equal(preferFrontierCandidateV102({
+    currentQuality:quality(.81,{coverage:1}),
+    candidateQuality:quality(.98,{coverage:.7}),
+    currentReport:{premiumPass:false,hardReject:false},
+    candidateReport:{premiumPass:true,hardReject:false},
+  }),false);
+  assert.equal(preferFrontierCandidateV102({
+    currentQuality:quality(.81,{coverage:1}),
+    candidateQuality:quality(.98,{coverage:1}),
+    currentReport:{premiumPass:false,hardReject:false},
+    candidateReport:{premiumPass:true,hardReject:true},
+  }),false);
+});
+
+
+test('v120 requires answer-level source attribution, not only a list of retrieved URLs', () => {
+  const withoutCitation=assessFrontierQualityV102({
+    question:'Investiga precios actuales y cita cada fuente',
+    mode:'research',
+    quality:quality(.96,{evidence:.68}),
+    sources:[{key:'W1',url:'https://example.org/verified-source'}],
+  });
+  assert.equal(withoutCitation.premiumPass,false);
+  assert.ok(withoutCitation.reasons.includes('source_attribution_missing'));
+  const withCitation=assessFrontierQualityV102({
+    question:'Investiga precios actuales y cita cada fuente',
+    mode:'research',
+    quality:quality(.96,{evidence:1}),
+    sources:[{key:'W1',url:'https://example.org/verified-source'}],
+  });
+  assert.equal(withCitation.premiumPass,true);
+});
